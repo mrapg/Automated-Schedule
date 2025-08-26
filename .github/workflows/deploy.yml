@@ -21,13 +21,16 @@ jobs:
         uses: actions/checkout@v3
 
       # Step 2: Replace the Firebase Config placeholder with your secret
-      # This step is now more robust. It passes the secret as an environment
-      # variable to prevent special characters from breaking the command.
+      # This step safely injects the Firebase config from GitHub Secrets.
+      # It uses an environment variable (FIREBASE_CONFIG) to avoid issues
+      # with special characters in the secret breaking the command.
+      # The 'sed' command uses a pipe '|' as a delimiter, which is a robust
+      # way to prevent conflicts with characters inside the JSON config string.
       - name: Replace Firebase Config 🤫
         env:
           FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
         run: |
-          sed -i "s~'__FIREBASE_CONFIG_PLACEHOLDER__'~'${FIREBASE_CONFIG}'~g" index.html admin.html
+          sed -i "s|'__FIREBASE_CONFIG_PLACEHOLDER__'|'${FIREBASE_CONFIG}'|g" index.html admin.html
 
       # Step 3: Deploy the modified files to GitHub Pages
       # This action takes your code (with the real keys now) and pushes it
