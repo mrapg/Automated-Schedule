@@ -28,9 +28,17 @@
                 <h1 class="text-xl font-bold">AFMC Training Schedule</h1>
                 <p id="current-week-display" class="text-sm opacity-90"></p>
             </div>
-            <button id="calendar-view-btn" class="p-2 rounded-full hover:bg-blue-700">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-            </button>
+            <div class="flex items-center space-x-2">
+                 <button id="today-btn" class="p-2 rounded-full hover:bg-blue-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <circle cx="12" cy="12" r="3" fill="currentColor" />
+                    </svg>
+                </button>
+                <button id="calendar-view-btn" class="p-2 rounded-full hover:bg-blue-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                </button>
+            </div>
         </header>
 
         <div id="user-view">
@@ -57,15 +65,31 @@
 
     <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-30"><div class="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-sm text-center"><p id="alert-message" class="mb-4"></p><button id="close-alert-modal" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600">OK</button></div></div>
 
-    <script>
-        // --- GLOBAL STATE ---
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG (Provided by Environment) ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
+
+        // --- INITIALIZE FIREBASE ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        signInAnonymously(auth).catch((error) => console.error("Anonymous sign-in failed:", error));
+
+        const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+
+        // --- GLOBAL STATE & DOM ELEMENTS ---
         let scheduleData = [];
         let allWeeks = [];
         let currentVisibleWeekStart = null;
         let calendarDate = new Date();
         let intersectionObserver;
 
-        // --- DOM ELEMENTS ---
         const dayViewContainer = document.getElementById('day-view-container');
         const deptFilter = document.getElementById('department-filter');
         const calendarModal = document.getElementById('calendar-modal');
@@ -75,50 +99,47 @@
         const weekDisplay = document.getElementById('current-week-display');
         const rollNoInput = document.getElementById('roll-no-input');
 
-        // --- FUNCTIONS ---
-        function customAlert(message) {
-            alertMessage.textContent = message;
-            alertModal.classList.remove('hidden');
+        // --- CORE APP LOGIC ---
+
+        function initialize() {
+            setupEventListeners();
+            listenForScheduleUpdates();
         }
 
-        function formatDate(date) {
-            const year = date.getUTCFullYear();
-            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-            const day = String(date.getUTCDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
-        }
-
-        function getStartOfWeek(date) {
-            const d = new Date(date);
-            const day = d.getUTCDay();
-            const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
-            d.setUTCDate(diff);
-            d.setUTCHours(0, 0, 0, 0);
-            return d;
+        function listenForScheduleUpdates() {
+            const q = query(scheduleCollectionRef);
+            onSnapshot(q, (snapshot) => {
+                scheduleData = snapshot.docs.map(doc => doc.data());
+                console.log("Schedule updated from Firestore:", scheduleData.length, "events");
+                processAndGroupData();
+                populateFilters();
+                renderFullSchedule();
+            }, (error) => {
+                console.error("Firestore listener error:", error);
+                customAlert("Error connecting to the schedule database.");
+            });
         }
 
         function processAndGroupData() {
             const uniqueDates = [...new Set(scheduleData.map(e => e.date))].sort();
             if (uniqueDates.length === 0) { allWeeks = []; return; }
 
-            const weekStarts = [...new Set(uniqueDates.map(d => {
-                const dateObj = new Date(d + 'T00:00:00Z');
-                return formatDate(getStartOfWeek(dateObj));
-            }))].sort();
+            const weekStarts = [...new Set(uniqueDates.map(d => formatDate(getStartOfWeek(new Date(d + 'T00:00:00Z')))))].sort();
             
             allWeeks = weekStarts.map(startDateStr => {
                 const startDate = new Date(startDateStr + 'T00:00:00Z');
                 const endDate = new Date(startDate);
                 endDate.setUTCDate(endDate.getUTCDate() + 6);
-                const days = [];
-                for (let i = 0; i < 7; i++) {
+                const days = Array.from({ length: 7 }, (_, i) => {
                     const dayDate = new Date(startDate);
                     dayDate.setUTCDate(startDate.getUTCDate() + i);
-                    days.push(dayDate);
-                }
+                    return dayDate;
+                });
                 return { startDate, endDate, days };
             });
         }
+
+        // --- UI RENDERING FUNCTIONS ---
 
         function renderFullSchedule() {
             if (intersectionObserver) intersectionObserver.disconnect();
@@ -152,11 +173,7 @@
                     const isSunday = day.getUTCDay() === 0;
 
                     if (classEvents.length === 0) {
-                        if (hasHoliday || isSunday) {
-                            daySlide.innerHTML += `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>`;
-                        } else {
-                            daySlide.innerHTML += `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled for today.</p></div>`;
-                        }
+                        daySlide.innerHTML += (hasHoliday || isSunday) ? `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>` : `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled for today.</p></div>`;
                     } else {
                         classEvents.forEach(event => {
                             daySlide.innerHTML += `
@@ -179,6 +196,35 @@
             setupIntersectionObserver();
         }
 
+        function renderCalendar() {
+            const calendarGrid = document.getElementById('calendar-grid');
+            document.getElementById('month-year-display').textContent = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+            calendarGrid.innerHTML = '';
+
+            const month = calendarDate.getUTCMonth();
+            const year = calendarDate.getUTCFullYear();
+            const firstDayOfMonth = new Date(Date.UTC(year, month, 1)).getUTCDay();
+            const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+
+            ['S','M','T','W','T','F','S'].forEach(day => { calendarGrid.innerHTML += `<div class="font-bold text-gray-600">${day}</div>`; });
+            for (let i = 0; i < firstDayOfMonth; i++) { calendarGrid.innerHTML += `<div></div>`; }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const currentDay = new Date(Date.UTC(year, month, day));
+                const dateStr = formatDate(currentDay);
+                const dayEvents = scheduleData.filter(e => e.date === dateStr);
+                let classes = 'p-2 cursor-pointer hover:bg-gray-200 rounded-full';
+                
+                if (currentDay.getUTCDay() === 0) classes += ' sunday';
+                if (dayEvents.some(e => e.isHoliday)) classes = classes.replace('sunday', '') + ' holiday'; 
+                else if (dayEvents.some(e => !e.isHoliday)) classes += ' event-day';
+                
+                calendarGrid.innerHTML += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
+            }
+        }
+
+        // --- HELPER & UTILITY FUNCTIONS ---
+        
         function scrollToLatestWeek() {
             if (allWeeks.length > 0) {
                 const latestWeek = allWeeks[allWeeks.length - 1];
@@ -186,6 +232,16 @@
                 if (firstDayOfLatestWeek) {
                     firstDayOfLatestWeek.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'start' });
                 }
+            }
+        }
+        
+        function goToToday() {
+            const todayStr = formatDate(new Date());
+            const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
+            if (todaySlide) {
+                todaySlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+            } else {
+                customAlert("Today's date is not in the current schedule.");
             }
         }
 
@@ -232,38 +288,6 @@
                 deptFilter.appendChild(option);
             });
         }
-        
-        function renderCalendar() {
-            const calendarGrid = document.getElementById('calendar-grid');
-            document.getElementById('month-year-display').textContent = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-            calendarGrid.innerHTML = '';
-
-            const month = calendarDate.getUTCMonth();
-            const year = calendarDate.getUTCFullYear();
-            const firstDayOfMonth = new Date(Date.UTC(year, month, 1)).getUTCDay();
-            const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-
-            ['S','M','T','W','T','F','S'].forEach(day => { calendarGrid.innerHTML += `<div class="font-bold text-gray-600">${day}</div>`; });
-            for (let i = 0; i < firstDayOfMonth; i++) { calendarGrid.innerHTML += `<div></div>`; }
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const currentDay = new Date(Date.UTC(year, month, day));
-                const dateStr = formatDate(currentDay);
-                const dayEvents = scheduleData.filter(e => e.date === dateStr);
-                let classes = 'p-2 cursor-pointer hover:bg-gray-200 rounded-full';
-                
-                if (currentDay.getUTCDay() === 0) {
-                    classes += ' sunday';
-                }
-                
-                if (dayEvents.some(e => e.isHoliday)) {
-                    classes = classes.replace('sunday', '') + ' holiday'; 
-                } else if (dayEvents.some(e => !e.isHoliday)) {
-                    classes += ' event-day';
-                }
-                calendarGrid.innerHTML += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
-            }
-        }
 
         function getClinicBatch(rollNo) {
             if (rollNo >= 1 && rollNo <= 38) return 'A';
@@ -282,15 +306,12 @@
 
         function generateICS(events) {
             let icsString = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AFMCScheduleApp//EN'];
-            function toICSDate(date, time) {
-                const [year, month, day] = date.split('-');
-                const [hour, minute] = time.split(':');
-                return `${year}${month}${day}T${hour}${minute}00`;
-            }
+            const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
+            
             events.forEach(event => {
                 icsString.push('BEGIN:VEVENT');
                 icsString.push(`UID:${event.date}-${event.startTime}@afmc.schedule`);
-                icsString.push(`DTSTAMP:${toICSDate(formatDate(new Date()), new Date().toTimeString().substring(0,5)).replace(/[-:]/g, '')}Z`);
+                icsString.push(`DTSTAMP:${new Date().toISOString().replace(/[-:.]/g, '')}Z`);
                 icsString.push(`DTSTART;TZID=Asia/Kolkata:${toICSDate(event.date, event.startTime)}`);
                 icsString.push(`DTEND;TZID=Asia/Kolkata:${toICSDate(event.date, event.endTime)}`);
                 icsString.push(`SUMMARY:${event.topic}`);
@@ -312,89 +333,70 @@
             document.body.removeChild(link);
         }
 
-        // --- EVENT LISTENERS ---
-        deptFilter.addEventListener('change', renderFullSchedule);
-        document.getElementById('add-to-calendar-btn').addEventListener('click', () => rollNoModal.classList.remove('hidden'));
-        document.getElementById('close-roll-no-modal').addEventListener('click', () => rollNoModal.classList.add('hidden'));
-        document.getElementById('close-alert-modal').addEventListener('click', () => alertModal.classList.add('hidden'));
-        document.getElementById('calendar-view-btn').addEventListener('click', () => { renderCalendar(); calendarModal.classList.remove('hidden'); });
-        document.getElementById('close-calendar-modal').addEventListener('click', () => calendarModal.classList.add('hidden'));
-        document.getElementById('prev-month-btn').addEventListener('click', () => { calendarDate.setUTCMonth(calendarDate.getUTCMonth() - 1); renderCalendar(); });
-        document.getElementById('next-month-btn').addEventListener('click', () => { calendarDate.setUTCMonth(calendarDate.getUTCMonth() + 1); renderCalendar(); });
+        // --- EVENT LISTENERS SETUP ---
+        function setupEventListeners() {
+            deptFilter.addEventListener('change', renderFullSchedule);
+            document.getElementById('add-to-calendar-btn').addEventListener('click', () => rollNoModal.classList.remove('hidden'));
+            document.getElementById('close-roll-no-modal').addEventListener('click', () => rollNoModal.classList.add('hidden'));
+            document.getElementById('close-alert-modal').addEventListener('click', () => alertModal.classList.add('hidden'));
+            document.getElementById('calendar-view-btn').addEventListener('click', () => { renderCalendar(); calendarModal.classList.remove('hidden'); });
+            document.getElementById('today-btn').addEventListener('click', goToToday);
+            document.getElementById('close-calendar-modal').addEventListener('click', () => calendarModal.classList.add('hidden'));
+            document.getElementById('prev-month-btn').addEventListener('click', () => { calendarDate.setUTCMonth(calendarDate.getUTCMonth() - 1); renderCalendar(); });
+            document.getElementById('next-month-btn').addEventListener('click', () => { calendarDate.setUTCMonth(calendarDate.getUTCMonth() + 1); renderCalendar(); });
 
-        document.getElementById('calendar-grid').addEventListener('click', (e) => {
-            if (e.target.dataset.date) {
-                const date = e.target.dataset.date;
-                const targetSlide = document.querySelector(`.day-slide[data-date="${date}"]`);
-                if (targetSlide) {
-                    targetSlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+            document.getElementById('calendar-grid').addEventListener('click', (e) => {
+                if (e.target.dataset.date) {
+                    const date = e.target.dataset.date;
+                    const targetSlide = document.querySelector(`.day-slide[data-date="${date}"]`);
+                    if (targetSlide) {
+                        targetSlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                    }
+                    calendarModal.classList.add('hidden');
                 }
-                calendarModal.classList.add('hidden');
-            }
-        });
-
-        document.getElementById('submit-roll-no-btn').addEventListener('click', (e) => {
-            const rollNo = parseInt(rollNoInput.value);
-            if (!rollNo || rollNo < 1 || rollNo > 150) {
-                customAlert("Please enter a valid Roll Number (1-150).");
-                return;
-            }
-
-            const clinicBatch = getClinicBatch(rollNo);
-            const generalBatch = getGeneralBatch(rollNo);
-            
-            const currentWeek = allWeeks.find(w => formatDate(w.startDate) === currentVisibleWeekStart);
-            if (!currentWeek) {
-                customAlert("Could not determine the current week to add to calendar.");
-                return;
-            }
-
-            const weekEvents = scheduleData.filter(event => {
-                const eventDate = new Date(event.date + 'T00:00:00Z');
-                return eventDate >= currentWeek.startDate && eventDate <= currentWeek.endDate;
             });
 
-            const eventsToAdd = weekEvents.filter(event => {
-                if (event.isHoliday) return false;
-                if (event.batch.includes('ALL')) return true;
-
-                if (event.isClinic) {
-                    return event.batch.includes(clinicBatch);
+            document.getElementById('submit-roll-no-btn').addEventListener('click', () => {
+                const rollNo = parseInt(rollNoInput.value);
+                if (!rollNo || rollNo < 1 || rollNo > 150) {
+                    customAlert("Please enter a valid Roll Number (1-150).");
+                    return;
                 }
 
-                return event.batch.includes(generalBatch);
+                const clinicBatch = getClinicBatch(rollNo);
+                const generalBatch = getGeneralBatch(rollNo);
+                
+                const currentWeek = allWeeks.find(w => formatDate(w.startDate) === currentVisibleWeekStart);
+                if (!currentWeek) {
+                    customAlert("Could not determine the current week to add to calendar.");
+                    return;
+                }
+
+                const weekEvents = scheduleData.filter(event => {
+                    const eventDate = new Date(event.date + 'T00:00:00Z');
+                    return eventDate >= currentWeek.startDate && eventDate <= currentWeek.endDate;
+                });
+
+                const eventsToAdd = weekEvents.filter(event => {
+                    if (event.isHoliday) return false;
+                    if (event.batch.includes('ALL')) return true;
+                    if (event.isClinic) return event.batch.includes(clinicBatch);
+                    return event.batch.includes(generalBatch);
+                });
+                
+                if (eventsToAdd.length > 0) {
+                    const icsData = generateICS(eventsToAdd);
+                    downloadICS(icsData);
+                } else {
+                    customAlert(`No specific schedule found for Roll No. ${rollNo} in the current week.`);
+                }
+                rollNoModal.classList.add('hidden');
+                rollNoInput.value = '';
             });
-            
-            if (eventsToAdd.length > 0) {
-                const icsData = generateICS(eventsToAdd);
-                downloadICS(icsData);
-            } else {
-                customAlert(`No specific schedule found for Roll No. ${rollNo} in the current week.`);
-            }
-            rollNoModal.classList.add('hidden');
-            rollNoInput.value = '';
-        });
-
-        // --- INITIALIZATION ---
-        function initialize() {
-            try {
-                const storedData = localStorage.getItem('afmcScheduleData');
-                if (storedData) {
-                    scheduleData = JSON.parse(storedData);
-                }
-            } catch (e) {
-                console.error("Could not parse schedule data from localStorage", e);
-                // If there's an error, it's safer to start fresh
-                scheduleData = [];
-            }
-            
-            processAndGroupData();
-            populateFilters();
-            renderFullSchedule();
         }
 
+        // --- INITIALIZE THE APP ---
         initialize();
-
     </script>
 </body>
 </html>
