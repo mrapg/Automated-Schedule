@@ -67,9 +67,6 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // --- DATA SOURCE ---
-            const initialScheduleData = []; // Start with no data, let localStorage provide it.
-
             // --- GLOBAL STATE & DOM ELEMENTS ---
             let scheduleData = [];
             let allWeeks = [];
@@ -99,10 +96,10 @@
             function loadData() {
                 try {
                     const storedData = localStorage.getItem('afmcScheduleData');
-                    scheduleData = storedData ? JSON.parse(storedData) : initialScheduleData;
+                    scheduleData = storedData ? JSON.parse(storedData) : [];
                 } catch (e) {
-                    console.error("Could not parse schedule data from localStorage, using initial data.", e);
-                    scheduleData = initialScheduleData;
+                    console.error("Could not parse schedule data from localStorage.", e);
+                    scheduleData = [];
                 }
             }
 
@@ -378,6 +375,14 @@
                     }
                     rollNoModal.classList.add('hidden');
                     rollNoInput.value = '';
+                });
+                
+                // --- REAL-TIME UPDATE LISTENER ---
+                window.addEventListener('storage', (event) => {
+                    if (event.key === 'afmcScheduleData') {
+                        console.log("Schedule data changed in another tab. Reloading...");
+                        initialize();
+                    }
                 });
             }
 
