@@ -71,7 +71,8 @@
         import { getFirestore, collection, onSnapshot, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- FIREBASE CONFIG (Provided by Environment) ---
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        // This placeholder will be replaced by our GitHub Action during deployment
+        const firebaseConfig = JSON.parse('__FIREBASE_CONFIG_PLACEHOLDER__');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
 
         // --- INITIALIZE FIREBASE ---
@@ -400,3 +401,4 @@
     </script>
 </body>
 </html>
+
