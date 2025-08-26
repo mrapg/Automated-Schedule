@@ -17,7 +17,8 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
         .holiday { background-color: #facc15; color: #713f12; border-radius: 50%; font-weight: bold; }
         .event-day { background-color: #bfdbfe; border-radius: 50%; }
-        .sunday { background-color: #fecaca; color: #991b1b; border-radius: 50%; }
+        .sunday { color: #991b1b; }
+        .today-highlight { background-color: #dbeafe; } /* Light blue for today */
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -29,14 +30,11 @@
                 <p id="current-week-display" class="text-sm opacity-90"></p>
             </div>
             <div class="flex items-center space-x-2">
-                 <button id="today-btn" class="p-2 rounded-full hover:bg-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        <circle cx="12" cy="12" r="3" fill="currentColor" />
-                    </svg>
+                 <button id="today-btn" class="p-2 rounded-full hover:bg-blue-700" title="Go to Today">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /><circle cx="12" cy="12" r="3" fill="currentColor" /></svg>
                 </button>
-                <button id="calendar-view-btn" class="p-2 rounded-full hover:bg-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                <button id="calendar-view-btn" class="p-2 rounded-full hover:bg-blue-700" title="Calendar View">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 </button>
             </div>
         </header>
@@ -48,30 +46,26 @@
                     <button id="add-to-calendar-btn" class="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition">Add to Calendar</button>
                 </div>
             </div>
+            <!-- Loading Indicator -->
+            <div id="loading-indicator" class="text-center p-10">
+                <p class="text-gray-500 font-semibold animate-pulse">Loading Schedule...</p>
+            </div>
             <div id="day-view-container" class="overflow-x-auto day-view flex"></div>
         </div>
     </div>
 
+    <!-- Modals -->
     <div id="calendar-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-20"><div class="bg-white rounded-lg shadow-xl p-4 w-11/12 max-w-md"><div id="calendar-header" class="flex justify-between items-center mb-4"><button id="prev-month-btn" class="px-2 py-1">&lt;</button><h3 id="month-year-display" class="text-lg font-semibold"></h3><button id="next-month-btn" class="px-2 py-1">&gt;</button></div><div id="calendar-grid" class="calendar-grid gap-2 text-center"></div><button id="close-calendar-modal" class="w-full mt-4 bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600">Close</button></div></div>
-    
-    <div id="roll-no-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-20">
-        <div class="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-sm text-center">
-            <h3 class="text-lg font-semibold mb-4">Enter Your Roll Number</h3>
-            <input type="number" id="roll-no-input" class="w-full p-2 border rounded-md text-center mb-4" placeholder="e.g., 42" min="1" max="150">
-            <button id="submit-roll-no-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded">Get My Schedule File</button>
-            <button id="close-roll-no-modal" class="w-full mt-4 bg-gray-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600">Cancel</button>
-        </div>
-    </div>
-
+    <div id="roll-no-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-20"><div class="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-sm text-center"><h3 class="text-lg font-semibold mb-4">Enter Your Roll Number</h3><input type="number" id="roll-no-input" class="w-full p-2 border rounded-md text-center mb-4" placeholder="e.g., 42" min="1" max="150"><button id="submit-roll-no-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded">Get My Schedule File</button><button id="close-roll-no-modal" class="w-full mt-4 bg-gray-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600">Cancel</button></div></div>
     <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-30"><div class="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-sm text-center"><p id="alert-message" class="mb-4"></p><button id="close-alert-modal" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600">OK</button></div></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, query } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import * as utils from './utils.js'; // Assuming utils.js is in the same directory
 
-        // --- FIREBASE CONFIG (Provided by Environment) ---
-        // This placeholder will be replaced by our GitHub Action during deployment
+        // --- FIREBASE CONFIG (Placeholder) ---
         const firebaseConfig = JSON.parse('__FIREBASE_CONFIG_PLACEHOLDER__');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
 
@@ -82,8 +76,6 @@
         
         signInAnonymously(auth).catch((error) => console.error("Anonymous sign-in failed:", error));
 
-        const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
-
         // --- GLOBAL STATE & DOM ELEMENTS ---
         let scheduleData = [];
         let allWeeks = [];
@@ -93,39 +85,53 @@
 
         const dayViewContainer = document.getElementById('day-view-container');
         const deptFilter = document.getElementById('department-filter');
-        const calendarModal = document.getElementById('calendar-modal');
-        const rollNoModal = document.getElementById('roll-no-modal');
-        const alertModal = document.getElementById('alert-modal');
-        const alertMessage = document.getElementById('alert-message');
         const weekDisplay = document.getElementById('current-week-display');
-        const rollNoInput = document.getElementById('roll-no-input');
+        const loadingIndicator = document.getElementById('loading-indicator');
 
         // --- CORE APP LOGIC ---
-
         function initialize() {
             setupEventListeners();
             listenForScheduleUpdates();
         }
 
         function listenForScheduleUpdates() {
-            const q = query(scheduleCollectionRef);
+            const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+            
+            // --- OPTIMIZED QUERY: Fetch a relevant date range ---
+            const today = new Date();
+            const startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1); // 2 months ago
+            const endDate = new Date(today.getFullYear(), today.getMonth() + 4, 0);   // 3 months from now
+            const startDateString = utils.formatDate(startDate);
+            const endDateString = utils.formatDate(endDate);
+
+            const q = query(scheduleCollectionRef, 
+                where("date", ">=", startDateString),
+                where("date", "<=", endDateString)
+            );
+
             onSnapshot(q, (snapshot) => {
                 scheduleData = snapshot.docs.map(doc => doc.data());
-                console.log("Schedule updated from Firestore:", scheduleData.length, "events");
+                console.log(`Fetched ${scheduleData.length} events from Firestore.`);
+                
                 processAndGroupData();
                 populateFilters();
                 renderFullSchedule();
+                
+                loadingIndicator.classList.add('hidden'); // Hide loader after first render
             }, (error) => {
                 console.error("Firestore listener error:", error);
-                customAlert("Error connecting to the schedule database.");
+                loadingIndicator.textContent = "Error loading schedule.";
+                utils.customAlert("Error connecting to the schedule database.");
             });
         }
 
         function processAndGroupData() {
+            if (scheduleData.length === 0) {
+                allWeeks = [];
+                return;
+            }
             const uniqueDates = [...new Set(scheduleData.map(e => e.date))].sort();
-            if (uniqueDates.length === 0) { allWeeks = []; return; }
-
-            const weekStarts = [...new Set(uniqueDates.map(d => formatDate(getStartOfWeek(new Date(d + 'T00:00:00Z')))))].sort();
+            const weekStarts = [...new Set(uniqueDates.map(d => utils.formatDate(utils.getStartOfWeek(new Date(d + 'T00:00:00Z')))))].sort();
             
             allWeeks = weekStarts.map(startDateStr => {
                 const startDate = new Date(startDateStr + 'T00:00:00Z');
@@ -141,6 +147,21 @@
         }
 
         // --- UI RENDERING FUNCTIONS ---
+        function createEventHTML(event) {
+            const batchClass = event.batch.includes('ALL') ? 'bg-gray-500' : 'bg-purple-600';
+            const batchText = event.batch.includes('ALL') ? 'All Batches' : 'Batch ' + event.batch.join(', ');
+            return `
+                <div class="bg-white border-l-4 ${utils.getDeptColor(event.department)} rounded-r-lg p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div><p class="font-bold text-lg">${event.topic}</p><p class="text-sm text-gray-600">${event.department}</p></div>
+                        <div class="text-right flex-shrink-0 ml-4"><p class="font-semibold text-blue-600">${event.startTime} - ${event.endTime}</p><p class="text-sm text-gray-500">${event.location}</p></div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center text-sm">
+                        <p class="text-gray-700"><strong>Instructor:</strong> ${event.instructor}</p>
+                        <p class="font-medium text-white text-xs px-2 py-1 rounded-full ${batchClass}">${batchText}</p>
+                    </div>
+                </div>`;
+        }
 
         function renderFullSchedule() {
             if (intersectionObserver) intersectionObserver.disconnect();
@@ -148,47 +169,36 @@
             const selectedDept = deptFilter.value;
 
             if (allWeeks.length === 0) {
-                dayViewContainer.innerHTML = `<div class="p-4 text-center text-gray-500 w-full">No schedule data has been uploaded yet.</div>`;
-                weekDisplay.textContent = "No Schedule";
+                dayViewContainer.innerHTML = `<div class="p-4 text-center text-gray-500 w-full">No schedule data found for the current period.</div>`;
+                weekDisplay.textContent = "No Schedule Available";
                 return;
             }
 
             allWeeks.forEach(week => {
                 week.days.forEach(day => {
-                    const dayString = formatDate(day);
-                    let events = scheduleData.filter(event => event.date === dayString).filter(event => selectedDept === 'all' || event.department === selectedDept);
-                    events.sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
-
+                    const dayString = utils.formatDate(day);
                     const daySlide = document.createElement('div');
                     daySlide.className = 'day-slide p-4';
                     daySlide.dataset.date = dayString;
-                    daySlide.dataset.weekStart = formatDate(week.startDate);
+                    daySlide.dataset.weekStart = utils.formatDate(week.startDate);
+                    if (dayString === utils.formatDate(new Date())) {
+                        daySlide.classList.add('today-highlight');
+                    }
 
-                    const dayHeader = document.createElement('h2');
-                    dayHeader.className = 'text-2xl font-bold mb-4 text-blue-700';
-                    dayHeader.textContent = day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' });
-                    daySlide.appendChild(dayHeader);
+                    daySlide.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}</h2>`;
+                    
+                    const events = scheduleData.filter(e => e.date === dayString && (selectedDept === 'all' || e.department === selectedDept))
+                                             .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
 
-                    const hasHoliday = events.some(e => e.isHoliday);
                     const classEvents = events.filter(e => !e.isHoliday);
-                    const isSunday = day.getUTCDay() === 0;
-
-                    if (classEvents.length === 0) {
-                        daySlide.innerHTML += (hasHoliday || isSunday) ? `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>` : `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled for today.</p></div>`;
+                    if (classEvents.length > 0) {
+                        daySlide.innerHTML += classEvents.map(createEventHTML).join('');
                     } else {
-                        classEvents.forEach(event => {
-                            daySlide.innerHTML += `
-                                <div class="bg-white border-l-4 ${getDeptColor(event.department)} rounded-r-lg p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
-                                    <div class="flex justify-between items-start">
-                                        <div><p class="font-bold text-lg">${event.topic}</p><p class="text-sm text-gray-600">${event.department}</p></div>
-                                        <div class="text-right flex-shrink-0 ml-4"><p class="font-semibold text-blue-600">${event.startTime} - ${event.endTime}</p><p class="text-sm text-gray-500">${event.location}</p></div>
-                                    </div>
-                                    <div class="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center text-sm">
-                                        <p class="text-gray-700"><strong>Instructor:</strong> ${event.instructor}</p>
-                                        <p class="font-medium text-white text-xs px-2 py-1 rounded-full ${event.batch.includes('ALL') ? 'bg-gray-500' : 'bg-purple-600'}">${event.batch.includes('ALL') ? 'All Batches' : 'Batch ' + event.batch.join(', ')}</p>
-                                    </div>
-                                </div>`;
-                        });
+                        const isHoliday = events.some(e => e.isHoliday);
+                        const isSunday = day.getUTCDay() === 0;
+                        daySlide.innerHTML += (isHoliday || isSunday) 
+                            ? `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>` 
+                            : `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
                     }
                     dayViewContainer.appendChild(daySlide);
                 });
@@ -207,12 +217,12 @@
             const firstDayOfMonth = new Date(Date.UTC(year, month, 1)).getUTCDay();
             const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
 
-            ['S','M','T','W','T','F','S'].forEach(day => { calendarGrid.innerHTML += `<div class="font-bold text-gray-600">${day}</div>`; });
+            ['S','M','T','W','T','F','S'].forEach(day => { calendarGrid.innerHTML += `<div class="font-bold text-gray-600 ${day === 'S' ? 'sunday' : ''}">${day}</div>`; });
             for (let i = 0; i < firstDayOfMonth; i++) { calendarGrid.innerHTML += `<div></div>`; }
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const currentDay = new Date(Date.UTC(year, month, day));
-                const dateStr = formatDate(currentDay);
+                const dateStr = utils.formatDate(currentDay);
                 const dayEvents = scheduleData.filter(e => e.date === dateStr);
                 let classes = 'p-2 cursor-pointer hover:bg-gray-200 rounded-full';
                 
@@ -225,24 +235,23 @@
         }
 
         // --- HELPER & UTILITY FUNCTIONS ---
-        
         function scrollToLatestWeek() {
             if (allWeeks.length > 0) {
                 const latestWeek = allWeeks[allWeeks.length - 1];
-                const firstDayOfLatestWeek = document.querySelector(`.day-slide[data-date="${formatDate(latestWeek.days[0])}"]`);
+                const firstDayOfLatestWeek = document.querySelector(`.day-slide[data-date="${utils.formatDate(latestWeek.days[0])}"]`);
                 if (firstDayOfLatestWeek) {
-                    firstDayOfLatestWeek.scrollIntoView({ behavior: 'instant', block: 'nearest', inline: 'start' });
+                    firstDayOfLatestWeek.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'start' });
                 }
             }
         }
         
         function goToToday() {
-            const todayStr = formatDate(new Date());
+            const todayStr = utils.formatDate(new Date());
             const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
             if (todaySlide) {
                 todaySlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
             } else {
-                customAlert("Today's date is not in the current schedule.");
+                utils.customAlert("Today's date is not in the current schedule.");
             }
         }
 
@@ -265,7 +274,7 @@
         }
 
         function updateHeader(weekStartDateStr) {
-            const week = allWeeks.find(w => formatDate(w.startDate) === weekStartDateStr);
+            const week = allWeeks.find(w => utils.formatDate(w.startDate) === weekStartDateStr);
             if (week) {
                 const start = week.startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
                 const end = week.endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
@@ -273,14 +282,10 @@
                 calendarDate = new Date(week.startDate);
             }
         }
-        
-        function getDeptColor(department) {
-            const colors = { "Internal Medicine": "border-blue-500", "Community Medicine": "border-green-500", "Ophthalmology": "border-purple-500", "Obs & Gynae": "border-pink-500", "ENT": "border-yellow-500", "Forensic Medicine": "border-red-500", "Orthopaedics": "border-orange-500" };
-            return colors[department] || "border-gray-500";
-        }
 
         function populateFilters() {
             const departments = [...new Set(scheduleData.map(item => item.department).filter(Boolean))].sort();
+            const currentVal = deptFilter.value;
             deptFilter.innerHTML = '<option value="all">All Departments</option>';
             departments.forEach(dept => {
                 const option = document.createElement('option');
@@ -288,58 +293,19 @@
                 option.textContent = dept;
                 deptFilter.appendChild(option);
             });
-        }
-
-        function getClinicBatch(rollNo) {
-            if (rollNo >= 1 && rollNo <= 38) return 'A';
-            if (rollNo >= 39 && rollNo <= 76) return 'B';
-            if (rollNo >= 77 && rollNo <= 112) return 'C';
-            if (rollNo >= 113 && rollNo <= 150) return 'D';
-            return null;
-        }
-
-        function getGeneralBatch(rollNo) {
-            if (rollNo >= 1 && rollNo <= 50) return 'A';
-            if (rollNo >= 51 && rollNo <= 100) return 'B';
-            if (rollNo >= 101 && rollNo <= 150) return 'C';
-            return null;
-        }
-
-        function generateICS(events) {
-            let icsString = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AFMCScheduleApp//EN'];
-            const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
-            
-            events.forEach(event => {
-                icsString.push('BEGIN:VEVENT');
-                icsString.push(`UID:${event.date}-${event.startTime}@afmc.schedule`);
-                icsString.push(`DTSTAMP:${new Date().toISOString().replace(/[-:.]/g, '')}Z`);
-                icsString.push(`DTSTART;TZID=Asia/Kolkata:${toICSDate(event.date, event.startTime)}`);
-                icsString.push(`DTEND;TZID=Asia/Kolkata:${toICSDate(event.date, event.endTime)}`);
-                icsString.push(`SUMMARY:${event.topic}`);
-                icsString.push(`LOCATION:${event.location}`);
-                icsString.push(`DESCRIPTION:Instructor: ${event.instructor}`);
-                icsString.push('END:VEVENT');
-            });
-            icsString.push('END:VCALENDAR');
-            return icsString.join('\r\n');
-        }
-
-        function downloadICS(icsData) {
-            const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'MySchedule.ics';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+            deptFilter.value = currentVal;
         }
 
         // --- EVENT LISTENERS SETUP ---
         function setupEventListeners() {
+            const calendarModal = document.getElementById('calendar-modal');
+            const rollNoModal = document.getElementById('roll-no-modal');
+            const rollNoInput = document.getElementById('roll-no-input');
+
             deptFilter.addEventListener('change', renderFullSchedule);
             document.getElementById('add-to-calendar-btn').addEventListener('click', () => rollNoModal.classList.remove('hidden'));
             document.getElementById('close-roll-no-modal').addEventListener('click', () => rollNoModal.classList.add('hidden'));
-            document.getElementById('close-alert-modal').addEventListener('click', () => alertModal.classList.add('hidden'));
+            document.getElementById('close-alert-modal').addEventListener('click', () => document.getElementById('alert-modal').classList.add('hidden'));
             document.getElementById('calendar-view-btn').addEventListener('click', () => { renderCalendar(); calendarModal.classList.remove('hidden'); });
             document.getElementById('today-btn').addEventListener('click', goToToday);
             document.getElementById('close-calendar-modal').addEventListener('click', () => calendarModal.classList.add('hidden'));
@@ -348,8 +314,7 @@
 
             document.getElementById('calendar-grid').addEventListener('click', (e) => {
                 if (e.target.dataset.date) {
-                    const date = e.target.dataset.date;
-                    const targetSlide = document.querySelector(`.day-slide[data-date="${date}"]`);
+                    const targetSlide = document.querySelector(`.day-slide[data-date="${e.target.dataset.date}"]`);
                     if (targetSlide) {
                         targetSlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
                     }
@@ -360,17 +325,14 @@
             document.getElementById('submit-roll-no-btn').addEventListener('click', () => {
                 const rollNo = parseInt(rollNoInput.value);
                 if (!rollNo || rollNo < 1 || rollNo > 150) {
-                    customAlert("Please enter a valid Roll Number (1-150).");
-                    return;
+                    return utils.customAlert("Please enter a valid Roll Number (1-150).");
                 }
 
-                const clinicBatch = getClinicBatch(rollNo);
-                const generalBatch = getGeneralBatch(rollNo);
-                
-                const currentWeek = allWeeks.find(w => formatDate(w.startDate) === currentVisibleWeekStart);
+                const clinicBatch = utils.getClinicBatch(rollNo);
+                const generalBatch = utils.getGeneralBatch(rollNo);
+                const currentWeek = allWeeks.find(w => utils.formatDate(w.startDate) === currentVisibleWeekStart);
                 if (!currentWeek) {
-                    customAlert("Could not determine the current week to add to calendar.");
-                    return;
+                    return utils.customAlert("Could not determine the current week.");
                 }
 
                 const weekEvents = scheduleData.filter(event => {
@@ -386,10 +348,10 @@
                 });
                 
                 if (eventsToAdd.length > 0) {
-                    const icsData = generateICS(eventsToAdd);
-                    downloadICS(icsData);
+                    const icsData = utils.generateICS(eventsToAdd);
+                    utils.downloadICS(icsData, `Schedule-Week-${currentVisibleWeekStart}.ics`);
                 } else {
-                    customAlert(`No specific schedule found for Roll No. ${rollNo} in the current week.`);
+                    utils.customAlert(`No specific schedule found for Roll No. ${rollNo} in the current week.`);
                 }
                 rollNoModal.classList.add('hidden');
                 rollNoInput.value = '';
@@ -401,4 +363,3 @@
     </script>
 </body>
 </html>
-
