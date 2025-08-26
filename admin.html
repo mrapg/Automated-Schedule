@@ -10,7 +10,7 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen">
+<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen p-4">
 
     <div id="admin-container" class="w-full max-w-2xl mx-auto bg-gray-900 shadow-lg rounded-lg p-8">
         <h1 class="text-3xl font-bold mb-6 text-center text-blue-400">Schedule Data Uploader</h1>
@@ -20,75 +20,97 @@
             <textarea id="schedule-input" rows="15" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Paste the JavaScript array of schedule objects here..."></textarea>
         </div>
         
-        <div class="flex space-x-4">
+        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
             <button id="update-btn" class="flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition">Update Schedule</button>
             <button id="clear-btn" class="flex-1 bg-red-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-red-700 transition">Clear All Data</button>
         </div>
+        <div class="mt-6 text-center">
+            <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
+        </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, writeBatch, doc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // --- FIREBASE CONFIG (Provided by Environment) ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
+
+        // --- INITIALIZE FIREBASE ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        signInAnonymously(auth).catch((error) => console.error("Anonymous sign-in failed:", error));
+
+        const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+
         // --- ADMIN PANEL LOGIC ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const password = "afmc";
+            let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
 
-        // Simple password protection
-        const password = "afmc"; // You can change this
-        let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
-
-        if (!isAuthenticated) {
-            const input = prompt("Enter admin password:");
-            if (input === password) {
-                sessionStorage.setItem('isAdminAuthenticated', 'true');
-            } else {
-                alert("Incorrect password. Access denied.");
-                document.body.innerHTML = '<div class="text-center text-red-500 text-2xl">Access Denied</div>';
-            }
-        }
-
-        const updateBtn = document.getElementById('update-btn');
-        const clearBtn = document.getElementById('clear-btn');
-        const scheduleInput = document.getElementById('schedule-input');
-
-        updateBtn.addEventListener('click', () => {
-            const inputText = scheduleInput.value.trim();
-            if (!inputText) {
-                alert("Text area is empty. Please paste the schedule data.");
-                return;
+            function authenticate() {
+                if (isAuthenticated) return true;
+                const input = prompt("Enter admin password:");
+                if (input === password) {
+                    sessionStorage.setItem('isAdminAuthenticated', 'true');
+                    return true;
+                } else {
+                    alert("Incorrect password. Access denied.");
+                    document.body.innerHTML = '<div class="text-center text-red-500 text-2xl p-8">Access Denied</div>';
+                    return false;
+                }
             }
 
-            try {
-                // Attempt to parse the input as a JavaScript array
-                const newScheduleArray = eval(inputText);
+            if (!authenticate()) return;
 
-                if (!Array.isArray(newScheduleArray)) {
-                    throw new Error("Input is not a valid JavaScript array.");
+            const updateBtn = document.getElementById('update-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            const scheduleInput = document.getElementById('schedule-input');
+
+            updateBtn.addEventListener('click', async () => {
+                const inputText = scheduleInput.value.trim();
+                if (!inputText) {
+                    alert("Text area is empty. Please paste the schedule data.");
+                    return;
                 }
 
-                // Get existing data from localStorage
-                let existingData = [];
-                const storedData = localStorage.getItem('afmcScheduleData');
-                if (storedData) {
-                    existingData = JSON.parse(storedData);
+                try {
+                    const newScheduleArray = JSON.parse(inputText);
+                    if (!Array.isArray(newScheduleArray)) throw new Error("Input is not a valid JavaScript array.");
+
+                    const batch = writeBatch(db);
+                    newScheduleArray.forEach(event => {
+                        const docRef = doc(scheduleCollectionRef); // Create a new document reference for each event
+                        batch.set(docRef, event);
+                    });
+                    
+                    await batch.commit();
+                    alert("Schedule updated successfully! The main app will update for all users automatically.");
+                    scheduleInput.value = '';
+
+                } catch (error) {
+                    alert("Error parsing data. Please make sure you are pasting a valid JavaScript array of objects.\n\n" + error.message);
                 }
+            });
 
-                // Combine and remove duplicates
-                const combinedData = [...existingData, ...newScheduleArray];
-                const uniqueData = Array.from(new Set(combinedData.map(e => JSON.stringify(e)))).map(e => JSON.parse(e));
-
-                // Save back to localStorage
-                localStorage.setItem('afmcScheduleData', JSON.stringify(uniqueData));
-
-                alert("Schedule updated successfully! Users will see the new schedule on the main app page.");
-                scheduleInput.value = '';
-
-            } catch (error) {
-                alert("Error parsing data. Please make sure you are pasting a valid JavaScript array.\n\n" + error.message);
-            }
-        });
-
-        clearBtn.addEventListener('click', () => {
-            if (confirm("Are you sure you want to clear ALL schedule data? This cannot be undone.")) {
-                localStorage.removeItem('afmcScheduleData');
-                alert("All schedule data has been cleared.");
-            }
+            clearBtn.addEventListener('click', async () => {
+                if (confirm("Are you sure you want to clear ALL schedule data? This cannot be undone.")) {
+                    try {
+                        const snapshot = await getDocs(scheduleCollectionRef);
+                        const batch = writeBatch(db);
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                        alert("All schedule data has been cleared.");
+                    } catch (error) {
+                        console.error("Error clearing data: ", error);
+                        alert("Failed to clear schedule data.");
+                    }
+                }
+            });
         });
     </script>
 </body>
