@@ -3,7 +3,7 @@
 /**
  * Formats a Date object into a 'YYYY-MM-DD' string.
  * @param {Date} date The date to format.
- * @returns {string} The formatted date string.
+ * @returns {string} The formatted date string. 
  */
 export function formatDate(date) {
     return date.toISOString().split('T')[0];
