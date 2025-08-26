@@ -68,51 +68,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             // --- DATA SOURCE ---
-            const initialScheduleData = [
-                // Week of Aug 25
-                { date: "2025-08-25", startTime: "08:00", endTime: "09:00", department: "Internal Medicine", topic: "Lecture: Rheumatologic problems-II", instructor: "Col V Koshy", location: "NLH Sushruta", batch: ["ALL"] },
-                { date: "2025-08-25", startTime: "09:00", endTime: "10:00", department: "Community Medicine", topic: "Basic Statistics and its application", instructor: "Dr. Seema Pannikar", location: "Sushruta", batch: ["ALL"] },
-                { date: "2025-08-25", startTime: "10:00", endTime: "13:00", department: "Ophthalmology", topic: "Colour vision assessment and pupillary reflexes", instructor: "CHSC", location: "Service Eye OPD and OT CHSC", batch: ["D"], isClinic: true },
-                { date: "2025-08-25", startTime: "10:30", endTime: "13:00", department: "Obs & Gynae", topic: "ANC history taking and Obstetric Examination", instructor: "Maj Sunilkumar", location: "Civ OPD", batch: ["C"], isClinic: true },
-                { date: "2025-08-25", startTime: "10:30", endTime: "13:00", department: "ENT", topic: "CLINICS: Case Presentation: Ear Part-1", instructor: "Maj V S Sreejith / Col MS Boparai", location: "Civil ENT OPD", batch: ["A"], isClinic: true },
-                { date: "2025-08-25", startTime: "11:00", endTime: "13:00", department: "Orthopaedics", topic: "Clinics: History Taking", instructor: "Surg Lt Cdr AC Tiwary", location: "CH(SC)", batch: ["B"], isClinic: true },
-                { date: "2025-08-25", startTime: "14:00", endTime: "15:00", department: "Internal Medicine", topic: "Tutorial: Portal Hypertension", instructor: "Clinical Tutor", location: "NLH Sushruta", batch: ["ALL"] },
-                { date: "2025-08-25", startTime: "15:00", endTime: "16:00", department: "Forensic Medicine", topic: "Non metallic Irritants/animal & plant irritants", instructor: "Maj Ishita Manral", location: "LH Sushruta", batch: ["ALL"] },
-                { date: "2025-08-26", startTime: "08:00", endTime: "09:00", department: "Community Medicine", topic: "International Health & Recent Advances", instructor: "Major Nidhi Rana", location: "Sushruta", batch: ["ALL"] },
-                { date: "2025-08-26", startTime: "10:00", endTime: "13:00", department: "Ophthalmology", topic: "Types of cataract surgery, Phacoemulsification", instructor: "CHSC", location: "Service Eye OPD,OT CHSC", batch: ["D"], isClinic: true },
-                { date: "2025-08-26", startTime: "10:30", endTime: "13:00", department: "Obs & Gynae", topic: "AUB", instructor: "Col Sanjay Kumar Sharma", location: "Civ OPD", batch: ["C"], isClinic: true },
-                { date: "2025-08-26", startTime: "10:30", endTime: "13:00", department: "ENT", topic: "CLINICS: Case Presentation: Ear Part-2", instructor: "Col Vikas Gupta", location: "Service ENT OPD", batch: ["A"], isClinic: true },
-                { date: "2025-08-26", startTime: "11:00", endTime: "13:00", department: "Orthopaedics", topic: "Clinics: Closed reduction of fractures", instructor: "Maj Abhay Singh", location: "CH(SC)", batch: ["B"], isClinic: true },
-                { date: "2025-08-27", isHoliday: true, topic: "Holiday" },
-                { date: "2025-08-27", startTime: "11:00", endTime: "13:00", department: "Orthopaedics", topic: "Clinics: Instruments", instructor: "Surg Lt Cdr AC Tiwary", location: "CH(SC)", batch: ["B"], isClinic: true },
-                { date: "2025-08-27", startTime: "14:00", endTime: "15:00", department: "Orthopaedics", topic: "SDL: Fracture distal end of radius", instructor: "Maj Abhay Singh", location: "NLH- Sushruta", batch: ["ALL"] },
-                { date: "2025-08-28", startTime: "08:00", endTime: "09:00", department: "Obs & Gynae", topic: "Heart Disease in Pregnancy", instructor: "Lt Col Ankur Shah", location: "Sushruta", batch: ["ALL"] },
-                { date: "2025-08-28", startTime: "10:00", endTime: "13:00", department: "Ophthalmology", topic: "Instruments", instructor: "CHSC", location: "Service Eye OPD and OT CHSC", batch: ["D"], isClinic: true },
-                { date: "2025-08-28", startTime: "10:30", endTime: "13:00", department: "Obs & Gynae", topic: "Fibroid Uterus", instructor: "Col Sirisha Anne", location: "Civ OPD", batch: ["C"], isClinic: true },
-                { date: "2025-08-28", startTime: "10:30", endTime: "13:00", department: "ENT", topic: "CLINICS: Case Presentation: Nose Part-1", instructor: "Lt Col Rahul Kurkure", location: "Service ENT OPD", batch: ["A"], isClinic: true },
-                { date: "2025-08-28", startTime: "11:00", endTime: "13:00", department: "Orthopaedics", topic: "Clinics: Malunion of fracture", instructor: "Maj Abhay Singh", location: "CH(SC)", batch: ["B"], isClinic: true },
-                { date: "2025-08-28", startTime: "14:00", endTime: "15:00", department: "Obs & Gynae", topic: "Anti-hypertensives in pregnancy", instructor: "Col Suneeta Singh", location: "Charaka Sushruta", batch: ["A", "B"] },
-                { date: "2025-08-28", startTime: "14:00", endTime: "15:00", department: "Obs & Gynae", topic: "Uterotonics in PPH", instructor: "VKD", location: "Charaka Sushruta", batch: ["C"] },
-                { date: "2025-08-28", startTime: "15:00", endTime: "16:00", department: "Community Medicine", topic: "NTEP Tutorial", instructor: "Colonel Harpreet Singh / JR1", location: "LH-10", batch: ["A"] },
-                { date: "2025-08-28", startTime: "15:00", endTime: "16:00", department: "Community Medicine", topic: "NTEP Tutorial", instructor: "Lieutenant Colonel Kapil Pabba / JR-1", location: "LH-11", batch: ["B"] },
-                { date: "2025-08-28", startTime: "15:00", endTime: "16:00", department: "Community Medicine", topic: "NTEP Tutorial", instructor: "Major Nidhi Rana / JR-1", location: "Manson Hall", batch: ["C"] },
-                { date: "2025-08-29", startTime: "08:00", endTime: "09:00", department: "Forensic Medicine", topic: "Deliriants / Spinal / Systemic poisons", instructor: "Lt Col Anandhakrishnan / Lt Col Thippesh Kumar N", location: "LH Sushruta", batch: ["ALL"] },
-                { date: "2025-08-29", startTime: "09:00", endTime: "10:00", department: "Community Medicine", topic: "AETCOM Module 1.3", instructor: "Wing Commander Amol Nath", location: "Sushruta", batch: ["ALL"] },
-                { date: "2025-08-29", startTime: "10:00", endTime: "12:00", department: "Ophthalmology", topic: "Ocular anaesthesia", instructor: "CHSC", location: "Service Eye OPD and OT CHSC", batch: ["D"], isClinic: true },
-                { date: "2025-08-29", startTime: "10:30", endTime: "13:00", department: "Obs & Gynae", topic: "Anemia in Pregnancy", instructor: "Dr Meenakshi K Bharadwaj", location: "Civ Maty Ward", batch: ["C"], isClinic: true },
-                { date: "2025-08-29", startTime: "10:30", endTime: "13:00", department: "ENT", topic: "CLINICS: Case Presentation: Nose Part-2", instructor: "Maj V S Sreejith", location: "Civil ENT OPD", batch: ["A"], isClinic: true },
-                { date: "2025-08-29", startTime: "11:00", endTime: "13:00", department: "Orthopaedics", topic: "Clinics: X-rays", instructor: "Sqn Ldr R Anand", location: "CH(SC)", batch: ["B"], isClinic: true },
-                { date: "2025-08-30", startTime: "08:00", endTime: "09:00", department: "Orthopaedics", topic: "Theory: Pelvic Injuries", instructor: "Lt Col DK Deepak", location: "NLH- Sushruta", batch: ["ALL"] },
-                { date: "2025-08-30", startTime: "09:00", endTime: "10:00", department: "Ophthalmology", topic: "Cataract", instructor: "Wg Cdr Vinay Kumar Sharma", location: "NLH Sushruta", batch: ["ALL"] },
-                { date: "2025-08-30", startTime: "10:00", endTime: "13:00", department: "Ophthalmology", topic: "Ocular movements and abnormalities", instructor: "Wg Cdr Vinay Kumar Sharma / CHSC / Wg Cdr Rajat Chaudhary", location: "Service Eye OPD, GJB", batch: ["D"], isClinic: true },
-                { date: "2025-08-30", startTime: "10:30", endTime: "13:00", department: "Obs & Gynae", topic: "Fetal growth restriction", instructor: "Col Madhusudan Dey", location: "Civ OPD", batch: ["A"], isClinic: true },
-                { date: "2025-08-30", startTime: "10:30", endTime: "13:00", department: "ENT", topic: "CLINICS: Preop Clinics", instructor: "Lt Col Meenakshi Rajput", location: "Civil ENT OPD", batch: ["A"], isClinic: true },
-                { date: "2025-08-30", startTime: "11:00", endTime: "13:00", department: "Orthopaedics", topic: "Clinics: Knee and Hip Examination", instructor: "Sqn Ldr R Anand", location: "CH(SC)", batch: ["B"], isClinic: true },
-                { date: "2025-08-30", startTime: "14:00", endTime: "15:00", department: "Community Medicine", topic: "NACP Tutorial", instructor: "Lieutenant Colonel Kapil Pabba / JR-1", location: "LH-10", batch: ["A"] },
-                { date: "2025-08-30", startTime: "14:00", endTime: "15:00", department: "Community Medicine", topic: "NACP Tutorial", instructor: "Wing Commander Amol Nath / JR1", location: "LH-11", batch: ["B"] },
-                { date: "2025-08-30", startTime: "14:00", endTime: "15:00", department: "Community Medicine", topic: "NACP Tutorial", instructor: "Major Nidhi Rana / JR-1", location: "Manson Hall", batch: ["C"] },
-                { date: "2025-08-31", isHoliday: true, topic: "Holiday" },
-            ];
+            const initialScheduleData = []; // Start with no data, let localStorage provide it.
 
             // --- GLOBAL STATE & DOM ELEMENTS ---
             let scheduleData = [];
