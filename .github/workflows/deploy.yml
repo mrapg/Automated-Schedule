@@ -1,25 +1,38 @@
-# .github/workflows/deploy.yml
-
+# This is the name of your GitHub Action. You'll see this in the "Actions" tab.
 name: Deploy to GitHub Pages
 
+# This section defines when the action should run.
 on:
+  # We want it to run every time you push new code...
   push:
+    # ...but only when the push is to your "main" branch.
     branches:
-      - main # Or whatever your default branch is
+      - main
 
+# This section defines the actual steps the action will take.
 jobs:
   build-and-deploy:
+    # It will run on a standard virtual machine provided by GitHub.
     runs-on: ubuntu-latest
     steps:
+      # Step 1: Check out your code
+      # This downloads your repository's code onto the virtual machine.
       - name: Checkout 🛎️
         uses: actions/checkout@v3
 
+      # Step 2: Replace the Firebase Config placeholder with your secret
+      # This is the most important step for security.
+      # It finds the placeholder string in your HTML files and replaces it
+      # with the FIREBASE_CONFIG secret you created in your repository settings.
       - name: Replace Firebase Config 🤫
         run: |
           sed -i "s|'__FIREBASE_CONFIG_PLACEHOLDER__'|'${{ secrets.FIREBASE_CONFIG }}'|g" index.html admin.html
 
+      # Step 3: Deploy the modified files to GitHub Pages
+      # This action takes your code (with the real keys now) and pushes it
+      # to a special branch called "gh-pages" which is used for hosting.
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages # The branch the action should deploy to.
-          folder: . # The folder the action should deploy.
+          folder: . # The folder the action should deploy (the root folder).
