@@ -65,8 +65,8 @@
                 }
 
                 try {
-                    // Use a safer parsing method than eval()
-                    const newScheduleArray = JSON.parse(inputText.replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2": '));
+                    // This is a safer way to parse JS-like objects than eval()
+                    const newScheduleArray = JSON.parse(inputText);
 
                     if (!Array.isArray(newScheduleArray)) {
                         throw new Error("Input is not a valid JavaScript array.");
