@@ -29,17 +29,31 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- ADMIN PANEL LOGIC ---
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, collection, writeBatch, doc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-            // Simple password protection
-            const password = "afmc"; // You can change this
+        // --- FIREBASE CONFIG (Provided by Environment) ---
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
+
+        // --- INITIALIZE FIREBASE ---
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        signInAnonymously(auth).catch((error) => console.error("Anonymous sign-in failed:", error));
+
+        const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+
+        // --- ADMIN PANEL LOGIC ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const password = "afmc";
             let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
 
             function authenticate() {
                 if (isAuthenticated) return true;
-
                 const input = prompt("Enter admin password:");
                 if (input === password) {
                     sessionStorage.setItem('isAdminAuthenticated', 'true');
@@ -57,7 +71,7 @@
             const clearBtn = document.getElementById('clear-btn');
             const scheduleInput = document.getElementById('schedule-input');
 
-            updateBtn.addEventListener('click', () => {
+            updateBtn.addEventListener('click', async () => {
                 const inputText = scheduleInput.value.trim();
                 if (!inputText) {
                     alert("Text area is empty. Please paste the schedule data.");
@@ -66,32 +80,16 @@
 
                 try {
                     const newScheduleArray = JSON.parse(inputText);
+                    if (!Array.isArray(newScheduleArray)) throw new Error("Input is not a valid JavaScript array.");
 
-                    if (!Array.isArray(newScheduleArray)) {
-                        throw new Error("Input is not a valid JavaScript array.");
-                    }
-
-                    let existingData = [];
-                    const storedData = localStorage.getItem('afmcScheduleData');
-                    if (storedData) {
-                        try {
-                            existingData = JSON.parse(storedData);
-                        } catch(e) {
-                            console.error("Could not parse existing data, starting fresh.", e);
-                        }
-                    }
-
-                    const combinedData = [...existingData, ...newScheduleArray];
-                    const uniqueDataMap = new Map();
-                    combinedData.forEach(event => {
-                        const key = `${event.date}-${event.startTime}-${event.topic}`;
-                        uniqueDataMap.set(key, event);
+                    const batch = writeBatch(db);
+                    newScheduleArray.forEach(event => {
+                        const docRef = doc(scheduleCollectionRef); // Create a new document reference for each event
+                        batch.set(docRef, event);
                     });
                     
-                    const uniqueData = Array.from(uniqueDataMap.values());
-                    localStorage.setItem('afmcScheduleData', JSON.stringify(uniqueData));
-
-                    alert("Schedule updated successfully! The main app will now reflect the changes automatically.");
+                    await batch.commit();
+                    alert("Schedule updated successfully! The main app will update for all users automatically.");
                     scheduleInput.value = '';
 
                 } catch (error) {
@@ -99,10 +97,18 @@
                 }
             });
 
-            clearBtn.addEventListener('click', () => {
+            clearBtn.addEventListener('click', async () => {
                 if (confirm("Are you sure you want to clear ALL schedule data? This cannot be undone.")) {
-                    localStorage.removeItem('afmcScheduleData');
-                    alert("All schedule data has been cleared.");
+                    try {
+                        const snapshot = await getDocs(scheduleCollectionRef);
+                        const batch = writeBatch(db);
+                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                        await batch.commit();
+                        alert("All schedule data has been cleared.");
+                    } catch (error) {
+                        console.error("Error clearing data: ", error);
+                        alert("Failed to clear schedule data.");
+                    }
                 }
             });
         });
