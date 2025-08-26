@@ -10,7 +10,7 @@
         body { font-family: 'Inter', sans-serif; }
     </style>
 </head>
-<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen p-4">
+<body class="bg-gray-800 text-white flex items-center justify-center min-h-screen">
 
     <div id="admin-container" class="w-full max-w-2xl mx-auto bg-gray-900 shadow-lg rounded-lg p-8">
         <h1 class="text-3xl font-bold mb-6 text-center text-blue-400">Schedule Data Uploader</h1>
@@ -20,91 +20,75 @@
             <textarea id="schedule-input" rows="15" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Paste the JavaScript array of schedule objects here..."></textarea>
         </div>
         
-        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+        <div class="flex space-x-4">
             <button id="update-btn" class="flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition">Update Schedule</button>
             <button id="clear-btn" class="flex-1 bg-red-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-red-700 transition">Clear All Data</button>
-        </div>
-        <div class="mt-6 text-center">
-            <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
         </div>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- ADMIN PANEL LOGIC ---
+        // --- ADMIN PANEL LOGIC ---
 
-            // Simple password protection
-            const password = "afmc"; // You can change this
-            let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
+        // Simple password protection
+        const password = "afmc"; // You can change this
+        let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
 
-            function authenticate() {
-                if (isAuthenticated) return true;
+        if (!isAuthenticated) {
+            const input = prompt("Enter admin password:");
+            if (input === password) {
+                sessionStorage.setItem('isAdminAuthenticated', 'true');
+            } else {
+                alert("Incorrect password. Access denied.");
+                document.body.innerHTML = '<div class="text-center text-red-500 text-2xl">Access Denied</div>';
+            }
+        }
 
-                const input = prompt("Enter admin password:");
-                if (input === password) {
-                    sessionStorage.setItem('isAdminAuthenticated', 'true');
-                    return true;
-                } else {
-                    alert("Incorrect password. Access denied.");
-                    document.body.innerHTML = '<div class="text-center text-red-500 text-2xl p-8">Access Denied</div>';
-                    return false;
-                }
+        const updateBtn = document.getElementById('update-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const scheduleInput = document.getElementById('schedule-input');
+
+        updateBtn.addEventListener('click', () => {
+            const inputText = scheduleInput.value.trim();
+            if (!inputText) {
+                alert("Text area is empty. Please paste the schedule data.");
+                return;
             }
 
-            if (!authenticate()) return;
+            try {
+                // Attempt to parse the input as a JavaScript array
+                const newScheduleArray = eval(inputText);
 
-            const updateBtn = document.getElementById('update-btn');
-            const clearBtn = document.getElementById('clear-btn');
-            const scheduleInput = document.getElementById('schedule-input');
-
-            updateBtn.addEventListener('click', () => {
-                const inputText = scheduleInput.value.trim();
-                if (!inputText) {
-                    alert("Text area is empty. Please paste the schedule data.");
-                    return;
+                if (!Array.isArray(newScheduleArray)) {
+                    throw new Error("Input is not a valid JavaScript array.");
                 }
 
-                try {
-                    const newScheduleArray = JSON.parse(inputText);
-
-                    if (!Array.isArray(newScheduleArray)) {
-                        throw new Error("Input is not a valid JavaScript array.");
-                    }
-
-                    let existingData = [];
-                    const storedData = localStorage.getItem('afmcScheduleData');
-                    if (storedData) {
-                        try {
-                            existingData = JSON.parse(storedData);
-                        } catch(e) {
-                            console.error("Could not parse existing data, starting fresh.", e);
-                        }
-                    }
-
-                    const combinedData = [...existingData, ...newScheduleArray];
-                    const uniqueDataMap = new Map();
-                    combinedData.forEach(event => {
-                        const key = `${event.date}-${event.startTime}-${event.topic}`;
-                        uniqueDataMap.set(key, event);
-                    });
-                    
-                    const uniqueData = Array.from(uniqueDataMap.values());
-                    localStorage.setItem('afmcScheduleData', JSON.stringify(uniqueData));
-
-                    alert("Schedule updated successfully! The main app will now reflect the changes.");
-                    scheduleInput.value = '';
-
-                } catch (error) {
-                    alert("Error parsing data. Please make sure you are pasting a valid JavaScript array of objects.\n\n" + error.message);
+                // Get existing data from localStorage
+                let existingData = [];
+                const storedData = localStorage.getItem('afmcScheduleData');
+                if (storedData) {
+                    existingData = JSON.parse(storedData);
                 }
-            });
 
-            clearBtn.addEventListener('click', () => {
-                if (confirm("Are you sure you want to clear ALL schedule data? This cannot be undone.")) {
-                    localStorage.removeItem('afmcScheduleData');
-                    alert("All schedule data has been cleared.");
-                }
-            });
+                // Combine and remove duplicates
+                const combinedData = [...existingData, ...newScheduleArray];
+                const uniqueData = Array.from(new Set(combinedData.map(e => JSON.stringify(e)))).map(e => JSON.parse(e));
+
+                // Save back to localStorage
+                localStorage.setItem('afmcScheduleData', JSON.stringify(uniqueData));
+
+                alert("Schedule updated successfully! Users will see the new schedule on the main app page.");
+                scheduleInput.value = '';
+
+            } catch (error) {
+                alert("Error parsing data. Please make sure you are pasting a valid JavaScript array.\n\n" + error.message);
+            }
+        });
+
+        clearBtn.addEventListener('click', () => {
+            if (confirm("Are you sure you want to clear ALL schedule data? This cannot be undone.")) {
+                localStorage.removeItem('afmcScheduleData');
+                alert("All schedule data has been cleared.");
+            }
         });
     </script>
 </body>
