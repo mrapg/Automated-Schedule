@@ -1,5 +1,5 @@
 # This is the name of your GitHub Action. You'll see this in the "Actions" tab.
-name: Deploy to GitHub Pages 
+name: Deploy to GitHub Pages
 
 # This section defines when the action should run.
 on:
