@@ -65,14 +65,12 @@
                 }
 
                 try {
-                    // This is a safer way to parse JS-like objects than eval()
                     const newScheduleArray = JSON.parse(inputText);
 
                     if (!Array.isArray(newScheduleArray)) {
                         throw new Error("Input is not a valid JavaScript array.");
                     }
 
-                    // Get existing data from localStorage
                     let existingData = [];
                     const storedData = localStorage.getItem('afmcScheduleData');
                     if (storedData) {
@@ -80,11 +78,9 @@
                             existingData = JSON.parse(storedData);
                         } catch(e) {
                             console.error("Could not parse existing data, starting fresh.", e);
-                            existingData = [];
                         }
                     }
 
-                    // Combine and remove duplicates based on a unique key (e.g., date+time+topic)
                     const combinedData = [...existingData, ...newScheduleArray];
                     const uniqueDataMap = new Map();
                     combinedData.forEach(event => {
@@ -93,11 +89,9 @@
                     });
                     
                     const uniqueData = Array.from(uniqueDataMap.values());
-
-                    // Save back to localStorage
                     localStorage.setItem('afmcScheduleData', JSON.stringify(uniqueData));
 
-                    alert("Schedule updated successfully! Users will see the new schedule on the main app page (they may need to refresh).");
+                    alert("Schedule updated successfully! Users will see the new schedule on the main app page automatically.");
                     scheduleInput.value = '';
 
                 } catch (error) {
