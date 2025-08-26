@@ -18,7 +18,7 @@ jobs:
       # Step 1: Check out your code
       # This downloads your repository's code onto the virtual machine.
       - name: Checkout 🛎️
-        uses: actions/checkout@v3
+        uses: actions/checkout@v3 
 
       # Step 2: Replace the Firebase Config placeholder with your secret
       # This step safely injects the Firebase config from GitHub Secrets.
