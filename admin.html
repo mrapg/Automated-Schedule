@@ -20,9 +20,8 @@
             <textarea id="schedule-input" rows="15" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Paste the JavaScript array of schedule objects here..."></textarea>
         </div>
         
-        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-            <button id="update-btn" class="flex-1 bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition">Update Schedule</button>
-            <button id="clear-btn" class="flex-1 bg-red-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-red-700 transition">Clear All Data</button>
+        <div class="flex">
+            <button id="update-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition">Add New Schedule</button>
         </div>
         <div class="mt-6 text-center">
             <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
@@ -32,10 +31,10 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, writeBatch, doc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, writeBatch, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- FIREBASE CONFIG (Provided by Environment) ---
-        // This placeholder will be replaced by our GitHub Action during deployment
+        // --- FIREBASE CONFIG (Placeholder) ---
+        // This placeholder will be replaced by your GitHub Action during deployment
         const firebaseConfig = JSON.parse('__FIREBASE_CONFIG_PLACEHOLDER__');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
 
@@ -69,7 +68,6 @@
             if (!authenticate()) return;
 
             const updateBtn = document.getElementById('update-btn');
-            const clearBtn = document.getElementById('clear-btn');
             const scheduleInput = document.getElementById('schedule-input');
 
             updateBtn.addEventListener('click', async () => {
@@ -81,35 +79,23 @@
 
                 try {
                     const newScheduleArray = JSON.parse(inputText);
-                    if (!Array.isArray(newScheduleArray)) throw new Error("Input is not a valid JavaScript array.");
+                    if (!Array.isArray(newScheduleArray)) {
+                        throw new Error("Input is not a valid JavaScript array.");
+                    }
 
                     const batch = writeBatch(db);
                     newScheduleArray.forEach(event => {
-                        const docRef = doc(scheduleCollectionRef); // Create a new document reference for each event
+                        const docRef = doc(scheduleCollectionRef);
                         batch.set(docRef, event);
                     });
                     
                     await batch.commit();
-                    alert("Schedule updated successfully! The main app will update for all users automatically.");
+
+                    alert(`Successfully added ${newScheduleArray.length} new schedule events!`);
                     scheduleInput.value = '';
 
                 } catch (error) {
-                    alert("Error parsing data. Please make sure you are pasting a valid JavaScript array of objects.\n\n" + error.message);
-                }
-            });
-
-            clearBtn.addEventListener('click', async () => {
-                if (confirm("Are you sure you want to clear ALL schedule data? This cannot be undone.")) {
-                    try {
-                        const snapshot = await getDocs(scheduleCollectionRef);
-                        const batch = writeBatch(db);
-                        snapshot.docs.forEach(doc => batch.delete(doc.ref));
-                        await batch.commit();
-                        alert("All schedule data has been cleared.");
-                    } catch (error) {
-                        console.error("Error clearing data: ", error);
-                        alert("Failed to clear schedule data.");
-                    }
+                    alert("Error parsing or uploading data. Please make sure you are pasting a valid JavaScript array of objects.\n\n" + error.message);
                 }
             });
         });
