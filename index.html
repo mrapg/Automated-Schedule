@@ -224,16 +224,25 @@
         function mergeSchedules(genericSchedule, specificSchedule) {
             const scheduleMap = new Map();
             
-            // First, add all generic events to the map
+            // 1. Find all dates that are holidays in the specific schedule
+            const holidayDates = new Set(
+                specificSchedule.filter(e => e.isHoliday).map(e => e.date)
+            );
+
+            // 2. Add generic events, but only if their date is NOT a holiday
             genericSchedule.forEach(event => {
-                const key = `${event.date}T${event.startTime}`;
-                scheduleMap.set(key, event);
+                if (!holidayDates.has(event.date)) {
+                    const key = `${event.date}T${event.startTime}`;
+                    scheduleMap.set(key, event);
+                }
             });
 
-            // Then, add specific events, overwriting generic ones
+            // 3. Add all specific events, overwriting generic ones and adding holidays
             specificSchedule.forEach(event => {
                 const key = `${event.date}T${event.startTime}`;
-                scheduleMap.set(key, event);
+                // If it's a holiday, it might not have a startTime, so we create a generic key
+                const holidayKey = `${event.date}T00:00`;
+                scheduleMap.set(event.isHoliday ? holidayKey : key, event);
             });
 
             return Array.from(scheduleMap.values());
@@ -256,10 +265,8 @@
             onSnapshot(q, (snapshot) => {
                 const specificSchedule = snapshot.docs.map(doc => doc.data());
                 
-                // Generate the generic schedule for the term
                 const genericSchedule = generateGenericSchedule();
-
-                // Merge the schedules, with specific events overriding generic ones
+                
                 scheduleData = mergeSchedules(genericSchedule, specificSchedule);
                 
                 console.log(`Merged ${specificSchedule.length} specific events with ${genericSchedule.length} generic events, resulting in ${scheduleData.length} total events.`);
@@ -299,9 +306,13 @@
 
         // --- UI RENDERING FUNCTIONS ---
         function createEventHTML(event) {
+            // Handle holiday display separately
+            if (event.isHoliday) {
+                return `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p><p>${event.topic || ''}</p></div>`;
+            }
+
             const batchClass = event.batch.includes('ALL') ? 'bg-gray-500' : 'bg-purple-600';
             const batchText = event.batch.includes('ALL') ? 'All Batches' : 'Batch ' + event.batch.join(', ');
-            // Add a visual indicator for generic events
             const genericIndicator = event.isGeneric ? '<span class="text-xs font-semibold text-gray-500 ml-2">(Term Schedule)</span>' : '';
             return `
                 <div class="bg-white border-l-4 ${utils.getDeptColor(event.department)} rounded-r-lg p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
@@ -340,7 +351,7 @@
 
                     daySlide.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}</h2>`;
                     
-                    const events = scheduleData.filter(e => e.date === dayString && (selectedDept === 'all' || e.department === selectedDept))
+                    const events = scheduleData.filter(e => e.date === dayString && (selectedDept === 'all' || e.department === selectedDept || e.isHoliday))
                                              .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
 
                     if (events.length > 0) {
@@ -378,9 +389,10 @@
                 let classes = 'p-2 cursor-pointer hover:bg-gray-200 rounded-full';
                 
                 const isSunday = currentDay.getUTCDay() === 0;
+                const isDataHoliday = dayEvents.some(e => e.isHoliday);
                 const hasClassEvents = dayEvents.some(e => !e.isHoliday);
 
-                if (isSunday && !hasClassEvents) {
+                if (isDataHoliday || (isSunday && !hasClassEvents)) {
                     classes += ' holiday';
                 } else if (hasClassEvents) {
                     classes += ' event-day';
