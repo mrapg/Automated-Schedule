@@ -84,22 +84,28 @@ export function customAlert(message) {
 }
 
 /**
- * Generates an ICS calendar file string from an array of events.
+ * Generates a more compatible ICS calendar file string from an array of events.
  * @param {Array<object>} events Array of schedule event objects.
  * @returns {string} A string in iCalendar format.
  */
 export function generateICS(events) {
+    const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
+    const now = new Date();
+    const timestamp = `${now.getUTCFullYear()}${(now.getUTCMonth() + 1).toString().padStart(2, '0')}${now.getUTCDate().toString().padStart(2, '0')}T${now.getUTCHours().toString().padStart(2, '0')}${now.getUTCMinutes().toString().padStart(2, '0')}${now.getUTCSeconds().toString().padStart(2, '0')}Z`;
+
     let icsString = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//AFMCScheduleApp//EN'
+        'PRODID:-//YourAppName//AFMC Schedule//EN'
     ];
-    const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
     
     events.forEach(event => {
+        // Create a more unique ID for each event
+        const uid = `${event.date}-${event.startTime}-${event.topic.replace(/[^a-zA-Z0-9]/g, "")}@afmc.schedule`;
+        
         icsString.push('BEGIN:VEVENT');
-        icsString.push(`UID:${event.date}-${event.startTime}@afmc.schedule`);
-        icsString.push(`DTSTAMP:${new Date().toISOString().replace(/[-:.]/g, '')}Z`);
+        icsString.push(`UID:${uid}`);
+        icsString.push(`DTSTAMP:${timestamp}`);
         icsString.push(`DTSTART;TZID=Asia/Kolkata:${toICSDate(event.date, event.startTime)}`);
         icsString.push(`DTEND;TZID=Asia/Kolkata:${toICSDate(event.date, event.endTime)}`);
         icsString.push(`SUMMARY:${event.topic} (${event.department})`);
@@ -107,6 +113,7 @@ export function generateICS(events) {
         icsString.push(`DESCRIPTION:Instructor: ${event.instructor}`);
         icsString.push('END:VEVENT');
     });
+
     icsString.push('END:VCALENDAR');
     return icsString.join('\r\n');
 }
