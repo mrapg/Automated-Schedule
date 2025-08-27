@@ -183,13 +183,22 @@ Friday 20/12/2024
         const fileUploadActions = document.getElementById('file-upload-actions');
 
         // --- TAB SWITCHING ---
-        function switchTab(activeTab, activeSection, inactiveTab, inactiveSection) {
+        function switchTab(activeTab, activeSection, inactiveTabs, inactiveSections) {
+            // Activate selected tab
             activeTab.classList.add('bg-blue-600', 'text-white');
             activeTab.classList.remove('text-gray-300');
-            inactiveTab.classList.remove('bg-blue-600', 'text-white');
-            inactiveTab.classList.add('text-gray-300');
             activeSection.classList.remove('hidden');
-            inactiveSection.classList.add('hidden');
+            
+            // Deactivate other tabs
+            inactiveTabs.forEach(tab => {
+                tab.classList.remove('bg-blue-600', 'text-white');
+                tab.classList.add('text-gray-300');
+            });
+            
+            // Hide other sections
+            inactiveSections.forEach(section => {
+                section.classList.add('hidden');
+            });
         }
 
         // --- FILE UPLOAD HANDLERS ---
