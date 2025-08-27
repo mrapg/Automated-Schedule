@@ -116,8 +116,25 @@
             );
 
             onSnapshot(q, (snapshot) => {
-                scheduleData = snapshot.docs.map(doc => doc.data());
-                console.log(`Fetched ${scheduleData.length} events from Firestore.`);
+                const uniqueEvents = new Map();
+                snapshot.docs.forEach(doc => {
+                    const event = doc.data();
+                    // Create a consistent key by sorting object keys to handle different key orders
+                    const sortedEvent = Object.keys(event).sort().reduce(
+                        (obj, key) => { 
+                            obj[key] = event[key]; 
+                            return obj;
+                        }, 
+                        {}
+                    );
+                    const key = JSON.stringify(sortedEvent);
+                    if (!uniqueEvents.has(key)) {
+                        uniqueEvents.set(key, event);
+                    }
+                });
+                scheduleData = Array.from(uniqueEvents.values());
+
+                console.log(`Fetched ${snapshot.docs.length} events, found ${scheduleData.length} unique events.`);
                 
                 processAndGroupData();
                 populateFilters();
