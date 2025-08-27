@@ -61,9 +61,8 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import * as utils from './utils.js'; // Assuming utils.js is in the same directory
+        import * as utils from './utils.js'; 
 
-        // --- FIREBASE CONFIG (Placeholder) ---
         const firebaseConfig = {
           apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
           authDomain: "training-schedule-7c862.firebaseapp.com",
@@ -75,14 +74,12 @@
         };
         const appId = "training-schedule-7c862";
 
-        // --- INITIALIZE FIREBASE ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         
         signInAnonymously(auth).catch((error) => console.error("Anonymous sign-in failed:", error));
 
-        // --- GLOBAL STATE & DOM ELEMENTS ---
         let scheduleData = [];
         let allWeeks = [];
         let currentVisibleWeekStart = null;
@@ -94,6 +91,155 @@
         const weekDisplay = document.getElementById('current-week-display');
         const loadingIndicator = document.getElementById('loading-indicator');
 
+        // --- GENERIC TERM SCHEDULE LOGIC ---
+        const termStartDate = new Date('2025-06-30T00:00:00Z');
+        const termEndDate = new Date('2025-11-28T00:00:00Z');
+
+        const scheduleRules = {
+            "1": { // Monday
+                "08:00-09:00": { topic: "Gen Medicine Theory", department: "Internal Medicine", weeks: { from: 1, to: 19 } },
+                "09:00-10:00": { topic: "Comm Medicine Theory", department: "Community Medicine", weeks: { from: 1, to: 19 } },
+                "14:00-15:00": { topic: "Tutorial Gen Medicine", department: "Internal Medicine", weeks: { from: 1, to: 19 } },
+                "15:00-16:00": { topic: "Tutorial FM&T", department: "Forensic Medicine", weeks: { from: 1, to: 19 } },
+            },
+            "2": { // Tuesday
+                "08:00-09:00": { topic: "Gen Surgery", department: "Surgery", weeks: { from: 1, to: 19 } },
+                "09:00-10:00": { topic: "PANDEMICS MODULE", department: "Community Medicine", weeks: { from: 1, to: 19 } },
+                "14:00-15:00": { topic: "Tutorial Gen Surgery", department: "Surgery", weeks: { from: 1, to: 19 } },
+                "15:00-16:00": [
+                    { topic: "SDL FM&T", department: "Forensic Medicine", weeks: { from: 1, to: 2 } },
+                    { topic: "SDL Dermatology", department: "Dermatology", weeks: { from: 3, to: 4 } },
+                    { topic: "SDL Orthopaedics", department: "Orthopaedics", weeks: { from: 5, to: 6 } },
+                    { topic: "SDL Paediatrics", department: "Pediatrics", weeks: { from: 7, to: 8 } },
+                    { topic: "SDL Resp Med", department: "Respiratory Medicine", weeks: { from: 11, to: 12 } },
+                ]
+            },
+            "3": { // Wednesday
+                "08:00-09:00": [
+                    { topic: "Pediatrics", department: "Pediatrics", weeks: { from: 1, to: 13 } },
+                    { topic: "Radiodiagnosis", department: "Radiodiagnosis", weeks: { from: 14, to: 19 } },
+                ],
+                "09:00-10:00": [
+                    { topic: "ENT Theory", department: "ENT", weeks: { from: 1, to: 10 } },
+                    { topic: "Tutorial ENT", department: "ENT", weeks: { from: 11, to: 19 } },
+                ],
+                "14:00-15:00": [
+                    { topic: "SDL Comm Med", department: "Community Medicine", weeks: [1, 5, 10] },
+                    { topic: "SDL ENT", department: "ENT", weeks: [2, 3, 6, 8] },
+                    { topic: "SDL Orthopaedics", department: "Orthopaedics", weeks: [7, 9, 11] },
+                    { topic: "SDL Psychiatry", department: "Psychiatry", weeks: [4, 10] },
+                    { topic: "SDL Radio diagnosis", department: "Radiodiagnosis", weeks: [12, 13] },
+                ]
+            },
+            "4": { // Thursday
+                "08:00-09:00": [
+                    { topic: "Dermat", department: "Dermatology", weeks: { from: 1, to: 8 } },
+                    { topic: "Obst & Gynae", department: "Obs & Gynae", weeks: { from: 10, to: 19 } },
+                ],
+                "09:00-10:00": [
+                    { topic: "Anaes", department: "Anaesthesiology", weeks: { from: 1, to: 8 } },
+                    { topic: "AETCOM", department: "AETCOM", weeks: { from: 9, to: 19 } },
+                ],
+                "14:00-15:00": { topic: "Tutorial Obst & Gynae", department: "Obs & Gynae", weeks: { from: 1, to: 19 } },
+                "15:00-16:00": { topic: "Tutorial Community Medicine", department: "Community Medicine", weeks: { from: 1, to: 19 } },
+            },
+            "5": { // Friday
+                "08:00-09:00": [
+                    { topic: "AETCOM", department: "AETCOM", weeks: { from: 1, to: 5 } },
+                    { topic: "Obs & Gynae", department: "Obs & Gynae", weeks: { from: 6, to: 10 } },
+                    { topic: "FM&T", department: "Forensic Medicine", weeks: { from: 11, to: 15 } },
+                    { topic: "ENT", department: "ENT", weeks: { from: 16, to: 19 } },
+                ],
+                "14:00-15:00": [
+                    { topic: "Tutorial Paediatrics", department: "Pediatrics", weeks: { from: 1, to: 14 } },
+                    { topic: "Tutorial Anaesthesiology", department: "Anaesthesiology", weeks: { from: 15, to: 19 } },
+                ],
+                "15:00-16:00": [
+                    { topic: "Tutorial Psy", department: "Psychiatry", weeks: { from: 1, to: 9 } },
+                    { topic: "Tutorial Anaesthesiology", department: "Anaesthesiology", weeks: { from: 10, to: 14 } },
+                    { topic: "Tutorial Resp Med", department: "Respiratory Medicine", weeks: { from: 15, to: 17 } },
+                ]
+            },
+            "6": { // Saturday
+                "08:00-09:00": [
+                    { topic: "Orthopaedics", department: "Orthopaedics", weeks: { from: 1, to: 11 } },
+                    { topic: "Dept of Med, Surg, Obst & Gynae, ENT, Opthal & Paed", department: "Multi-Dept", weeks: { from: 12, to: 19 } },
+                ],
+                "09:00-10:00": [
+                    { topic: "Ophthalmology Theory", department: "Ophthalmology", weeks: { from: 1, to: 10 } },
+                    { topic: "Tutorial Ophthalmology", department: "Ophthalmology", weeks: { from: 11, to: 19 } },
+                ],
+                "14:00-15:00": { topic: "Tutorial Community Medicine", department: "Community Medicine", weeks: { from: 1, to: 19 } }
+            }
+        };
+
+        function generateGenericSchedule() {
+            const genericSchedule = [];
+            const getTermWeek = (currentDate) => {
+                const diff = currentDate.getTime() - termStartDate.getTime();
+                return Math.floor(diff / (1000 * 60 * 60 * 24 * 7)) + 1;
+            };
+
+            let currentDate = new Date(termStartDate);
+            while (currentDate <= termEndDate) {
+                const dayOfWeek = currentDate.getUTCDay();
+                if (dayOfWeek === 0) { // Skip Sundays
+                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                    continue;
+                }
+
+                const termWeek = getTermWeek(currentDate);
+                const dayRules = scheduleRules[dayOfWeek];
+
+                if (dayRules) {
+                    for (const timeSlot in dayRules) {
+                        let events = dayRules[timeSlot];
+                        if (!Array.isArray(events)) events = [events];
+
+                        events.forEach(rule => {
+                            const { topic, department, weeks } = rule;
+                            let isInWeek = false;
+                            if (Array.isArray(weeks)) {
+                                if (weeks.includes(termWeek)) isInWeek = true;
+                            } else if (weeks && weeks.from && weeks.to) {
+                                if (termWeek >= weeks.from && termWeek <= weeks.to) isInWeek = true;
+                            }
+
+                            if (isInWeek) {
+                                const [startTime, endTime] = timeSlot.split('-');
+                                genericSchedule.push({
+                                    date: utils.formatDate(currentDate), startTime, endTime, topic, department,
+                                    instructor: "TBD", location: "TBD", batch: ["ALL"],
+                                    isHoliday: false, isClinic: false, isGeneric: true 
+                                });
+                            }
+                        });
+                    }
+                }
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+            }
+            return genericSchedule;
+        }
+
+        function mergeSchedules(genericSchedule, specificSchedule) {
+            const scheduleMap = new Map();
+            
+            // First, add all generic events to the map
+            genericSchedule.forEach(event => {
+                const key = `${event.date}T${event.startTime}`;
+                scheduleMap.set(key, event);
+            });
+
+            // Then, add specific events, overwriting generic ones
+            specificSchedule.forEach(event => {
+                const key = `${event.date}T${event.startTime}`;
+                scheduleMap.set(key, event);
+            });
+
+            return Array.from(scheduleMap.values());
+        }
+
+
         // --- CORE APP LOGIC ---
         function initialize() {
             setupEventListeners();
@@ -102,45 +248,27 @@
 
         function listenForScheduleUpdates() {
             const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
-            
-            // --- OPTIMIZED QUERY: Fetch a relevant date range ---
             const today = new Date();
-            const startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1); // 2 months ago
-            const endDate = new Date(today.getFullYear(), today.getMonth() + 4, 0);   // 3 months from now
-            const startDateString = utils.formatDate(startDate);
-            const endDateString = utils.formatDate(endDate);
-
-            const q = query(scheduleCollectionRef, 
-                where("date", ">=", startDateString),
-                where("date", "<=", endDateString)
-            );
+            const startDate = new Date(today.getFullYear(), today.getMonth() - 2, 1);
+            const endDate = new Date(today.getFullYear(), today.getMonth() + 4, 0);
+            const q = query(scheduleCollectionRef, where("date", ">=", utils.formatDate(startDate)), where("date", "<=", utils.formatDate(endDate)));
 
             onSnapshot(q, (snapshot) => {
-                const uniqueEvents = new Map();
-                snapshot.docs.forEach(doc => {
-                    const event = doc.data();
-                    // Create a consistent key by sorting object keys to handle different key orders
-                    const sortedEvent = Object.keys(event).sort().reduce(
-                        (obj, key) => { 
-                            obj[key] = event[key]; 
-                            return obj;
-                        }, 
-                        {}
-                    );
-                    const key = JSON.stringify(sortedEvent);
-                    if (!uniqueEvents.has(key)) {
-                        uniqueEvents.set(key, event);
-                    }
-                });
-                scheduleData = Array.from(uniqueEvents.values());
+                const specificSchedule = snapshot.docs.map(doc => doc.data());
+                
+                // Generate the generic schedule for the term
+                const genericSchedule = generateGenericSchedule();
 
-                console.log(`Fetched ${snapshot.docs.length} events, found ${scheduleData.length} unique events.`);
+                // Merge the schedules, with specific events overriding generic ones
+                scheduleData = mergeSchedules(genericSchedule, specificSchedule);
+                
+                console.log(`Merged ${specificSchedule.length} specific events with ${genericSchedule.length} generic events, resulting in ${scheduleData.length} total events.`);
                 
                 processAndGroupData();
                 populateFilters();
                 renderFullSchedule();
                 
-                loadingIndicator.classList.add('hidden'); // Hide loader after first render
+                loadingIndicator.classList.add('hidden');
             }, (error) => {
                 console.error("Firestore listener error:", error);
                 loadingIndicator.textContent = "Error loading schedule.";
@@ -173,10 +301,12 @@
         function createEventHTML(event) {
             const batchClass = event.batch.includes('ALL') ? 'bg-gray-500' : 'bg-purple-600';
             const batchText = event.batch.includes('ALL') ? 'All Batches' : 'Batch ' + event.batch.join(', ');
+            // Add a visual indicator for generic events
+            const genericIndicator = event.isGeneric ? '<span class="text-xs font-semibold text-gray-500 ml-2">(Term Schedule)</span>' : '';
             return `
                 <div class="bg-white border-l-4 ${utils.getDeptColor(event.department)} rounded-r-lg p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex justify-between items-start">
-                        <div><p class="font-bold text-lg">${event.topic}</p><p class="text-sm text-gray-600">${event.department}</p></div>
+                        <div><p class="font-bold text-lg">${event.topic}${genericIndicator}</p><p class="text-sm text-gray-600">${event.department}</p></div>
                         <div class="text-right flex-shrink-0 ml-4"><p class="font-semibold text-blue-600">${event.startTime} - ${event.endTime}</p><p class="text-sm text-gray-500">${event.location}</p></div>
                     </div>
                     <div class="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center text-sm">
@@ -213,20 +343,18 @@
                     const events = scheduleData.filter(e => e.date === dayString && (selectedDept === 'all' || e.department === selectedDept))
                                              .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
 
-                    const classEvents = events.filter(e => !e.isHoliday);
-                    if (classEvents.length > 0) {
-                        daySlide.innerHTML += classEvents.map(createEventHTML).join('');
+                    if (events.length > 0) {
+                        daySlide.innerHTML += events.map(createEventHTML).join('');
                     } else {
-                        const isHoliday = events.some(e => e.isHoliday);
                         const isSunday = day.getUTCDay() === 0;
-                        daySlide.innerHTML += (isHoliday || isSunday) 
+                        daySlide.innerHTML += isSunday 
                             ? `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>` 
                             : `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
                     }
                     dayViewContainer.appendChild(daySlide);
                 });
             });
-            goToToday(false); // Scroll to today on initial load
+            goToToday(false);
             setupIntersectionObserver();
         }
 
@@ -250,10 +378,9 @@
                 let classes = 'p-2 cursor-pointer hover:bg-gray-200 rounded-full';
                 
                 const isSunday = currentDay.getUTCDay() === 0;
-                const isDataHoliday = dayEvents.some(e => e.isHoliday);
                 const hasClassEvents = dayEvents.some(e => !e.isHoliday);
 
-                if (isDataHoliday || (isSunday && !hasClassEvents)) {
+                if (isSunday && !hasClassEvents) {
                     classes += ' holiday';
                 } else if (hasClassEvents) {
                     classes += ' event-day';
@@ -267,7 +394,6 @@
             }
         }
 
-        // --- HELPER & UTILITY FUNCTIONS ---
         function scrollToLatestWeek() {
             if (allWeeks.length > 0) {
                 const latestWeek = allWeeks[allWeeks.length - 1];
@@ -283,7 +409,7 @@
             const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
             if (todaySlide) {
                 todaySlide.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest', inline: 'start' });
-            } else if (!smooth) { // Fallback for initial load
+            } else if (!smooth) {
                 scrollToLatestWeek();
             } else {
                 utils.customAlert("Today's date is not in the current schedule.");
@@ -331,7 +457,6 @@
             deptFilter.value = currentVal;
         }
 
-        // --- EVENT LISTENERS SETUP ---
         function setupEventListeners() {
             const calendarModal = document.getElementById('calendar-modal');
             const rollNoModal = document.getElementById('roll-no-modal');
@@ -393,7 +518,6 @@
             });
         }
 
-        // --- INITIALIZE THE APP ---
         initialize();
     </script>
 </body>
