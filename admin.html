@@ -77,6 +77,55 @@
             </div>
         </div>
 
+        <!-- Text Demo Section -->
+        <div id="text-demo-section" class="hidden">
+            <div class="mb-6">
+                <label for="demo-text-input" class="block text-sm font-medium text-gray-400 mb-3">Test Schedule Text Parsing (Demo)</label>
+                <textarea id="demo-text-input" rows="12" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="Paste your schedule text here to see how it would be parsed...">AFMC Weekly Training Schedule
+Week of December 15-21, 2024
+
+Monday 16/12/2024
+09:00 - 10:00  Internal Medicine Lecture - Dr. Sharma - Hall A
+10:30 - 11:30  Community Medicine Practical - Prof. Kumar - Lab 1
+14:00 - 15:00  Ophthalmology Tutorial - Dr. Patel - Room 205
+
+Tuesday 17/12/2024
+08:00 - 09:00  ENT Clinical Session - Dr. Gupta - OPD Block
+11:00 - 12:00  Forensic Medicine Lecture - Prof. Singh - Auditorium
+15:30 - 16:30  Orthopaedics Rounds - Dr. Verma - Ward 3
+
+Wednesday 18/12/2024
+09:30 - 10:30  Obs & Gynae Tutorial - Dr. Mehta - Room 102
+12:00 - 13:00  Internal Medicine Case Discussion - Dr. Sharma - Conference Room
+16:00 - 17:00  Community Medicine Field Visit - Prof. Kumar - Field Station
+
+Thursday 19/12/2024
+HOLIDAY - National Day
+
+Friday 20/12/2024
+10:00 - 11:00  Ophthalmology Surgery Demo - Dr. Patel - OR 1
+13:00 - 14:00  ENT Practical - Dr. Gupta - Skills Lab
+14:30 - 15:30  Forensic Medicine Autopsy Demo - Prof. Singh - Autopsy Hall</textarea>
+            </div>
+
+            <div class="flex gap-4 mb-6">
+                <button id="parse-demo-btn" class="flex-1 bg-purple-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-purple-700 transition">🔍 Parse Text</button>
+                <button id="clear-demo-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-md hover:bg-gray-700 transition">🗑️ Clear</button>
+            </div>
+
+            <!-- Demo Results -->
+            <div id="demo-results-section" class="hidden mb-6">
+                <label class="block text-sm font-medium text-gray-400 mb-3">Parsed Schedule Data (Review & Edit)</label>
+                <textarea id="demo-results" rows="12" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"></textarea>
+            </div>
+
+            <!-- Action Buttons for Demo -->
+            <div id="demo-actions" class="hidden flex gap-4">
+                <button id="save-demo-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-green-700 transition">✅ Save Parsed Data</button>
+                <button id="clear-demo-results-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-md hover:bg-gray-700 transition">🗑️ Clear Results</button>
+            </div>
+        </div>
+
         <!-- Manual Input Section -->
         <div id="manual-input-section" class="hidden">
             <div class="mb-6">
