@@ -99,7 +99,6 @@
         import { getFirestore, collection, writeBatch, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- FIREBASE CONFIG (Placeholder) ---
-        // This placeholder will be replaced by your GitHub Action during deployment
         const firebaseConfig = JSON.parse('__FIREBASE_CONFIG_PLACEHOLDER__');
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
 
@@ -112,7 +111,280 @@
 
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
-        // --- ADMIN PANEL LOGIC ---
+        // --- GLOBAL VARIABLES ---
+        let extractedScheduleData = [];
+        let isProcessing = false;
+
+        // --- DOM ELEMENTS ---
+        const fileUploadTab = document.getElementById('file-upload-tab');
+        const manualInputTab = document.getElementById('manual-input-tab');
+        const fileUploadSection = document.getElementById('file-upload-section');
+        const manualInputSection = document.getElementById('manual-input-section');
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const processingStatus = document.getElementById('processing-status');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const statusText = document.getElementById('status-text');
+        const extractedDataSection = document.getElementById('extracted-data-section');
+        const extractedDataTextarea = document.getElementById('extracted-data');
+        const fileUploadActions = document.getElementById('file-upload-actions');
+
+        // --- TAB SWITCHING ---
+        function switchTab(activeTab, activeSection, inactiveTab, inactiveSection) {
+            activeTab.classList.add('bg-blue-600', 'text-white');
+            activeTab.classList.remove('text-gray-300');
+            inactiveTab.classList.remove('bg-blue-600', 'text-white');
+            inactiveTab.classList.add('text-gray-300');
+            activeSection.classList.remove('hidden');
+            inactiveSection.classList.add('hidden');
+        }
+
+        // --- FILE UPLOAD HANDLERS ---
+        function handleFiles(files) {
+            if (isProcessing) return;
+            
+            const validFiles = Array.from(files).filter(file => {
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+                const maxSize = 10 * 1024 * 1024; // 10MB
+                return validTypes.includes(file.type) && file.size <= maxSize;
+            });
+
+            if (validFiles.length === 0) {
+                alert('Please select valid image files (JPG, PNG) or PDF files under 10MB.');
+                return;
+            }
+
+            processFiles(validFiles);
+        }
+
+        async function processFiles(files) {
+            isProcessing = true;
+            extractedScheduleData = [];
+            
+            // Show processing UI
+            processingStatus.classList.remove('hidden');
+            extractedDataSection.classList.add('hidden');
+            fileUploadActions.classList.add('hidden');
+            
+            updateProgress(0, 'Starting processing...');
+
+            try {
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    updateProgress((i / files.length) * 90, `Processing ${file.name}...`);
+                    
+                    let imageData;
+                    if (file.type === 'application/pdf') {
+                        imageData = await convertPdfToImage(file);
+                    } else {
+                        imageData = await fileToImageData(file);
+                    }
+                    
+                    const text = await extractTextFromImage(imageData);
+                    const scheduleData = parseScheduleText(text);
+                    extractedScheduleData.push(...scheduleData);
+                }
+
+                updateProgress(100, 'Processing complete!');
+                
+                // Show extracted data
+                setTimeout(() => {
+                    processingStatus.classList.add('hidden');
+                    extractedDataSection.classList.remove('hidden');
+                    fileUploadActions.classList.remove('hidden');
+                    
+                    extractedDataTextarea.value = JSON.stringify(extractedScheduleData, null, 2);
+                    isProcessing = false;
+                }, 1000);
+
+            } catch (error) {
+                console.error('Processing error:', error);
+                updateProgress(0, 'Error processing files. Please try again.');
+                setTimeout(() => {
+                    processingStatus.classList.add('hidden');
+                    isProcessing = false;
+                }, 3000);
+            }
+        }
+
+        function updateProgress(percent, status) {
+            progressBar.style.width = percent + '%';
+            progressText.textContent = Math.round(percent) + '%';
+            statusText.textContent = status;
+        }
+
+        // --- FILE CONVERSION FUNCTIONS ---
+        async function fileToImageData(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function convertPdfToImage(file) {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const page = await pdf.getPage(1); // Get first page
+            
+            const scale = 2.0;
+            const viewport = page.getViewport({ scale });
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            
+            await page.render({
+                canvasContext: context,
+                viewport: viewport
+            }).promise;
+            
+            return canvas.toDataURL('image/png');
+        }
+
+        // --- OCR PROCESSING ---
+        async function extractTextFromImage(imageData) {
+            const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {
+                logger: m => {
+                    if (m.status === 'recognizing text') {
+                        updateProgress(10 + (m.progress * 70), `OCR: ${Math.round(m.progress * 100)}%`);
+                    }
+                }
+            });
+            return text;
+        }
+
+        // --- TEXT PARSING FUNCTIONS ---
+        function parseScheduleText(text) {
+            const lines = text.split('\n').filter(line => line.trim());
+            const scheduleData = [];
+            
+            // Common patterns for schedule parsing
+            const timePattern = /(\d{1,2}):?(\d{2})?\s*[-–—]\s*(\d{1,2}):?(\d{2})?/g;
+            const datePattern = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/g;
+            
+            let currentDate = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                // Try to extract date
+                const dateMatch = line.match(datePattern);
+                if (dateMatch) {
+                    currentDate = parseDate(dateMatch[0]);
+                    continue;
+                }
+                
+                // Try to extract time and class info
+                const timeMatch = line.match(timePattern);
+                if (timeMatch && currentDate) {
+                    const event = parseScheduleLine(line, currentDate);
+                    if (event) {
+                        scheduleData.push(event);
+                    }
+                }
+            }
+            
+            return scheduleData;
+        }
+
+        function parseDate(dateStr) {
+            // Handle various date formats
+            const parts = dateStr.split(/[\/\-\.]/);
+            if (parts.length === 3) {
+                let day = parseInt(parts[0]);
+                let month = parseInt(parts[1]);
+                let year = parseInt(parts[2]);
+                
+                // Handle 2-digit years
+                if (year < 100) {
+                    year += 2000;
+                }
+                
+                // Create date in YYYY-MM-DD format
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            }
+            return null;
+        }
+
+        function parseScheduleLine(line, date) {
+            // Extract time pattern
+            const timeMatch = line.match(/(\d{1,2}):?(\d{2})?\s*[-–—]\s*(\d{1,2}):?(\d{2})?/);
+            if (!timeMatch) return null;
+            
+            const startHour = parseInt(timeMatch[1]);
+            const startMin = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+            const endHour = parseInt(timeMatch[3]);
+            const endMin = timeMatch[4] ? parseInt(timeMatch[4]) : 0;
+            
+            const startTime = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
+            const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
+            
+            // Remove time from line to extract other info
+            const remainingText = line.replace(timeMatch[0], '').trim();
+            
+            // Try to extract other components (this is a basic implementation)
+            const parts = remainingText.split(/[,\-|]/);
+            
+            return {
+                date: date,
+                startTime: startTime,
+                endTime: endTime,
+                topic: parts[0]?.trim() || 'Extracted Class',
+                department: extractDepartment(line) || 'General',
+                instructor: extractInstructor(line) || 'TBA',
+                location: extractLocation(line) || 'TBA',
+                batch: ['ALL'],
+                isHoliday: false,
+                isClinic: false
+            };
+        }
+
+        function extractDepartment(text) {
+            const departments = [
+                'Internal Medicine', 'Community Medicine', 'Ophthalmology', 
+                'Obs & Gynae', 'ENT', 'Forensic Medicine', 'Orthopaedics'
+            ];
+            
+            for (const dept of departments) {
+                if (text.toLowerCase().includes(dept.toLowerCase())) {
+                    return dept;
+                }
+            }
+            return null;
+        }
+
+        function extractInstructor(text) {
+            // Look for patterns like "Dr. Name" or "Prof. Name"
+            const instructorMatch = text.match(/(Dr|Prof|Professor)\.?\s+([A-Za-z\s]+)/i);
+            if (instructorMatch) {
+                return instructorMatch[0].trim();
+            }
+            return null;
+        }
+
+        function extractLocation(text) {
+            // Look for common location patterns
+            const locationPatterns = [
+                /Room\s+\d+/i,
+                /Hall\s+[A-Z]/i,
+                /Auditorium/i,
+                /Lab\s+\d+/i
+            ];
+            
+            for (const pattern of locationPatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    return match[0];
+                }
+            }
+            return null;
+        }
+
+        // --- EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', () => {
             const password = "afmc";
             let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
@@ -132,6 +404,78 @@
 
             if (!authenticate()) return;
 
+            // Tab switching
+            fileUploadTab.addEventListener('click', () => {
+                switchTab(fileUploadTab, fileUploadSection, manualInputTab, manualInputSection);
+            });
+
+            manualInputTab.addEventListener('click', () => {
+                switchTab(manualInputTab, manualInputSection, fileUploadTab, fileUploadSection);
+            });
+
+            // File upload events
+            uploadArea.addEventListener('click', () => fileInput.click());
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('drag-over');
+            });
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+
+            // Process extracted data
+            document.getElementById('process-extracted-btn').addEventListener('click', async () => {
+                const data = extractedDataTextarea.value.trim();
+                if (!data) {
+                    alert("No data to process.");
+                    return;
+                }
+
+                try {
+                    const scheduleArray = JSON.parse(data);
+                    if (!Array.isArray(scheduleArray)) {
+                        throw new Error("Data is not a valid array.");
+                    }
+
+                    const batch = writeBatch(db);
+                    scheduleArray.forEach(event => {
+                        const docRef = doc(scheduleCollectionRef);
+                        batch.set(docRef, event);
+                    });
+                    
+                    await batch.commit();
+                    alert(`Successfully added ${scheduleArray.length} schedule events!`);
+                    
+                    // Clear the form
+                    clearUploadForm();
+
+                } catch (error) {
+                    alert("Error processing data: " + error.message);
+                }
+            });
+
+            // Clear upload form
+            document.getElementById('clear-upload-btn').addEventListener('click', clearUploadForm);
+
+            function clearUploadForm() {
+                fileInput.value = '';
+                extractedDataTextarea.value = '';
+                extractedScheduleData = [];
+                processingStatus.classList.add('hidden');
+                extractedDataSection.classList.add('hidden');
+                fileUploadActions.classList.add('hidden');
+            }
+
+            // Manual input (existing functionality)
             const updateBtn = document.getElementById('update-btn');
             const scheduleInput = document.getElementById('schedule-input');
 
