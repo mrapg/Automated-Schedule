@@ -262,26 +262,46 @@
             const lines = text.split('\n').filter(line => line.trim());
             const scheduleData = [];
             
-            // Common patterns for schedule parsing
-            const timePattern = /(\d{1,2}):?(\d{2})?\s*[-–—]\s*(\d{1,2}):?(\d{2})?/g;
-            const datePattern = /(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/g;
-            
             let currentDate = null;
             
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].trim();
                 
-                // Try to extract date
-                const dateMatch = line.match(datePattern);
-                if (dateMatch) {
-                    currentDate = parseDate(dateMatch[0]);
+                // Skip header lines
+                if (line.includes('AFMC') || line.includes('Week of') || line.includes('Schedule')) {
+                    continue;
+                }
+                
+                // Check for holiday
+                if (line.toUpperCase().includes('HOLIDAY')) {
+                    if (currentDate) {
+                        scheduleData.push({
+                            date: currentDate,
+                            startTime: "00:00",
+                            endTime: "23:59",
+                            topic: line,
+                            department: "Holiday",
+                            instructor: "N/A",
+                            location: "N/A",
+                            batch: ['ALL'],
+                            isHoliday: true,
+                            isClinic: false
+                        });
+                    }
+                    continue;
+                }
+                
+                // Try to extract date from various formats
+                const extractedDate = extractDateFromLine(line);
+                if (extractedDate) {
+                    currentDate = extractedDate;
                     continue;
                 }
                 
                 // Try to extract time and class info
-                const timeMatch = line.match(timePattern);
+                const timeMatch = line.match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);
                 if (timeMatch && currentDate) {
-                    const event = parseScheduleLine(line, currentDate);
+                    const event = parseScheduleLine(line, currentDate, timeMatch);
                     if (event) {
                         scheduleData.push(event);
                     }
@@ -291,34 +311,42 @@
             return scheduleData;
         }
 
-        function parseDate(dateStr) {
-            // Handle various date formats
-            const parts = dateStr.split(/[\/\-\.]/);
-            if (parts.length === 3) {
-                let day = parseInt(parts[0]);
-                let month = parseInt(parts[1]);
-                let year = parseInt(parts[2]);
-                
-                // Handle 2-digit years
-                if (year < 100) {
-                    year += 2000;
-                }
-                
-                // Create date in YYYY-MM-DD format
+        function extractDateFromLine(line) {
+            // Pattern 1: "Monday 16/12/2024"
+            const dayDateMatch = line.match(/(\w+)\s+(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
+            if (dayDateMatch) {
+                const day = parseInt(dayDateMatch[2]);
+                const month = parseInt(dayDateMatch[3]);
+                let year = parseInt(dayDateMatch[4]);
+                if (year < 100) year += 2000;
                 return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
             }
+            
+            // Pattern 2: Just date "16/12/2024"
+            const dateMatch = line.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+            if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]);
+                let year = parseInt(dateMatch[3]);
+                if (year < 100) year += 2000;
+                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            }
+            
+            // Pattern 3: Day name only (try to match with context)
+            const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+            if (dayNames.some(day => line.toLowerCase().includes(day))) {
+                // Return null and let context handle it
+                return null;
+            }
+            
             return null;
         }
 
-        function parseScheduleLine(line, date) {
-            // Extract time pattern
-            const timeMatch = line.match(/(\d{1,2}):?(\d{2})?\s*[-–—]\s*(\d{1,2}):?(\d{2})?/);
-            if (!timeMatch) return null;
-            
+        function parseScheduleLine(line, date, timeMatch) {
             const startHour = parseInt(timeMatch[1]);
-            const startMin = timeMatch[2] ? parseInt(timeMatch[2]) : 0;
+            const startMin = parseInt(timeMatch[2]);
             const endHour = parseInt(timeMatch[3]);
-            const endMin = timeMatch[4] ? parseInt(timeMatch[4]) : 0;
+            const endMin = parseInt(timeMatch[4]);
             
             const startTime = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
             const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
@@ -326,62 +354,68 @@
             // Remove time from line to extract other info
             const remainingText = line.replace(timeMatch[0], '').trim();
             
-            // Try to extract other components (this is a basic implementation)
-            const parts = remainingText.split(/[,\-|]/);
+            // Parse the format: "Subject Type - Instructor - Location"
+            const parts = remainingText.split(' - ');
+            
+            let topic = parts[0]?.trim() || 'Class';
+            let instructor = 'TBA';
+            let location = 'TBA';
+            let department = 'General';
+            
+            if (parts.length >= 2) {
+                instructor = parts[1]?.trim() || 'TBA';
+            }
+            
+            if (parts.length >= 3) {
+                location = parts[2]?.trim() || 'TBA';
+            }
+            
+            // Extract department from topic
+            department = extractDepartmentFromText(topic) || 'General';
+            
+            // Determine if it's a clinic session
+            const isClinic = topic.toLowerCase().includes('clinical') || 
+                           topic.toLowerCase().includes('rounds') || 
+                           topic.toLowerCase().includes('opd');
             
             return {
                 date: date,
                 startTime: startTime,
                 endTime: endTime,
-                topic: parts[0]?.trim() || 'Extracted Class',
-                department: extractDepartment(line) || 'General',
-                instructor: extractInstructor(line) || 'TBA',
-                location: extractLocation(line) || 'TBA',
+                topic: topic,
+                department: department,
+                instructor: instructor,
+                location: location,
                 batch: ['ALL'],
                 isHoliday: false,
-                isClinic: false
+                isClinic: isClinic
             };
         }
 
-        function extractDepartment(text) {
+        function extractDepartmentFromText(text) {
             const departments = [
                 'Internal Medicine', 'Community Medicine', 'Ophthalmology', 
                 'Obs & Gynae', 'ENT', 'Forensic Medicine', 'Orthopaedics'
             ];
             
+            const lowerText = text.toLowerCase();
+            
             for (const dept of departments) {
-                if (text.toLowerCase().includes(dept.toLowerCase())) {
+                if (lowerText.includes(dept.toLowerCase())) {
                     return dept;
                 }
             }
-            return null;
-        }
-
-        function extractInstructor(text) {
-            // Look for patterns like "Dr. Name" or "Prof. Name"
-            const instructorMatch = text.match(/(Dr|Prof|Professor)\.?\s+([A-Za-z\s]+)/i);
-            if (instructorMatch) {
-                return instructorMatch[0].trim();
-            }
-            return null;
-        }
-
-        function extractLocation(text) {
-            // Look for common location patterns
-            const locationPatterns = [
-                /Room\s+\d+/i,
-                /Hall\s+[A-Z]/i,
-                /Auditorium/i,
-                /Lab\s+\d+/i
-            ];
             
-            for (const pattern of locationPatterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    return match[0];
-                }
-            }
-            return null;
+            // Check for common abbreviations
+            if (lowerText.includes('medicine')) return 'Internal Medicine';
+            if (lowerText.includes('community')) return 'Community Medicine';
+            if (lowerText.includes('eye') || lowerText.includes('ophthal')) return 'Ophthalmology';
+            if (lowerText.includes('gynae') || lowerText.includes('obs')) return 'Obs & Gynae';
+            if (lowerText.includes('ent') || lowerText.includes('ear')) return 'ENT';
+            if (lowerText.includes('forensic')) return 'Forensic Medicine';
+            if (lowerText.includes('ortho') || lowerText.includes('bone')) return 'Orthopaedics';
+            
+            return 'General';
         }
 
         // --- EVENT LISTENERS ---
