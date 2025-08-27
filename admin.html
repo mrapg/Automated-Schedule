@@ -565,6 +565,66 @@ Friday 20/12/2024
             // Clear upload form
             document.getElementById('clear-upload-btn').addEventListener('click', clearUploadForm);
 
+            // Demo text parsing
+            document.getElementById('parse-demo-btn').addEventListener('click', () => {
+                const demoText = document.getElementById('demo-text-input').value.trim();
+                if (!demoText) {
+                    alert('Please enter some schedule text to parse.');
+                    return;
+                }
+                
+                const parsedData = parseScheduleText(demoText);
+                document.getElementById('demo-results').value = JSON.stringify(parsedData, null, 2);
+                document.getElementById('demo-results-section').classList.remove('hidden');
+                document.getElementById('demo-actions').classList.remove('hidden');
+            });
+
+            document.getElementById('clear-demo-btn').addEventListener('click', () => {
+                document.getElementById('demo-text-input').value = '';
+                document.getElementById('demo-results').value = '';
+                document.getElementById('demo-results-section').classList.add('hidden');
+                document.getElementById('demo-actions').classList.add('hidden');
+            });
+
+            document.getElementById('save-demo-btn').addEventListener('click', async () => {
+                const data = document.getElementById('demo-results').value.trim();
+                if (!data) {
+                    alert('No parsed data to save.');
+                    return;
+                }
+
+                try {
+                    const scheduleArray = JSON.parse(data);
+                    if (!Array.isArray(scheduleArray)) {
+                        throw new Error('Data is not a valid array.');
+                    }
+
+                    const batch = writeBatch(db);
+                    scheduleArray.forEach(event => {
+                        const docRef = doc(scheduleCollectionRef);
+                        batch.set(docRef, event);
+                    });
+                    
+                    await batch.commit();
+                    alert(`Successfully added ${scheduleArray.length} schedule events from parsed data!`);
+                    
+                    // Clear the form
+                    document.getElementById('demo-text-input').value = '';
+                    document.getElementById('demo-results').value = '';
+                    document.getElementById('demo-results-section').classList.add('hidden');
+                    document.getElementById('demo-actions').classList.add('hidden');
+
+                } catch (error) {
+                    alert("Error saving parsed data: " + error.message);
+                }
+            });
+
+            document.getElementById('clear-demo-results-btn').addEventListener('click', () => {
+                document.getElementById('demo-results').value = '';
+                document.getElementById('demo-results-section').classList.add('hidden');
+                document.getElementById('demo-actions').classList.add('hidden');
+            });
+
             function clearUploadForm() {
                 fileInput.value = '';
                 extractedDataTextarea.value = '';
