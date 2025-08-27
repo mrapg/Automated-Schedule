@@ -47,8 +47,8 @@ export function getDeptColor(department) {
 export function getClinicBatch(rollNo) {
     if (rollNo >= 1 && rollNo <= 38) return 'A';
     if (rollNo >= 39 && rollNo <= 76) return 'B';
-    if (rollNo >= 77 && rollNo <= 112) return 'C';
-    if (rollNo >= 113 && rollNo <= 150) return 'D';
+    if (rollNo >= 77 && rollNo <= 114) return 'C';
+    if (rollNo >= 115 && rollNo <= 150) return 'D';
     return null;
 }
 
