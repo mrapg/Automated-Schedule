@@ -492,11 +492,15 @@ Friday 20/12/2024
 
             // Tab switching
             fileUploadTab.addEventListener('click', () => {
-                switchTab(fileUploadTab, fileUploadSection, manualInputTab, manualInputSection);
+                switchTab(fileUploadTab, fileUploadSection, [textDemoTab, manualInputTab], [textDemoSection, manualInputSection]);
+            });
+
+            textDemoTab.addEventListener('click', () => {
+                switchTab(textDemoTab, textDemoSection, [fileUploadTab, manualInputTab], [fileUploadSection, manualInputSection]);
             });
 
             manualInputTab.addEventListener('click', () => {
-                switchTab(manualInputTab, manualInputSection, fileUploadTab, fileUploadSection);
+                switchTab(manualInputTab, manualInputSection, [fileUploadTab, textDemoTab], [fileUploadSection, textDemoSection]);
             });
 
             // File upload events
