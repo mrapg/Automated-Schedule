@@ -27,7 +27,8 @@
         <header class="bg-blue-800 text-white p-4 flex justify-between items-center sticky top-0 z-10">
             <div>
                 <h1 class="text-xl font-bold">AFMC Training Schedule</h1>
-                <p id="current-week-display" class="text-sm opacity-90"></p>
+                <p class="text-xs opacity-80">VI TERM (13 BATCH) WEF 30 JUN 2025 - 28 NOV 2025</p>
+                <p id="current-week-display" class="text-sm opacity-90 mt-1"></p>
             </div>
             <div class="flex items-center space-x-2">
                  <button id="today-btn" class="p-2 rounded-full hover:bg-blue-700" title="Go to Today">
@@ -91,21 +92,23 @@
         const weekDisplay = document.getElementById('current-week-display');
         const loadingIndicator = document.getElementById('loading-indicator');
 
-        // --- GENERIC TERM SCHEDULE LOGIC ---
         const termStartDate = new Date('2025-06-30T00:00:00Z');
         const termEndDate = new Date('2025-11-28T00:00:00Z');
 
         const scheduleRules = {
             "1": { // Monday
-                "08:00-09:00": { topic: "Gen Medicine Theory", department: "Internal Medicine", weeks: { from: 1, to: 19 } },
-                "09:00-10:00": { topic: "Comm Medicine Theory", department: "Community Medicine", weeks: { from: 1, to: 19 } },
-                "14:00-15:00": { topic: "Tutorial Gen Medicine", department: "Internal Medicine", weeks: { from: 1, to: 19 } },
+                "08:00-09:00": { topic: "Medicine Theory", department: "Internal Medicine", weeks: { from: 1, to: 22 } },
+                "09:00-10:00": { topic: "Comm Medicine Theory", department: "Community Medicine", weeks: { from: 1, to: 22 } },
+                "14:00-15:00": { topic: "Tutorial Medicine", department: "Internal Medicine", weeks: { from: 1, to: 19 } },
                 "15:00-16:00": { topic: "Tutorial FM&T", department: "Forensic Medicine", weeks: { from: 1, to: 19 } },
             },
             "2": { // Tuesday
-                "08:00-09:00": { topic: "Gen Surgery", department: "Surgery", weeks: { from: 1, to: 19 } },
-                "09:00-10:00": { topic: "PANDEMICS MODULE", department: "Community Medicine", weeks: { from: 1, to: 19 } },
-                "14:00-15:00": { topic: "Tutorial Gen Surgery", department: "Surgery", weeks: { from: 1, to: 19 } },
+                "08:00-09:00": { topic: "Surgery", department: "Surgery", weeks: { from: 1, to: 22 } },
+                "09:00-10:00": { topic: "PANDEMICS MODULE", department: "Community Medicine", weeks: { from: 1, to: 22 } },
+                "14:00-15:00": [
+                    { topic: "Tutorial Surgery", department: "Surgery", weeks: { from: 1, to: 13 } },
+                    { topic: "Tutorial Dermatology", department: "Dermatology", weeks: { from: 14, to: 19 } },
+                ],
                 "15:00-16:00": [
                     { topic: "SDL FM&T", department: "Forensic Medicine", weeks: { from: 1, to: 2 } },
                     { topic: "SDL Dermatology", department: "Dermatology", weeks: { from: 3, to: 4 } },
@@ -117,11 +120,11 @@
             "3": { // Wednesday
                 "08:00-09:00": [
                     { topic: "Pediatrics", department: "Pediatrics", weeks: { from: 1, to: 13 } },
-                    { topic: "Radiodiagnosis", department: "Radiodiagnosis", weeks: { from: 14, to: 19 } },
+                    { topic: "Radiodiagnosis", department: "Radiodiagnosis", weeks: { from: 14, to: 22 } },
                 ],
                 "09:00-10:00": [
                     { topic: "ENT Theory", department: "ENT", weeks: { from: 1, to: 10 } },
-                    { topic: "Tutorial ENT", department: "ENT", weeks: { from: 11, to: 19 } },
+                    { topic: "Tutorial ENT", department: "ENT", weeks: { from: 11, to: 22 } },
                 ],
                 "14:00-15:00": [
                     { topic: "SDL Comm Med", department: "Community Medicine", weeks: [1, 5, 10] },
@@ -132,43 +135,35 @@
                 ]
             },
             "4": { // Thursday
-                "08:00-09:00": [
-                    { topic: "Dermat", department: "Dermatology", weeks: { from: 1, to: 8 } },
-                    { topic: "Obst & Gynae", department: "Obs & Gynae", weeks: { from: 10, to: 19 } },
-                ],
+                "08:00-09:00": { topic: "Obst & Gynae", department: "Obs & Gynae", weeks: { from: 1, to: 22 } },
                 "09:00-10:00": [
-                    { topic: "Anaes", department: "Anaesthesiology", weeks: { from: 1, to: 8 } },
-                    { topic: "AETCOM", department: "AETCOM", weeks: { from: 9, to: 19 } },
+                    { topic: "Dermat", department: "Dermatology", weeks: { from: 1, to: 8 } },
+                    { topic: "Anaes", department: "Anaesthesiology", weeks: { from: 9, to: 19 } },
                 ],
                 "14:00-15:00": { topic: "Tutorial Obst & Gynae", department: "Obs & Gynae", weeks: { from: 1, to: 19 } },
                 "15:00-16:00": { topic: "Tutorial Community Medicine", department: "Community Medicine", weeks: { from: 1, to: 19 } },
             },
             "5": { // Friday
-                "08:00-09:00": [
-                    { topic: "AETCOM", department: "AETCOM", weeks: { from: 1, to: 5 } },
-                    { topic: "Obs & Gynae", department: "Obs & Gynae", weeks: { from: 6, to: 10 } },
-                    { topic: "FM&T", department: "Forensic Medicine", weeks: { from: 11, to: 15 } },
-                    { topic: "ENT", department: "ENT", weeks: { from: 16, to: 19 } },
+                "08:00-09:00": { topic: "FM&T", department: "Forensic Medicine", weeks: { from: 1, to: 22 } },
+                "09:00-10:00": [
+                    { topic: "FM&T", department: "Forensic Medicine", weeks: { from: 1, to: 5 } },
+                    { topic: "Community Medicine", department: "Community Medicine", weeks: { from: 6, to: 10 } },
+                    { topic: "Ophthalmology", department: "Ophthalmology", weeks: { from: 11, to: 15 } },
+                    { topic: "ENT", department: "ENT", weeks: { from: 16, to: 20 } },
                 ],
                 "14:00-15:00": [
                     { topic: "Tutorial Paediatrics", department: "Pediatrics", weeks: { from: 1, to: 14 } },
                     { topic: "Tutorial Anaesthesiology", department: "Anaesthesiology", weeks: { from: 15, to: 19 } },
                 ],
                 "15:00-16:00": [
-                    { topic: "Tutorial Psy", department: "Psychiatry", weeks: { from: 1, to: 9 } },
-                    { topic: "Tutorial Anaesthesiology", department: "Anaesthesiology", weeks: { from: 10, to: 14 } },
+                    { topic: "Tutorial Psy", department: "Psychiatry", weeks: { from: 1, to: 10 } },
+                    { topic: "Tutorial Anaesthesiology", department: "Anaesthesiology", weeks: { from: 11, to: 14 } },
                     { topic: "Tutorial Resp Med", department: "Respiratory Medicine", weeks: { from: 15, to: 17 } },
                 ]
             },
             "6": { // Saturday
-                "08:00-09:00": [
-                    { topic: "Orthopaedics", department: "Orthopaedics", weeks: { from: 1, to: 11 } },
-                    { topic: "Dept of Med, Surg, Obst & Gynae, ENT, Opthal & Paed", department: "Multi-Dept", weeks: { from: 12, to: 19 } },
-                ],
-                "09:00-10:00": [
-                    { topic: "Ophthalmology Theory", department: "Ophthalmology", weeks: { from: 1, to: 10 } },
-                    { topic: "Tutorial Ophthalmology", department: "Ophthalmology", weeks: { from: 11, to: 19 } },
-                ],
+                "08:00-09:00": { topic: "Orthopaedics", department: "Orthopaedics", weeks: { from: 1, to: 19 } },
+                "09:00-10:00": { topic: "Ophthalmology", department: "Ophthalmology", weeks: { from: 1, to: 19 } },
                 "14:00-15:00": { topic: "Tutorial Community Medicine", department: "Community Medicine", weeks: { from: 1, to: 19 } }
             }
         };
@@ -223,13 +218,10 @@
 
         function mergeSchedules(genericSchedule, specificSchedule) {
             const scheduleMap = new Map();
-            
-            // 1. Find all dates that are holidays in the specific schedule
             const holidayDates = new Set(
                 specificSchedule.filter(e => e.isHoliday).map(e => e.date)
             );
 
-            // 2. Add generic events, but only if their date is NOT a holiday
             genericSchedule.forEach(event => {
                 if (!holidayDates.has(event.date)) {
                     const key = `${event.date}T${event.startTime}`;
@@ -237,10 +229,8 @@
                 }
             });
 
-            // 3. Add all specific events, overwriting generic ones and adding holidays
             specificSchedule.forEach(event => {
                 const key = `${event.date}T${event.startTime}`;
-                // If it's a holiday, it might not have a startTime, so we create a generic key
                 const holidayKey = `${event.date}T00:00`;
                 scheduleMap.set(event.isHoliday ? holidayKey : key, event);
             });
@@ -248,8 +238,6 @@
             return Array.from(scheduleMap.values());
         }
 
-
-        // --- CORE APP LOGIC ---
         function initialize() {
             setupEventListeners();
             listenForScheduleUpdates();
@@ -264,12 +252,8 @@
 
             onSnapshot(q, (snapshot) => {
                 const specificSchedule = snapshot.docs.map(doc => doc.data());
-                
                 const genericSchedule = generateGenericSchedule();
-                
                 scheduleData = mergeSchedules(genericSchedule, specificSchedule);
-                
-                console.log(`Merged ${specificSchedule.length} specific events with ${genericSchedule.length} generic events, resulting in ${scheduleData.length} total events.`);
                 
                 processAndGroupData();
                 populateFilters();
@@ -304,9 +288,7 @@
             });
         }
 
-        // --- UI RENDERING FUNCTIONS ---
         function createEventHTML(event) {
-            // Handle holiday display separately
             if (event.isHoliday) {
                 return `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p><p>${event.topic || ''}</p></div>`;
             }
