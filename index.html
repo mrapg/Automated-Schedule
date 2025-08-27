@@ -46,7 +46,6 @@
                     <button id="add-to-calendar-btn" class="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition">Add to Calendar</button>
                 </div>
             </div>
-            <!-- Loading Indicator -->
             <div id="loading-indicator" class="text-center p-10">
                 <p class="text-gray-500 font-semibold animate-pulse">Loading Schedule...</p>
             </div>
@@ -54,7 +53,6 @@
         </div>
     </div>
 
-    <!-- Modals -->
     <div id="calendar-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-20"><div class="bg-white rounded-lg shadow-xl p-4 w-11/12 max-w-md"><div id="calendar-header" class="flex justify-between items-center mb-4"><button id="prev-month-btn" class="px-2 py-1">&lt;</button><h3 id="month-year-display" class="text-lg font-semibold"></h3><button id="next-month-btn" class="px-2 py-1">&gt;</button></div><div id="calendar-grid" class="calendar-grid gap-2 text-center"></div><button id="close-calendar-modal" class="w-full mt-4 bg-red-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-red-600">Close</button></div></div>
     <div id="roll-no-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-20"><div class="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-sm text-center"><h3 class="text-lg font-semibold mb-4">Enter Your Roll Number</h3><input type="number" id="roll-no-input" class="w-full p-2 border rounded-md text-center mb-4" placeholder="e.g., 42" min="1" max="150"><button id="submit-roll-no-btn" class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 rounded">Get My Schedule File</button><button id="close-roll-no-modal" class="w-full mt-4 bg-gray-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-gray-600">Cancel</button></div></div>
     <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-30"><div class="bg-white rounded-lg shadow-xl p-6 w-11/12 max-w-sm text-center"><p id="alert-message" class="mb-4"></p><button id="close-alert-modal" class="bg-blue-500 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-600">OK</button></div></div>
@@ -211,7 +209,7 @@
                     dayViewContainer.appendChild(daySlide);
                 });
             });
-            scrollToLatestWeek();
+            goToToday(false); // Scroll to today on initial load
             setupIntersectionObserver();
         }
 
@@ -253,11 +251,13 @@
             }
         }
         
-        function goToToday() {
+        function goToToday(smooth = true) {
             const todayStr = utils.formatDate(new Date());
             const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
             if (todaySlide) {
-                todaySlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                todaySlide.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest', inline: 'start' });
+            } else if (!smooth) { // Fallback for initial load
+                scrollToLatestWeek();
             } else {
                 utils.customAlert("Today's date is not in the current schedule.");
             }
@@ -315,7 +315,7 @@
             document.getElementById('close-roll-no-modal').addEventListener('click', () => rollNoModal.classList.add('hidden'));
             document.getElementById('close-alert-modal').addEventListener('click', () => document.getElementById('alert-modal').classList.add('hidden'));
             document.getElementById('calendar-view-btn').addEventListener('click', () => { renderCalendar(); calendarModal.classList.remove('hidden'); });
-            document.getElementById('today-btn').addEventListener('click', goToToday);
+            document.getElementById('today-btn').addEventListener('click', () => goToToday(true));
             document.getElementById('close-calendar-modal').addEventListener('click', () => calendarModal.classList.add('hidden'));
             document.getElementById('prev-month-btn').addEventListener('click', () => { calendarDate.setUTCMonth(calendarDate.getUTCMonth() - 1); renderCalendar(); });
             document.getElementById('next-month-btn').addEventListener('click', () => { calendarDate.setUTCMonth(calendarDate.getUTCMonth() + 1); renderCalendar(); });
@@ -371,4 +371,3 @@
     </script>
 </body>
 </html>
-
