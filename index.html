@@ -27,7 +27,7 @@
         <header class="bg-blue-800 text-white p-4 flex justify-between items-center sticky top-0 z-10">
             <div>
                 <h1 class="text-xl font-bold">AFMC Training Schedule</h1>
-                <p class="text-xs opacity-80">VI TERM (13 BATCH) WEF 30 JUN 2025 - 28 NOV 2025</p>
+                <p class="text-xs opacity-80">VI term, 30 Jun - 28 Nov 2025</p>
                 <p id="current-week-display" class="text-sm opacity-90 mt-1"></p>
             </div>
             <div class="flex items-center space-x-2">
@@ -222,7 +222,6 @@
                 specificSchedule.filter(e => e.isHoliday).map(e => e.date)
             );
 
-            // Group generic events by time slot, filtering out holiday dates
             genericSchedule.forEach(event => {
                 if (!holidayDates.has(event.date)) {
                     const key = `${event.date}T${event.startTime}`;
@@ -233,7 +232,6 @@
                 }
             });
 
-            // Group specific events by time slot
             const specificEventsMap = new Map();
             specificSchedule.forEach(event => {
                 const key = event.isHoliday ? `${event.date}T00:00_holiday` : `${event.date}T${event.startTime}`;
@@ -243,12 +241,10 @@
                 specificEventsMap.get(key).push(event);
             });
 
-            // Overwrite generic event groups with specific event groups
             for (const [key, specificEvents] of specificEventsMap.entries()) {
                 scheduleMap.set(key, specificEvents);
             }
 
-            // Flatten the map values into a single array
             return Array.from(scheduleMap.values()).flat();
         }
 
@@ -268,7 +264,6 @@
                 const uniqueEventsMap = new Map();
                 snapshot.docs.forEach(doc => {
                     const event = doc.data();
-                    // Create a composite key for uniqueness based on content that matters
                     const batchKey = Array.isArray(event.batch) ? JSON.stringify(event.batch.sort()) : event.batch;
                     const key = `${event.date}|${event.startTime}|${event.topic}|${event.instructor}|${batchKey}`;
                     
@@ -315,10 +310,6 @@
         }
 
         function createEventHTML(event) {
-            if (event.isHoliday) {
-                return `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p><p>${event.topic || ''}</p></div>`;
-            }
-
             const batchClass = event.batch && event.batch.includes('ALL') ? 'bg-gray-500' : 'bg-purple-600';
             const batchText = event.batch ? (event.batch.includes('ALL') ? 'All Batches' : 'Batch ' + event.batch.join(', ')) : 'N/A';
             const genericIndicator = event.isGeneric ? '<span class="text-xs font-semibold text-gray-500 ml-2">(Term Schedule)</span>' : '';
@@ -359,16 +350,24 @@
 
                     daySlide.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}</h2>`;
                     
-                    const events = scheduleData.filter(e => e.date === dayString && (selectedDept === 'all' || e.department === selectedDept || e.isHoliday))
-                                             .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
+                    const dayEvents = scheduleData.filter(e => e.date === dayString);
+                    const isHoliday = dayEvents.some(e => e.isHoliday);
 
-                    if (events.length > 0) {
-                        daySlide.innerHTML += events.map(createEventHTML).join('');
+                    if (isHoliday) {
+                        const holidayEvent = dayEvents.find(e => e.isHoliday);
+                        daySlide.innerHTML += `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p><p>${holidayEvent.topic || ''}</p></div>`;
                     } else {
-                        const isSunday = day.getUTCDay() === 0;
-                        daySlide.innerHTML += isSunday 
-                            ? `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>` 
-                            : `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
+                        const classEvents = dayEvents.filter(e => selectedDept === 'all' || e.department === selectedDept)
+                                                     .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
+
+                        if (classEvents.length > 0) {
+                            daySlide.innerHTML += classEvents.map(createEventHTML).join('');
+                        } else {
+                            const isSunday = day.getUTCDay() === 0;
+                            daySlide.innerHTML += isSunday 
+                                ? `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>` 
+                                : `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
+                        }
                     }
                     dayViewContainer.appendChild(daySlide);
                 });
@@ -380,7 +379,7 @@
         function populateFilters() {
             const departments = [...new Set(scheduleData
                 .map(item => item.department)
-                .filter(dept => dept && dept !== 'Holiday')
+                .filter(dept => dept && !['Holiday', 'Multi-Dept', 'AETCOM'].includes(dept))
             )].sort();
             
             const currentVal = deptFilter.value;
