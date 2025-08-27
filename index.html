@@ -178,19 +178,16 @@
             let currentDate = new Date(termStartDate);
             while (currentDate <= termEndDate) {
                 const dayOfWeek = currentDate.getUTCDay();
-                if (dayOfWeek === 0) { // Skip Sundays
+                if (dayOfWeek === 0) {
                     currentDate.setUTCDate(currentDate.getUTCDate() + 1);
                     continue;
                 }
-
                 const termWeek = getTermWeek(currentDate);
                 const dayRules = scheduleRules[dayOfWeek];
-
                 if (dayRules) {
                     for (const timeSlot in dayRules) {
                         let events = dayRules[timeSlot];
                         if (!Array.isArray(events)) events = [events];
-
                         events.forEach(rule => {
                             const { topic, department, weeks } = rule;
                             let isInWeek = false;
@@ -199,7 +196,6 @@
                             } else if (weeks && weeks.from && weeks.to) {
                                 if (termWeek >= weeks.from && termWeek <= weeks.to) isInWeek = true;
                             }
-
                             if (isInWeek) {
                                 const [startTime, endTime] = timeSlot.split('-');
                                 genericSchedule.push({
@@ -272,7 +268,6 @@
                     }
                 });
                 const specificSchedule = Array.from(uniqueEventsMap.values());
-
                 const genericSchedule = generateGenericSchedule();
                 scheduleData = mergeSchedules(genericSchedule, specificSchedule);
                 
@@ -347,7 +342,6 @@
                     if (dayString === utils.formatDate(new Date())) {
                         daySlide.classList.add('today-highlight');
                     }
-
                     daySlide.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}</h2>`;
                     
                     const dayEvents = scheduleData.filter(e => e.date === dayString);
@@ -362,11 +356,10 @@
 
                         if (classEvents.length > 0) {
                             daySlide.innerHTML += classEvents.map(createEventHTML).join('');
-                        } else {
-                            const isSunday = day.getUTCDay() === 0;
-                            daySlide.innerHTML += isSunday 
-                                ? `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>` 
-                                : `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
+                        } else if (day.getUTCDay() === 0) { // It's a Sunday with no other events
+                            daySlide.innerHTML += `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>`;
+                        } else { // It's a weekday with no events
+                            daySlide.innerHTML += `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
                         }
                     }
                     dayViewContainer.appendChild(daySlide);
@@ -397,15 +390,12 @@
             const calendarGrid = document.getElementById('calendar-grid');
             document.getElementById('month-year-display').textContent = calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
             calendarGrid.innerHTML = '';
-
             const month = calendarDate.getUTCMonth();
             const year = calendarDate.getUTCFullYear();
             const firstDayOfMonth = new Date(Date.UTC(year, month, 1)).getUTCDay();
             const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-
             ['S','M','T','W','T','F','S'].forEach(day => { calendarGrid.innerHTML += `<div class="font-bold text-gray-600 ${day === 'S' ? 'sunday' : ''}">${day}</div>`; });
             for (let i = 0; i < firstDayOfMonth; i++) { calendarGrid.innerHTML += `<div></div>`; }
-
             for (let day = 1; day <= daysInMonth; day++) {
                 const currentDay = new Date(Date.UTC(year, month, day));
                 const dateStr = utils.formatDate(currentDay);
@@ -415,7 +405,6 @@
                 const isSunday = currentDay.getUTCDay() === 0;
                 const isDataHoliday = dayEvents.some(e => e.isHoliday);
                 const hasClassEvents = dayEvents.some(e => !e.isHoliday);
-
                 if (isDataHoliday || (isSunday && !hasClassEvents)) {
                     classes += ' holiday';
                 } else if (hasClassEvents) {
