@@ -232,9 +232,19 @@
                 const dayEvents = scheduleData.filter(e => e.date === dateStr);
                 let classes = 'p-2 cursor-pointer hover:bg-gray-200 rounded-full';
                 
-                if (currentDay.getUTCDay() === 0) classes += ' sunday';
-                if (dayEvents.some(e => e.isHoliday)) classes = classes.replace('sunday', '') + ' holiday'; 
-                else if (dayEvents.some(e => !e.isHoliday)) classes += ' event-day';
+                const isSunday = currentDay.getUTCDay() === 0;
+                const isDataHoliday = dayEvents.some(e => e.isHoliday);
+                const hasClassEvents = dayEvents.some(e => !e.isHoliday);
+
+                if (isDataHoliday || (isSunday && !hasClassEvents)) {
+                    classes += ' holiday';
+                } else if (hasClassEvents) {
+                    classes += ' event-day';
+                }
+                
+                if (isSunday) {
+                    classes += ' sunday';
+                }
                 
                 calendarGrid.innerHTML += `<div class="${classes}" data-date="${dateStr}">${day}</div>`;
             }
