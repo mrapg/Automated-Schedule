@@ -3,142 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin: Schedule Uploader</title>
+    <title>Admin: Schedule Data Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .upload-area {
-            border: 2px dashed #4B5563;
-            transition: all 0.3s ease;
-        }
-        .upload-area.drag-over {
-            border-color: #3B82F6;
-            background-color: rgba(59, 130, 246, 0.1);
-        }
-        .progress-bar {
-            width: 0%;
-            transition: width 0.3s ease;
-        }
     </style>
 </head>
 <body class="bg-gray-800 text-white min-h-screen p-4">
 
-    <div class="max-w-6xl mx-auto bg-gray-900 shadow-lg rounded-lg p-8">
-        <h1 class="text-3xl font-bold mb-8 text-center text-blue-400">Schedule Data Uploader</h1>
+    <div class="max-w-4xl mx-auto bg-gray-900 shadow-lg rounded-lg p-8">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-400 mb-2">📅 Schedule Data Manager</h1>
+            <p class="text-gray-400">Add and manage AFMC training schedule data</p>
+        </div>
         
-        <!-- Upload Method Tabs -->
-        <div class="flex mb-8 bg-gray-800 rounded-lg p-1">
-            <button id="file-upload-tab" class="flex-1 py-2 px-4 rounded-md bg-blue-600 text-white font-semibold transition">📄 Upload Image/PDF</button>
-            <button id="text-demo-tab" class="flex-1 py-2 px-4 rounded-md text-gray-300 hover:text-white transition">📝 Text Demo</button>
-            <button id="manual-input-tab" class="flex-1 py-2 px-4 rounded-md text-gray-300 hover:text-white transition">✏️ Manual Entry</button>
+        <!-- Schedule Input Section -->
+        <div class="mb-6">
+            <label for="schedule-input" class="block text-sm font-medium text-gray-400 mb-3">
+                📝 Paste Schedule Data (JSON Format)
+            </label>
+            <div class="mb-3 p-3 bg-gray-800 rounded-md text-sm text-gray-300">
+                <p><strong>Expected Format:</strong> Array of schedule objects with fields:</p>
+                <code class="text-blue-300">date, startTime, endTime, topic, department, instructor, location, batch, isHoliday, isClinic</code>
+            </div>
+            <textarea 
+                id="schedule-input" 
+                rows="18" 
+                class="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" 
+                placeholder='Paste your schedule data here as JSON array, for example:
+[
+  {
+    "date": "2024-12-16",
+    "startTime": "09:00",
+    "endTime": "10:00", 
+    "topic": "Internal Medicine Lecture",
+    "department": "Internal Medicine",
+    "instructor": "Dr. Sharma",
+    "location": "Hall A",
+    "batch": ["ALL"],
+    "isHoliday": false,
+    "isClinic": false
+  },
+  {
+    "date": "2024-12-16", 
+    "startTime": "10:30",
+    "endTime": "11:30",
+    "topic": "Community Medicine Practical", 
+    "department": "Community Medicine",
+    "instructor": "Prof. Kumar",
+    "location": "Lab 1",
+    "batch": ["ALL"],
+    "isHoliday": false,
+    "isClinic": false
+  }
+]'></textarea>
         </div>
-  
-        <!-- File Upload Section -->
-        <div id="file-upload-section">
-            <div class="mb-6">
-                <label class="block text-sm font-medium text-gray-400 mb-3">Upload Schedule Document</label>
-                <div id="upload-area" class="upload-area p-8 rounded-lg text-center cursor-pointer">
-                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                    <p class="text-gray-300 text-lg mb-2">Drop files here or click to browse</p>
-                    <p class="text-gray-500 text-sm">Supports: JPG, PNG, PDF (Max: 10MB)</p>
-                    <input type="file" id="file-input" class="hidden" accept=".jpg,.jpeg,.png,.pdf" multiple>
-                </div>
-            </div>
-
-            <!-- Processing Status -->
-            <div id="processing-status" class="hidden mb-6">
-                <div class="bg-gray-800 rounded-lg p-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm font-medium">Processing Files...</span>
-                        <span id="progress-text" class="text-sm text-gray-400">0%</span>
-                    </div>
-                    <div class="w-full bg-gray-700 rounded-full h-2">
-                        <div id="progress-bar" class="progress-bar bg-blue-600 h-2 rounded-full"></div>
-                    </div>
-                    <div id="status-text" class="text-sm text-gray-400 mt-2">Initializing...</div>
-                </div>
-            </div>
-
-            <!-- Extracted Data Preview -->
-            <div id="extracted-data-section" class="hidden mb-6">
-                <label class="block text-sm font-medium text-gray-400 mb-3">Extracted Schedule Data (Review & Edit)</label>
-                <textarea id="extracted-data" rows="12" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"></textarea>
-            </div>
-
-            <!-- Action Buttons for File Upload -->
-            <div id="file-upload-actions" class="hidden flex gap-4">
-                <button id="process-extracted-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-green-700 transition">✅ Save Extracted Data</button>
-                <button id="clear-upload-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-md hover:bg-gray-700 transition">🗑️ Clear</button>
-            </div>
-        </div>
-
-        <!-- Text Demo Section -->
-        <div id="text-demo-section" class="hidden">
-            <div class="mb-6">
-                <label for="demo-text-input" class="block text-sm font-medium text-gray-400 mb-3">Test Schedule Text Parsing (Demo)</label>
-                <textarea id="demo-text-input" rows="12" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="Paste your schedule text here to see how it would be parsed...">AFMC Weekly Training Schedule
-Week of December 15-21, 2024
-
-Monday 16/12/2024
-09:00 - 10:00  Internal Medicine Lecture - Dr. Sharma - Hall A
-10:30 - 11:30  Community Medicine Practical - Prof. Kumar - Lab 1
-14:00 - 15:00  Ophthalmology Tutorial - Dr. Patel - Room 205
-
-Tuesday 17/12/2024
-08:00 - 09:00  ENT Clinical Session - Dr. Gupta - OPD Block
-11:00 - 12:00  Forensic Medicine Lecture - Prof. Singh - Auditorium
-15:30 - 16:30  Orthopaedics Rounds - Dr. Verma - Ward 3
-
-Wednesday 18/12/2024
-09:30 - 10:30  Obs & Gynae Tutorial - Dr. Mehta - Room 102
-12:00 - 13:00  Internal Medicine Case Discussion - Dr. Sharma - Conference Room
-16:00 - 17:00  Community Medicine Field Visit - Prof. Kumar - Field Station
-
-Thursday 19/12/2024
-HOLIDAY - National Day
-
-Friday 20/12/2024
-10:00 - 11:00  Ophthalmology Surgery Demo - Dr. Patel - OR 1
-13:00 - 14:00  ENT Practical - Dr. Gupta - Skills Lab
-14:30 - 15:30  Forensic Medicine Autopsy Demo - Prof. Singh - Autopsy Hall</textarea>
-            </div>
-
-            <div class="flex gap-4 mb-6">
-                <button id="parse-demo-btn" class="flex-1 bg-purple-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-purple-700 transition">🔍 Parse Text</button>
-                <button id="clear-demo-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-md hover:bg-gray-700 transition">🗑️ Clear</button>
-            </div>
-
-            <!-- Demo Results -->
-            <div id="demo-results-section" class="hidden mb-6">
-                <label class="block text-sm font-medium text-gray-400 mb-3">Parsed Schedule Data (Review & Edit)</label>
-                <textarea id="demo-results" rows="12" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"></textarea>
-            </div>
-
-            <!-- Action Buttons for Demo -->
-            <div id="demo-actions" class="hidden flex gap-4">
-                <button id="save-demo-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-green-700 transition">✅ Save Parsed Data</button>
-                <button id="clear-demo-results-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-md hover:bg-gray-700 transition">🗑️ Clear Results</button>
-            </div>
+        
+        <!-- Action Buttons -->
+        <div class="flex gap-4 mb-6">
+            <button id="validate-btn" class="flex-1 bg-yellow-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-yellow-700 transition">
+                🔍 Validate Data
+            </button>
+            <button id="update-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition">
+                ✅ Save Schedule Data
+            </button>
+            <button id="clear-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-lg hover:bg-gray-700 transition">
+                🗑️ Clear
+            </button>
         </div>
 
-        <!-- Manual Input Section -->
-        <div id="manual-input-section" class="hidden">
-            <div class="mb-6">
-                <label for="schedule-input" class="block text-sm font-medium text-gray-400 mb-2">Paste your cleaned weekly schedule data below:</label>
-                <textarea id="schedule-input" rows="15" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Paste the JavaScript array of schedule objects here..."></textarea>
-            </div>
-            
-            <div class="flex">
-                <button id="update-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition">Add New Schedule</button>
-            </div>
+        <!-- Status Messages -->
+        <div id="status-message" class="hidden mb-4 p-4 rounded-lg"></div>
+
+        <!-- Sample Data Helper -->
+        <div class="mb-6">
+            <button id="load-sample-btn" class="w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 transition text-sm">
+                📋 Load Sample Data (for testing)
+            </button>
         </div>
 
-        <div class="mt-8 text-center">
+        <!-- Navigation -->
+        <div class="text-center">
             <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
         </div>
     </div>
@@ -148,7 +94,7 @@ Friday 20/12/2024
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, writeBatch, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- FIREBASE CONFIG (Placeholder) --- 
+        // --- FIREBASE CONFIG (Replace with your actual config) ---
         const firebaseConfig = {
                   apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
                   authDomain: "training-schedule-7c862.firebaseapp.com",
@@ -158,7 +104,7 @@ Friday 20/12/2024
                   appId: "1:395637809585:web:9a5eea7f80741083f49d90",
                   measurementId: "G-S9EXHXY981"
                 };
-                const appId = "training-schedule-7c862";
+                const appId = "training-schedule-7c862";	
 
         // --- INITIALIZE FIREBASE ---
         const app = initializeApp(firebaseConfig);
@@ -169,325 +115,130 @@ Friday 20/12/2024
 
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
-        // --- GLOBAL VARIABLES ---
-        let extractedScheduleData = [];
-        let isProcessing = false;
-
         // --- DOM ELEMENTS ---
-        const fileUploadTab = document.getElementById('file-upload-tab');
-        const textDemoTab = document.getElementById('text-demo-tab');
-        const manualInputTab = document.getElementById('manual-input-tab');
-        const fileUploadSection = document.getElementById('file-upload-section');
-        const textDemoSection = document.getElementById('text-demo-section');
-        const manualInputSection = document.getElementById('manual-input-section');
-        const uploadArea = document.getElementById('upload-area');
-        const fileInput = document.getElementById('file-input');
-        const processingStatus = document.getElementById('processing-status');
-        const progressBar = document.getElementById('progress-bar');
-        const progressText = document.getElementById('progress-text');
-        const statusText = document.getElementById('status-text');
-        const extractedDataSection = document.getElementById('extracted-data-section');
-        const extractedDataTextarea = document.getElementById('extracted-data');
-        const fileUploadActions = document.getElementById('file-upload-actions');
+        const scheduleInput = document.getElementById('schedule-input');
+        const updateBtn = document.getElementById('update-btn');
+        const validateBtn = document.getElementById('validate-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const loadSampleBtn = document.getElementById('load-sample-btn');
+        const statusMessage = document.getElementById('status-message');
 
-        // --- TAB SWITCHING ---
-        function switchTab(activeTab, activeSection, inactiveTabs, inactiveSections) {
-            // Activate selected tab
-            activeTab.classList.add('bg-blue-600', 'text-white');
-            activeTab.classList.remove('text-gray-300');
-            activeSection.classList.remove('hidden');
-            
-            // Deactivate other tabs
-            inactiveTabs.forEach(tab => {
-                tab.classList.remove('bg-blue-600', 'text-white');
-                tab.classList.add('text-gray-300');
-            });
-            
-            // Hide other sections
-            inactiveSections.forEach(section => {
-                section.classList.add('hidden');
-            });
-        }
-
-        // --- FILE UPLOAD HANDLERS ---
-        function handleFiles(files) {
-            if (isProcessing) return;
-            
-            const validFiles = Array.from(files).filter(file => {
-                const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-                const maxSize = 10 * 1024 * 1024; // 10MB
-                return validTypes.includes(file.type) && file.size <= maxSize;
-            });
-
-            if (validFiles.length === 0) {
-                alert('Please select valid image files (JPG, PNG) or PDF files under 10MB.');
-                return;
+        // --- SAMPLE DATA ---
+        const sampleData = [
+            {
+                "date": "2024-12-16",
+                "startTime": "09:00",
+                "endTime": "10:00",
+                "topic": "Internal Medicine Lecture",
+                "department": "Internal Medicine",
+                "instructor": "Dr. Sharma",
+                "location": "Hall A",
+                "batch": ["ALL"],
+                "isHoliday": false,
+                "isClinic": false
+            },
+            {
+                "date": "2024-12-16",
+                "startTime": "10:30",
+                "endTime": "11:30",
+                "topic": "Community Medicine Practical",
+                "department": "Community Medicine", 
+                "instructor": "Prof. Kumar",
+                "location": "Lab 1",
+                "batch": ["ALL"],
+                "isHoliday": false,
+                "isClinic": false
+            },
+            {
+                "date": "2024-12-17",
+                "startTime": "08:00",
+                "endTime": "09:00",
+                "topic": "ENT Clinical Session",
+                "department": "ENT",
+                "instructor": "Dr. Gupta",
+                "location": "OPD Block",
+                "batch": ["ALL"],
+                "isHoliday": false,
+                "isClinic": true
+            },
+            {
+                "date": "2024-12-19",
+                "startTime": "00:00",
+                "endTime": "23:59",
+                "topic": "National Day Holiday",
+                "department": "Holiday",
+                "instructor": "N/A",
+                "location": "N/A",
+                "batch": ["ALL"],
+                "isHoliday": true,
+                "isClinic": false
             }
+        ];
 
-            processFiles(validFiles);
+        // --- UTILITY FUNCTIONS ---
+        function showStatus(message, type = 'info') {
+            statusMessage.className = `mb-4 p-4 rounded-lg`;
+            
+            if (type === 'success') {
+                statusMessage.className += ' bg-green-800 text-green-200 border border-green-600';
+            } else if (type === 'error') {
+                statusMessage.className += ' bg-red-800 text-red-200 border border-red-600';
+            } else if (type === 'warning') {
+                statusMessage.className += ' bg-yellow-800 text-yellow-200 border border-yellow-600';
+            } else {
+                statusMessage.className += ' bg-blue-800 text-blue-200 border border-blue-600';
+            }
+            
+            statusMessage.textContent = message;
+            statusMessage.classList.remove('hidden');
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 5000);
         }
 
-        async function processFiles(files) {
-            isProcessing = true;
-            extractedScheduleData = [];
+        function validateScheduleData(data) {
+            const errors = [];
             
-            // Show processing UI
-            processingStatus.classList.remove('hidden');
-            extractedDataSection.classList.add('hidden');
-            fileUploadActions.classList.add('hidden');
+            if (!Array.isArray(data)) {
+                errors.push("Data must be an array of schedule objects");
+                return errors;
+            }
             
-            updateProgress(0, 'Starting processing...');
-
-            try {
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    updateProgress((i / files.length) * 90, `Processing ${file.name}...`);
-                    
-                    let imageData;
-                    if (file.type === 'application/pdf') {
-                        imageData = await convertPdfToImage(file);
-                    } else {
-                        imageData = await fileToImageData(file);
+            data.forEach((event, index) => {
+                const requiredFields = ['date', 'startTime', 'endTime', 'topic', 'department', 'instructor', 'location', 'batch'];
+                
+                requiredFields.forEach(field => {
+                    if (!event.hasOwnProperty(field)) {
+                        errors.push(`Event ${index + 1}: Missing required field '${field}'`);
                     }
-                    
-                    const text = await extractTextFromImage(imageData);
-                    const scheduleData = parseScheduleText(text);
-                    extractedScheduleData.push(...scheduleData);
-                }
-
-                updateProgress(100, 'Processing complete!');
+                });
                 
-                // Show extracted data
-                setTimeout(() => {
-                    processingStatus.classList.add('hidden');
-                    extractedDataSection.classList.remove('hidden');
-                    fileUploadActions.classList.remove('hidden');
-                    
-                    extractedDataTextarea.value = JSON.stringify(extractedScheduleData, null, 2);
-                    isProcessing = false;
-                }, 1000);
-
-            } catch (error) {
-                console.error('Processing error:', error);
-                updateProgress(0, 'Error processing files. Please try again.');
-                setTimeout(() => {
-                    processingStatus.classList.add('hidden');
-                    isProcessing = false;
-                }, 3000);
-            }
-        }
-
-        function updateProgress(percent, status) {
-            progressBar.style.width = percent + '%';
-            progressText.textContent = Math.round(percent) + '%';
-            statusText.textContent = status;
-        }
-
-        // --- FILE CONVERSION FUNCTIONS ---
-        async function fileToImageData(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = (e) => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
-            });
-        }
-
-        async function convertPdfToImage(file) {
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-            const page = await pdf.getPage(1); // Get first page
-            
-            const scale = 2.0;
-            const viewport = page.getViewport({ scale });
-            
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            
-            await page.render({
-                canvasContext: context,
-                viewport: viewport
-            }).promise;
-            
-            return canvas.toDataURL('image/png');
-        }
-
-        // --- OCR PROCESSING ---
-        async function extractTextFromImage(imageData) {
-            const { data: { text } } = await Tesseract.recognize(imageData, 'eng', {
-                logger: m => {
-                    if (m.status === 'recognizing text') {
-                        updateProgress(10 + (m.progress * 70), `OCR: ${Math.round(m.progress * 100)}%`);
-                    }
+                // Validate date format (YYYY-MM-DD)
+                if (event.date && !/^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
+                    errors.push(`Event ${index + 1}: Invalid date format. Use YYYY-MM-DD`);
+                }
+                
+                // Validate time format (HH:MM)
+                if (event.startTime && !/^\d{2}:\d{2}$/.test(event.startTime)) {
+                    errors.push(`Event ${index + 1}: Invalid startTime format. Use HH:MM`);
+                }
+                
+                if (event.endTime && !/^\d{2}:\d{2}$/.test(event.endTime)) {
+                    errors.push(`Event ${index + 1}: Invalid endTime format. Use HH:MM`);
+                }
+                
+                // Validate batch is array
+                if (event.batch && !Array.isArray(event.batch)) {
+                    errors.push(`Event ${index + 1}: batch must be an array`);
                 }
             });
-            return text;
+            
+            return errors;
         }
 
-        // --- TEXT PARSING FUNCTIONS ---
-        function parseScheduleText(text) {
-            const lines = text.split('\n').filter(line => line.trim());
-            const scheduleData = [];
-            
-            let currentDate = null;
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i].trim();
-                
-                // Skip header lines
-                if (line.includes('AFMC') || line.includes('Week of') || line.includes('Schedule')) {
-                    continue;
-                }
-                
-                // Check for holiday
-                if (line.toUpperCase().includes('HOLIDAY')) {
-                    if (currentDate) {
-                        scheduleData.push({
-                            date: currentDate,
-                            startTime: "00:00",
-                            endTime: "23:59",
-                            topic: line,
-                            department: "Holiday",
-                            instructor: "N/A",
-                            location: "N/A",
-                            batch: ['ALL'],
-                            isHoliday: true,
-                            isClinic: false
-                        });
-                    }
-                    continue;
-                }
-                
-                // Try to extract date from various formats
-                const extractedDate = extractDateFromLine(line);
-                if (extractedDate) {
-                    currentDate = extractedDate;
-                    continue;
-                }
-                
-                // Try to extract time and class info
-                const timeMatch = line.match(/(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})/);
-                if (timeMatch && currentDate) {
-                    const event = parseScheduleLine(line, currentDate, timeMatch);
-                    if (event) {
-                        scheduleData.push(event);
-                    }
-                }
-            }
-            
-            return scheduleData;
-        }
-
-        function extractDateFromLine(line) {
-            // Pattern 1: "Monday 16/12/2024"
-            const dayDateMatch = line.match(/(\w+)\s+(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})/);
-            if (dayDateMatch) {
-                const day = parseInt(dayDateMatch[2]);
-                const month = parseInt(dayDateMatch[3]);
-                let year = parseInt(dayDateMatch[4]);
-                if (year < 100) year += 2000;
-                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-            }
-            
-            // Pattern 2: Just date "16/12/2024"
-            const dateMatch = line.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-            if (dateMatch) {
-                const day = parseInt(dateMatch[1]);
-                const month = parseInt(dateMatch[2]);
-                let year = parseInt(dateMatch[3]);
-                if (year < 100) year += 2000;
-                return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-            }
-            
-            // Pattern 3: Day name only (try to match with context)
-            const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-            if (dayNames.some(day => line.toLowerCase().includes(day))) {
-                // Return null and let context handle it
-                return null;
-            }
-            
-            return null;
-        }
-
-        function parseScheduleLine(line, date, timeMatch) {
-            const startHour = parseInt(timeMatch[1]);
-            const startMin = parseInt(timeMatch[2]);
-            const endHour = parseInt(timeMatch[3]);
-            const endMin = parseInt(timeMatch[4]);
-            
-            const startTime = `${startHour.toString().padStart(2, '0')}:${startMin.toString().padStart(2, '0')}`;
-            const endTime = `${endHour.toString().padStart(2, '0')}:${endMin.toString().padStart(2, '0')}`;
-            
-            // Remove time from line to extract other info
-            const remainingText = line.replace(timeMatch[0], '').trim();
-            
-            // Parse the format: "Subject Type - Instructor - Location"
-            const parts = remainingText.split(' - ');
-            
-            let topic = parts[0]?.trim() || 'Class';
-            let instructor = 'TBA';
-            let location = 'TBA';
-            let department = 'General';
-            
-            if (parts.length >= 2) {
-                instructor = parts[1]?.trim() || 'TBA';
-            }
-            
-            if (parts.length >= 3) {
-                location = parts[2]?.trim() || 'TBA';
-            }
-            
-            // Extract department from topic
-            department = extractDepartmentFromText(topic) || 'General';
-            
-            // Determine if it's a clinic session
-            const isClinic = topic.toLowerCase().includes('clinical') || 
-                           topic.toLowerCase().includes('rounds') || 
-                           topic.toLowerCase().includes('opd');
-            
-            return {
-                date: date,
-                startTime: startTime,
-                endTime: endTime,
-                topic: topic,
-                department: department,
-                instructor: instructor,
-                location: location,
-                batch: ['ALL'],
-                isHoliday: false,
-                isClinic: isClinic
-            };
-        }
-
-        function extractDepartmentFromText(text) {
-            const departments = [
-                'Internal Medicine', 'Community Medicine', 'Ophthalmology', 
-                'Obs & Gynae', 'ENT', 'Forensic Medicine', 'Orthopaedics'
-            ];
-            
-            const lowerText = text.toLowerCase();
-            
-            for (const dept of departments) {
-                if (lowerText.includes(dept.toLowerCase())) {
-                    return dept;
-                }
-            }
-            
-            // Check for common abbreviations
-            if (lowerText.includes('medicine')) return 'Internal Medicine';
-            if (lowerText.includes('community')) return 'Community Medicine';
-            if (lowerText.includes('eye') || lowerText.includes('ophthal')) return 'Ophthalmology';
-            if (lowerText.includes('gynae') || lowerText.includes('obs')) return 'Obs & Gynae';
-            if (lowerText.includes('ent') || lowerText.includes('ear')) return 'ENT';
-            if (lowerText.includes('forensic')) return 'Forensic Medicine';
-            if (lowerText.includes('ortho') || lowerText.includes('bone')) return 'Orthopaedics';
-            
-            return 'General';
-        }
-
-        // --- EVENT LISTENERS ---
+        // --- EVENT HANDLERS ---
         document.addEventListener('DOMContentLoaded', () => {
             const password = "afmc";
             let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
@@ -507,158 +258,53 @@ Friday 20/12/2024
 
             if (!authenticate()) return;
 
-            // Tab switching
-            fileUploadTab.addEventListener('click', () => {
-                switchTab(fileUploadTab, fileUploadSection, [textDemoTab, manualInputTab], [textDemoSection, manualInputSection]);
+            // Load sample data
+            loadSampleBtn.addEventListener('click', () => {
+                scheduleInput.value = JSON.stringify(sampleData, null, 2);
+                showStatus('Sample data loaded successfully!', 'success');
             });
 
-            textDemoTab.addEventListener('click', () => {
-                switchTab(textDemoTab, textDemoSection, [fileUploadTab, manualInputTab], [fileUploadSection, manualInputSection]);
-            });
-
-            manualInputTab.addEventListener('click', () => {
-                switchTab(manualInputTab, manualInputSection, [fileUploadTab, textDemoTab], [fileUploadSection, textDemoSection]);
-            });
-
-            // File upload events
-            uploadArea.addEventListener('click', () => fileInput.click());
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.classList.add('drag-over');
-            });
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.classList.remove('drag-over');
-            });
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.classList.remove('drag-over');
-                handleFiles(e.dataTransfer.files);
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
-
-            // Process extracted data
-            document.getElementById('process-extracted-btn').addEventListener('click', async () => {
-                const data = extractedDataTextarea.value.trim();
-                if (!data) {
-                    alert("No data to process.");
+            // Validate data
+            validateBtn.addEventListener('click', () => {
+                const inputText = scheduleInput.value.trim();
+                if (!inputText) {
+                    showStatus('Please paste schedule data first.', 'warning');
                     return;
                 }
 
                 try {
-                    const scheduleArray = JSON.parse(data);
-                    if (!Array.isArray(scheduleArray)) {
-                        throw new Error("Data is not a valid array.");
+                    const scheduleArray = JSON.parse(inputText);
+                    const errors = validateScheduleData(scheduleArray);
+                    
+                    if (errors.length === 0) {
+                        showStatus(`✅ Validation successful! Found ${scheduleArray.length} valid schedule events.`, 'success');
+                    } else {
+                        showStatus(`❌ Validation failed:\n${errors.join('\n')}`, 'error');
                     }
-
-                    const batch = writeBatch(db);
-                    scheduleArray.forEach(event => {
-                        const docRef = doc(scheduleCollectionRef);
-                        batch.set(docRef, event);
-                    });
-                    
-                    await batch.commit();
-                    alert(`Successfully added ${scheduleArray.length} schedule events!`);
-                    
-                    // Clear the form
-                    clearUploadForm();
-
                 } catch (error) {
-                    alert("Error processing data: " + error.message);
+                    showStatus('❌ Invalid JSON format. Please check your data structure.', 'error');
                 }
             });
 
-            // Clear upload form
-            document.getElementById('clear-upload-btn').addEventListener('click', clearUploadForm);
-
-            // Demo text parsing
-            document.getElementById('parse-demo-btn').addEventListener('click', () => {
-                const demoText = document.getElementById('demo-text-input').value.trim();
-                if (!demoText) {
-                    alert('Please enter some schedule text to parse.');
-                    return;
-                }
-                
-                const parsedData = parseScheduleText(demoText);
-                document.getElementById('demo-results').value = JSON.stringify(parsedData, null, 2);
-                document.getElementById('demo-results-section').classList.remove('hidden');
-                document.getElementById('demo-actions').classList.remove('hidden');
-            });
-
-            document.getElementById('clear-demo-btn').addEventListener('click', () => {
-                document.getElementById('demo-text-input').value = '';
-                document.getElementById('demo-results').value = '';
-                document.getElementById('demo-results-section').classList.add('hidden');
-                document.getElementById('demo-actions').classList.add('hidden');
-            });
-
-            document.getElementById('save-demo-btn').addEventListener('click', async () => {
-                const data = document.getElementById('demo-results').value.trim();
-                if (!data) {
-                    alert('No parsed data to save.');
-                    return;
-                }
-
-                try {
-                    const scheduleArray = JSON.parse(data);
-                    if (!Array.isArray(scheduleArray)) {
-                        throw new Error('Data is not a valid array.');
-                    }
-
-                    const batch = writeBatch(db);
-                    scheduleArray.forEach(event => {
-                        const docRef = doc(scheduleCollectionRef);
-                        batch.set(docRef, event);
-                    });
-                    
-                    await batch.commit();
-                    alert(`Successfully added ${scheduleArray.length} schedule events from parsed data!`);
-                    
-                    // Clear the form
-                    document.getElementById('demo-text-input').value = '';
-                    document.getElementById('demo-results').value = '';
-                    document.getElementById('demo-results-section').classList.add('hidden');
-                    document.getElementById('demo-actions').classList.add('hidden');
-
-                } catch (error) {
-                    alert("Error saving parsed data: " + error.message);
-                }
-            });
-
-            document.getElementById('clear-demo-results-btn').addEventListener('click', () => {
-                document.getElementById('demo-results').value = '';
-                document.getElementById('demo-results-section').classList.add('hidden');
-                document.getElementById('demo-actions').classList.add('hidden');
-            });
-
-            function clearUploadForm() {
-                fileInput.value = '';
-                extractedDataTextarea.value = '';
-                extractedScheduleData = [];
-                processingStatus.classList.add('hidden');
-                extractedDataSection.classList.add('hidden');
-                fileUploadActions.classList.add('hidden');
-            }
-
-            // Manual input (existing functionality)
-            const updateBtn = document.getElementById('update-btn');
-            const scheduleInput = document.getElementById('schedule-input');
-
+            // Save data to Firebase
             updateBtn.addEventListener('click', async () => {
                 const inputText = scheduleInput.value.trim();
                 if (!inputText) {
-                    alert("Text area is empty. Please paste the schedule data.");
+                    showStatus('Text area is empty. Please paste the schedule data.', 'warning');
                     return;
                 }
 
                 try {
                     const newScheduleArray = JSON.parse(inputText);
-                    if (!Array.isArray(newScheduleArray)) {
-                        throw new Error("Input is not a valid JavaScript array.");
+                    const errors = validateScheduleData(newScheduleArray);
+                    
+                    if (errors.length > 0) {
+                        showStatus(`❌ Please fix validation errors before saving:\n${errors.join('\n')}`, 'error');
+                        return;
                     }
 
+                    showStatus('Saving to Firebase...', 'info');
+                    
                     const batch = writeBatch(db);
                     newScheduleArray.forEach(event => {
                         const docRef = doc(scheduleCollectionRef);
@@ -667,12 +313,19 @@ Friday 20/12/2024
                     
                     await batch.commit();
 
-                    alert(`Successfully added ${newScheduleArray.length} new schedule events!`);
+                    showStatus(`🎉 Successfully added ${newScheduleArray.length} schedule events to Firebase!`, 'success');
                     scheduleInput.value = '';
 
                 } catch (error) {
-                    alert("Error parsing or uploading data. Please make sure you are pasting a valid JavaScript array of objects.\n\n" + error.message);
+                    showStatus(`❌ Error: ${error.message}`, 'error');
+                    console.error('Save error:', error);
                 }
+            });
+
+            // Clear data
+            clearBtn.addEventListener('click', () => {
+                scheduleInput.value = '';
+                showStatus('Data cleared.', 'info');
             });
         });
     </script>
