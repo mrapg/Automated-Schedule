@@ -149,8 +149,16 @@ Friday 20/12/2024
         import { getFirestore, collection, writeBatch, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- FIREBASE CONFIG (Placeholder) ---
-        const firebaseConfig = JSON.parse('__FIREBASE_CONFIG_PLACEHOLDER__');
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-schedule-app';
+        const firebaseConfig = {
+                  apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
+                  authDomain: "training-schedule-7c862.firebaseapp.com",
+                  projectId: "training-schedule-7c862",
+                  storageBucket: "training-schedule-7c862.firebasestorage.app",
+                  messagingSenderId: "395637809585",
+                  appId: "1:395637809585:web:9a5eea7f80741083f49d90",
+                  measurementId: "G-S9EXHXY981"
+                };
+                const appId = "training-schedule-7c862";
 
         // --- INITIALIZE FIREBASE ---
         const app = initializeApp(firebaseConfig);
