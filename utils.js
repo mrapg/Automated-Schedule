@@ -28,15 +28,25 @@ export function getStartOfWeek(date) {
  */
 export function getDeptColor(department) {
     const colors = {
+        // Core Colors
         "Internal Medicine": "border-blue-500",
         "Community Medicine": "border-green-500",
         "Ophthalmology": "border-purple-500",
         "Obs & Gynae": "border-pink-500",
         "ENT": "border-yellow-500",
         "Forensic Medicine": "border-red-500",
-        "Orthopaedics": "border-orange-500"
+        "Orthopaedics": "border-orange-500",
+        
+        // Additional Department Colors
+        "Surgery": "border-slate-500",
+        "Dermatology": "border-amber-500",
+        "Pediatrics": "border-cyan-500",
+        "Respiratory Medicine": "border-teal-500",
+        "Radiodiagnosis": "border-indigo-500",
+        "Psychiatry": "border-rose-500",
+        "Anaesthesiology": "border-lime-500"
     };
-    return colors[department] || "border-gray-500";
+    return colors[department] || "border-gray-500"; // Defaults to gray if not found
 }
 
 /**
