@@ -26,18 +26,69 @@
 </head>
 <body class="bg-gray-800 text-white min-h-screen p-4">
 
-    <div id="admin-container" class="w-full max-w-2xl mx-auto bg-gray-900 shadow-lg rounded-lg p-8">
-        <h1 class="text-3xl font-bold mb-6 text-center text-blue-400">Schedule Data Uploader</h1>
+    <div class="max-w-6xl mx-auto bg-gray-900 shadow-lg rounded-lg p-8">
+        <h1 class="text-3xl font-bold mb-8 text-center text-blue-400">Schedule Data Uploader</h1>
         
-        <div class="mb-6">
-            <label for="schedule-input" class="block text-sm font-medium text-gray-400 mb-2">Paste your cleaned weekly schedule data below:</label>
-            <textarea id="schedule-input" rows="15" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Paste the JavaScript array of schedule objects here..."></textarea>
+        <!-- Upload Method Tabs -->
+        <div class="flex mb-8 bg-gray-800 rounded-lg p-1">
+            <button id="file-upload-tab" class="flex-1 py-2 px-4 rounded-md bg-blue-600 text-white font-semibold transition">📄 Upload Image/PDF</button>
+            <button id="manual-input-tab" class="flex-1 py-2 px-4 rounded-md text-gray-300 hover:text-white transition">✏️ Manual Entry</button>
         </div>
-        
-        <div class="flex">
-            <button id="update-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition">Add New Schedule</button>
+
+        <!-- File Upload Section -->
+        <div id="file-upload-section">
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-400 mb-3">Upload Schedule Document</label>
+                <div id="upload-area" class="upload-area p-8 rounded-lg text-center cursor-pointer">
+                    <svg class="mx-auto h-12 w-12 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <p class="text-gray-300 text-lg mb-2">Drop files here or click to browse</p>
+                    <p class="text-gray-500 text-sm">Supports: JPG, PNG, PDF (Max: 10MB)</p>
+                    <input type="file" id="file-input" class="hidden" accept=".jpg,.jpeg,.png,.pdf" multiple>
+                </div>
+            </div>
+
+            <!-- Processing Status -->
+            <div id="processing-status" class="hidden mb-6">
+                <div class="bg-gray-800 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm font-medium">Processing Files...</span>
+                        <span id="progress-text" class="text-sm text-gray-400">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-700 rounded-full h-2">
+                        <div id="progress-bar" class="progress-bar bg-blue-600 h-2 rounded-full"></div>
+                    </div>
+                    <div id="status-text" class="text-sm text-gray-400 mt-2">Initializing...</div>
+                </div>
+            </div>
+
+            <!-- Extracted Data Preview -->
+            <div id="extracted-data-section" class="hidden mb-6">
+                <label class="block text-sm font-medium text-gray-400 mb-3">Extracted Schedule Data (Review & Edit)</label>
+                <textarea id="extracted-data" rows="12" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"></textarea>
+            </div>
+
+            <!-- Action Buttons for File Upload -->
+            <div id="file-upload-actions" class="hidden flex gap-4">
+                <button id="process-extracted-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-green-700 transition">✅ Save Extracted Data</button>
+                <button id="clear-upload-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-md hover:bg-gray-700 transition">🗑️ Clear</button>
+            </div>
         </div>
-        <div class="mt-6 text-center">
+
+        <!-- Manual Input Section -->
+        <div id="manual-input-section" class="hidden">
+            <div class="mb-6">
+                <label for="schedule-input" class="block text-sm font-medium text-gray-400 mb-2">Paste your cleaned weekly schedule data below:</label>
+                <textarea id="schedule-input" rows="15" class="w-full p-3 bg-gray-700 border border-gray-600 rounded-md text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Paste the JavaScript array of schedule objects here..."></textarea>
+            </div>
+            
+            <div class="flex">
+                <button id="update-btn" class="w-full bg-blue-600 text-white font-semibold py-3 px-4 rounded-md hover:bg-blue-700 transition">Add New Schedule</button>
+            </div>
+        </div>
+
+        <div class="mt-8 text-center">
             <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
         </div>
     </div>
