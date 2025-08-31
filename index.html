@@ -214,34 +214,60 @@
 
         function mergeSchedules(genericSchedule, specificSchedule) {
             const scheduleMap = new Map();
-            const holidayDates = new Set(
-                specificSchedule.filter(e => e.isHoliday).map(e => e.date)
-            );
+            const specificEventsByWeek = new Map();
 
-            genericSchedule.forEach(event => {
-                if (!holidayDates.has(event.date)) {
-                    const key = `${event.date}T${event.startTime}`;
-                    if (!scheduleMap.has(key)) {
-                        scheduleMap.set(key, []);
-                    }
-                    scheduleMap.get(key).push(event);
-                }
-            });
-
-            const specificEventsMap = new Map();
+            // Group specific events by week and department
             specificSchedule.forEach(event => {
-                const key = event.isHoliday ? `${event.date}T00:00_holiday` : `${event.date}T${event.startTime}`;
-                 if (!specificEventsMap.has(key)) {
-                    specificEventsMap.set(key, []);
+                const weekStart = utils.formatDate(utils.getStartOfWeek(new Date(event.date + 'T00:00:00Z')));
+                if (!specificEventsByWeek.has(weekStart)) {
+                    specificEventsByWeek.set(weekStart, new Set());
                 }
-                specificEventsMap.get(key).push(event);
+                if (event.department && event.department !== 'Holiday') {
+                    specificEventsByWeek.get(weekStart).add(event.department);
+                }
             });
 
-            for (const [key, specificEvents] of specificEventsMap.entries()) {
-                scheduleMap.set(key, specificEvents);
-            }
+            // Filter out generic events for departments that have specific events in the same week
+            const filteredGenericSchedule = genericSchedule.filter(event => {
+                const weekStart = utils.formatDate(utils.getStartOfWeek(new Date(event.date + 'T00:00:00Z')));
+                if (specificEventsByWeek.has(weekStart)) {
+                    const deptsWithSpecificEvents = specificEventsByWeek.get(weekStart);
+                    return !deptsWithSpecificEvents.has(event.department);
+                }
+                return true;
+            });
 
-            return Array.from(scheduleMap.values()).flat();
+            // Add all events to a map to handle duplicates and merging
+            [...filteredGenericSchedule, ...specificSchedule].forEach(event => {
+                const key = `${event.date}|${event.startTime}|${event.topic}|${event.instructor}|${JSON.stringify(event.batch ? event.batch.sort() : [])}`;
+                if (!scheduleMap.has(key)) {
+                    scheduleMap.set(key, event);
+                }
+            });
+            
+            // Handle holidays separately to ensure they properly override other events
+            const holidayDates = new Set(specificSchedule.filter(e => e.isHoliday).map(e => e.date));
+            const finalSchedule = Array.from(scheduleMap.values()).filter(event => {
+                return !holidayDates.has(event.date) || event.isHoliday;
+            });
+            
+            // Ensure only holiday events exist on holiday dates
+            holidayDates.forEach(date => {
+                const holidayEvent = specificSchedule.find(e => e.isHoliday && e.date === date);
+                if (holidayEvent) {
+                     finalSchedule.push(holidayEvent);
+                }
+            });
+            
+            // Remove duplicates that might have been re-added
+            const finalScheduleMap = new Map();
+            finalSchedule.forEach(event => {
+                 const key = `${event.date}|${event.startTime}|${event.topic}|${event.instructor}|${JSON.stringify(event.batch ? event.batch.sort() : [])}`;
+                 finalScheduleMap.set(key,event);
+            });
+
+
+            return Array.from(finalScheduleMap.values());
         }
 
         function initialize() {
