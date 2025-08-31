@@ -20,6 +20,39 @@
         .sunday { color: #991b1b; }
         .today-highlight { background-color: #dbeafe; } /* Light blue for today */
 
+        /* Festive Holiday Style */
+        .holiday-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 4rem 1rem;
+            text-align: center;
+            background: linear-gradient(45deg, #fef3c7, #fde68a);
+            border-radius: 0.5rem;
+            height: 100%;
+        }
+        .holiday-icon {
+            font-size: 4.5rem;
+            animation: bounce 2s infinite ease-in-out;
+        }
+        .holiday-title {
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: #ca8a04;
+            margin-top: 1rem;
+        }
+        .holiday-topic {
+            font-size: 1.1rem;
+            color: #a16207;
+            margin-top: 0.25rem;
+        }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-25px); }
+            60% { transform: translateY(-10px); }
+        }
+
         /* Night Mode Styles */
         .night-mode { background-color: #1a202c; color: #e2e8f0; }
         .night-mode #app-container { background-color: #2d3748; }
@@ -36,11 +69,15 @@
         .night-mode .event-day { background-color: #4299e1; }
         .night-mode .holiday { background-color: #ecc94b; color: #2d3748; }
         .night-mode .sunday { color: #f56565; }
-        .night-mode select { background-color: #2d3748; color: #e2e8f0; border-color: #718096;}
-        .night-mode input { background-color: #2d3748; color: #e2e8f0; border-color: #718096;}
+        .night-mode select, .night-mode input { background-color: #2d3748; color: #e2e8f0; border-color: #718096;}
         .night-mode #calendar-modal .bg-white,
         .night-mode #roll-no-modal .bg-white,
         .night-mode #alert-modal .bg-white { background-color: #4a5568; }
+        .night-mode .holiday-container {
+            background: linear-gradient(45deg, #4a5568, #2c3e50);
+        }
+        .night-mode .holiday-title { color: #fde68a; }
+        .night-mode .holiday-topic { color: #fef3c7; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -456,7 +493,12 @@
                     if (isHoliday) {
                         const holidayEvent = dayEvents.find(e => e.isHoliday);
                         const holidayTopic = (holidayEvent && holidayEvent.topic && holidayEvent.topic.toLowerCase() !== 'holiday') ? holidayEvent.topic : '';
-                        daySlide.innerHTML += `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p><p>${holidayTopic}</p></div>`;
+                        daySlide.innerHTML += `
+                            <div class="holiday-container">
+                                <div class="holiday-icon">🎉</div>
+                                <p class="holiday-title">Holiday</p>
+                                <p class="holiday-topic">${holidayTopic}</p>
+                            </div>`;
                     } else {
                         const classEvents = dayEvents.filter(e => selectedDept === 'all' || e.department === selectedDept)
                                                      .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
@@ -464,7 +506,11 @@
                         if (classEvents.length > 0) {
                             daySlide.innerHTML += classEvents.map(createEventHTML).join('');
                         } else if (day.getUTCDay() === 0) { // It's a Sunday with no other events
-                            daySlide.innerHTML += `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p></div>`;
+                             daySlide.innerHTML += `
+                                <div class="holiday-container">
+                                    <div class="holiday-icon">🎉</div>
+                                    <p class="holiday-title">Holiday</p>
+                                </div>`;
                         } else { // It's a weekday with no events
                             daySlide.innerHTML += `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
                         }
