@@ -3,15 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AFMC Weekly Training Schedule</title>
+    <title>AFMC Training Schedule</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1A365D"/>
+
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AFMC Schedule">
     <link rel="apple-touch-icon" href="https://placehold.co/180x180/022c7a/ffffff?text=AFMC">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        html { scroll-behavior: smooth; } /* Added for smoother manual scrolling */
+        html { scroll-behavior: smooth; }
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .day-view { scroll-snap-type: x mandatory; scroll-behavior: smooth; }
         .day-slide { scroll-snap-align: start; flex-shrink: 0; width: 100%; }
@@ -25,9 +30,9 @@
         .holiday-container {
             display: flex;
             flex-direction: column;
-            justify-content: flex-start; /* Aligns content to the top */
+            justify-content: flex-start;
             align-items: center;
-            padding: 2rem 1rem 4rem 1rem; /* Reduced top padding */
+            padding: 2rem 1rem 4rem 1rem;
             text-align: center;
             background: linear-gradient(45deg, #fef3c7, #fde68a);
             border-radius: 0.5rem;
@@ -54,31 +59,34 @@
             60% { transform: translateY(-10px); }
         }
 
-        /* Night Mode Styles */
-        .night-mode { background-color: #1a202c; color: #e2e8f0; }
-        .night-mode #app-container { background-color: #2d3748; }
-        .night-mode header { background-color: #2c5282; }
-        .night-mode #user-view .bg-gray-50 { background-color: #4a5568; border-color: #718096; }
-        .night-mode .bg-white { background-color: #4a5568; }
-        .night-mode .text-gray-800 { color: #e2e8f0; }
-        .night-mode .text-gray-600 { color: #a0aec0; }
-        .night-mode .text-gray-500 { color: #cbd5e0; }
+        /* --- Optimized Night Mode Styles --- */
+        .night-mode { background-color: #1A202C; color: #E2E8F0; }
+        .night-mode #app-container { background-color: #2D3748; }
+        .night-mode header { background-color: #1A365D; border-bottom: 1px solid #4A5568; }
+        .night-mode #user-view .bg-gray-50 { background-color: #2D3748; border-color: #4A5568; }
+        .night-mode .bg-white { background-color: #4A5568; }
+        .night-mode .text-gray-800 { color: #E2E8F0; }
+        .night-mode .text-gray-600 { color: #A0AEC0; }
+        .night-mode .text-gray-500 { color: #CBD5E0; }
         .night-mode .border-gray-200 { border-color: #718096; }
-        .night-mode .text-blue-700 { color: #63b3ed; }
-        .night-mode .text-blue-600 { color: #90cdf4; }
-        .night-mode .today-highlight { background-color: #2c5282; }
+        .night-mode .text-blue-700 { color: #90CDF4; }
+        .night-mode .text-blue-600 { color: #BEE3F8; }
+        .night-mode .today-highlight { background-color: #1A365D; }
         .night-mode .event-day { background-color: #4299e1; }
-        .night-mode .holiday { background-color: #ecc94b; color: #2d3748; }
+        .night-mode .holiday { background-color: #ecc94b; color: #1A202C; }
         .night-mode .sunday { color: #f56565; }
-        .night-mode select, .night-mode input { background-color: #2d3748; color: #e2e8f0; border-color: #718096;}
+        .night-mode select, .night-mode input { background-color: #2D3748; color: #E2E8F0; border-color: #718096;}
         .night-mode #calendar-modal .bg-white,
         .night-mode #roll-no-modal .bg-white,
-        .night-mode #alert-modal .bg-white { background-color: #4a5568; }
-        .night-mode .holiday-container {
-            background: linear-gradient(45deg, #4a5568, #2c3e50);
-        }
-        .night-mode .holiday-title { color: #fde68a; }
-        .night-mode .holiday-topic { color: #fef3c7; }
+        .night-mode #alert-modal .bg-white { background-color: #4A5568; }
+        .night-mode .holiday-container { background: linear-gradient(45deg, #4A5568, #2C3E50); }
+        .night-mode .holiday-title { color: #F6E05E; }
+        .night-mode .holiday-topic { color: #FEFCBF; }
+
+        /* Icon Toggle Styles */
+        #sun-icon { display: none; }
+        .night-mode #sun-icon { display: block; }
+        .night-mode #moon-icon { display: none; }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -97,10 +105,9 @@
                 <button id="calendar-view-btn" class="p-2 rounded-full hover:bg-blue-700" title="Calendar View">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                 </button>
-                <button id="night-mode-btn" class="p-2 rounded-full hover:bg-blue-700" title="Toggle Night Mode">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                    </svg>
+                <button id="night-mode-btn" class="p-2 rounded-full hover:bg-blue-700" title="Toggle Theme">
+                    <svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+                    <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
                 </button>
             </div>
         </header>
@@ -588,8 +595,7 @@
             const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
             if (todaySlide) {
                 todaySlide.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest', inline: 'start' });
-                // **FIX**: Reset vertical scroll to the top
-                window.scrollTo({ top: 0, behavior: 'auto' });
+                 setTimeout(() => { window.scrollTo({ top: 0, behavior: 'auto' }); }, 0);
             } else if (!smooth) {
                 scrollToLatestWeek();
             } else {
@@ -655,8 +661,7 @@
                     const targetSlide = document.querySelector(`.day-slide[data-date="${e.target.dataset.date}"]`);
                     if (targetSlide) {
                         targetSlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
-                         // **FIX**: Reset vertical scroll to the top
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                        setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 300);
                     }
                     calendarModal.classList.add('hidden');
                 }
