@@ -11,6 +11,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        html { scroll-behavior: smooth; } /* Added for smoother manual scrolling */
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
         .day-view { scroll-snap-type: x mandatory; scroll-behavior: smooth; }
         .day-slide { scroll-snap-align: start; flex-shrink: 0; width: 100%; }
@@ -587,6 +588,8 @@
             const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
             if (todaySlide) {
                 todaySlide.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest', inline: 'start' });
+                // **FIX**: Reset vertical scroll to the top
+                window.scrollTo({ top: 0, behavior: 'auto' });
             } else if (!smooth) {
                 scrollToLatestWeek();
             } else {
@@ -652,6 +655,8 @@
                     const targetSlide = document.querySelector(`.day-slide[data-date="${e.target.dataset.date}"]`);
                     if (targetSlide) {
                         targetSlide.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+                         // **FIX**: Reset vertical scroll to the top
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
                     }
                     calendarModal.classList.add('hidden');
                 }
