@@ -18,8 +18,21 @@
     <style>
         html { scroll-behavior: smooth; }
         body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .day-view { scroll-snap-type: x mandatory; scroll-behavior: smooth; }
-        .day-slide { scroll-snap-align: start; flex-shrink: 0; width: 100%; }
+        
+        /* --- Responsive Layout --- */
+        /* Mobile-specific styles for swiping */
+        @media (max-width: 1023px) {
+            .day-view { 
+                scroll-snap-type: x mandatory; 
+                scroll-behavior: smooth; 
+            }
+            .day-slide { 
+                scroll-snap-align: start; 
+                flex-shrink: 0; 
+                width: 100%; 
+            }
+        }
+        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
         .holiday { background-color: #facc15; color: #713f12; border-radius: 50%; font-weight: bold; }
         .event-day { background-color: #bfdbfe; border-radius: 50%; }
@@ -93,7 +106,7 @@
 </head>
 <body class="bg-gray-100 text-gray-800">
 
-    <div id="app-container" class="max-w-lg mx-auto bg-white shadow-lg min-h-screen">
+    <div id="app-container" class="max-w-lg lg:max-w-7xl mx-auto bg-white shadow-lg min-h-screen">
         <header class="bg-blue-800 text-white p-4 flex justify-between items-center sticky top-0 z-10">
             <div>
                 <h1 class="text-xl font-bold">AFMC Training Schedule</h1>
@@ -116,15 +129,15 @@
 
         <div id="user-view">
             <div class="p-4 bg-gray-50 border-b border-gray-200">
-                <div class="grid grid-cols-2 gap-4">
-                    <select id="department-filter" class="w-full p-2 border rounded-md bg-white"><option value="all">All Departments</option></select>
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <select id="department-filter" class="w-full p-2 border rounded-md bg-white lg:col-span-2"><option value="all">All Departments</option></select>
                     <button id="add-to-calendar-btn" class="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-green-700 transition">Add to Calendar</button>
                 </div>
             </div>
             <div id="loading-indicator" class="text-center p-10">
                 <p class="text-gray-500 font-semibold animate-pulse">Loading Schedule...</p>
             </div>
-            <div id="day-view-container" class="overflow-x-auto day-view flex"></div>
+            <div id="day-view-container" class="day-view flex lg:grid lg:grid-cols-7 lg:gap-4 lg:p-4"></div>
         </div>
     </div>
 
@@ -470,13 +483,16 @@
                 week.days.forEach(day => {
                     const dayString = utils.formatDate(day);
                     const daySlide = document.createElement('div');
-                    daySlide.className = 'day-slide p-4';
+                    daySlide.className = 'day-slide p-4 lg:border lg:border-gray-200 lg:rounded-lg';
+                    if (document.body.classList.contains('night-mode')) {
+                        daySlide.classList.add('lg:border-gray-700');
+                    }
                     daySlide.dataset.date = dayString;
                     daySlide.dataset.weekStart = utils.formatDate(week.startDate);
                     if (dayString === utils.formatDate(new Date())) {
                         daySlide.classList.add('today-highlight');
                     }
-                    daySlide.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC' })}</h2>`;
+                    daySlide.innerHTML = `<h2 class="text-lg font-bold mb-2 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' })}</h2>`;
                     
                     const dayEvents = scheduleData.filter(e => e.date === dayString);
                     const isHoliday = dayEvents.some(e => e.isHoliday);
