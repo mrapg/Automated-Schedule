@@ -239,7 +239,58 @@
             return genericSchedule;
         }
 
+        /**
+         * Standardizes department names to a consistent format.
+         * @param {string} dept The original department name.
+         * @returns {string} The standardized department name.
+         */
+        function standardizeDepartmentName(dept) {
+            if (!dept) return dept;
+            const d = dept.toLowerCase().trim();
+
+            const aliases = {
+                'obstetrics & gynaecology': 'Obs & Gynae',
+                'fm&t': 'Forensic Medicine',
+                'dermat': 'Dermatology',
+                'paediatrics': 'Pediatrics',
+                'resp med': 'Respiratory Medicine',
+                'radio diagnosis': 'Radiodiagnosis',
+                'radiodiagnosis': 'Radiodiagnosis',
+                'psy': 'Psychiatry',
+                'anaes': 'Anaesthesiology'
+            };
+            
+            // Handle cases from scheduleRules that might not have spaces
+            const scheduleRuleAliases = {
+                'dermat': 'Dermatology',
+                'anaes': 'Anaesthesiology',
+                'fm&t': 'Forensic Medicine',
+                'paediatrics': 'Pediatrics',
+                'sdl resp med': 'Respiratory Medicine',
+                'sdl comm med': 'Community Medicine',
+                'sdl ent': 'ENT',
+                'sdl orthopaedics': 'Orthopaedics',
+                'sdl psychiatry': 'Psychiatry',
+                'sdl radio diagnosis': 'Radiodiagnosis',
+                'tutorial psy': 'Psychiatry'
+            };
+
+            if (aliases[d]) return aliases[d];
+
+            for (const key in scheduleRuleAliases) {
+                if (d.includes(key)) return scheduleRuleAliases[key];
+            }
+
+            // Return the original name (properly capitalized) if no alias matches
+            const deptFromColors = Object.keys(utils.getDeptColor("")).find(key => key.toLowerCase() === d);
+            return deptFromColors || dept;
+        }
+
         function mergeSchedules(genericSchedule, specificSchedule) {
+            // **FIX**: Standardize all department names before merging
+            genericSchedule.forEach(e => e.department = standardizeDepartmentName(e.department));
+            specificSchedule.forEach(e => e.department = standardizeDepartmentName(e.department));
+
             const scheduleMap = new Map();
             const specificEventsByWeek = new Map();
 
