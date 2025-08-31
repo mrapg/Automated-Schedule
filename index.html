@@ -249,10 +249,16 @@
             const d = dept.toLowerCase().trim();
 
             const aliases = {
+                'psm': 'Community Medicine',
+                'comm medicine': 'Community Medicine',
+                'medicine': 'Internal Medicine',
                 'obstetrics & gynaecology': 'Obs & Gynae',
+                'gynae': 'Obs & Gynae',
                 'fm&t': 'Forensic Medicine',
+                'forensic medicine & toxicology': 'Forensic Medicine',
                 'dermat': 'Dermatology',
                 'paediatrics': 'Pediatrics',
+                'ortho': 'Orthopaedics',
                 'resp med': 'Respiratory Medicine',
                 'radio diagnosis': 'Radiodiagnosis',
                 'radiodiagnosis': 'Radiodiagnosis',
@@ -260,34 +266,22 @@
                 'anaes': 'Anaesthesiology'
             };
             
-            // Handle cases from scheduleRules that might not have spaces
-            const scheduleRuleAliases = {
-                'dermat': 'Dermatology',
-                'anaes': 'Anaesthesiology',
-                'fm&t': 'Forensic Medicine',
-                'paediatrics': 'Pediatrics',
-                'sdl resp med': 'Respiratory Medicine',
-                'sdl comm med': 'Community Medicine',
-                'sdl ent': 'ENT',
-                'sdl orthopaedics': 'Orthopaedics',
-                'sdl psychiatry': 'Psychiatry',
-                'sdl radio diagnosis': 'Radiodiagnosis',
-                'tutorial psy': 'Psychiatry'
-            };
-
             if (aliases[d]) return aliases[d];
 
-            for (const key in scheduleRuleAliases) {
-                if (d.includes(key)) return scheduleRuleAliases[key];
-            }
+            // Check for partial matches from the generic schedule keys
+            if (d.includes('comm med')) return 'Community Medicine';
+            if (d.includes('fm&t')) return 'Forensic Medicine';
+            if (d.includes('paediatrics')) return 'Pediatrics';
+            if (d.includes('resp med')) return 'Respiratory Medicine';
+            if (d.includes('radio diagnosis')) return 'Radiodiagnosis';
+            if (d.includes('psy')) return 'Psychiatry';
 
-            // Return the original name (properly capitalized) if no alias matches
-            const deptFromColors = Object.keys(utils.getDeptColor("")).find(key => key.toLowerCase() === d);
-            return deptFromColors || dept;
+            // Return the original name if no alias matches
+            return dept;
         }
 
         function mergeSchedules(genericSchedule, specificSchedule) {
-            // **FIX**: Standardize all department names before merging
+            // Standardize all department names before merging
             genericSchedule.forEach(e => e.department = standardizeDepartmentName(e.department));
             specificSchedule.forEach(e => e.department = standardizeDepartmentName(e.department));
 
