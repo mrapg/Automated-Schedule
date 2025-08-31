@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AFMC Training Schedule</title>
+    <title>AFMC Weekly Training Schedule</title>
 
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1A365D"/>
+    <meta name="theme-color" content="#1E293B"/>
 
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -24,7 +24,7 @@
         .holiday { background-color: #facc15; color: #713f12; border-radius: 50%; font-weight: bold; }
         .event-day { background-color: #bfdbfe; border-radius: 50%; }
         .sunday { color: #991b1b; }
-        .today-highlight { background-color: #dbeafe; } /* Light blue for today */
+        .today-highlight { background-color: #dbeafe; }
 
         /* Festive Holiday Style */
         .holiday-container {
@@ -60,29 +60,31 @@
         }
 
         /* --- Optimized Night Mode Styles --- */
-        .night-mode { background-color: #1A202C; color: #E2E8F0; }
-        .night-mode #app-container { background-color: #2D3748; }
-        .night-mode header { background-color: #1A365D; border-bottom: 1px solid #4A5568; }
-        .night-mode #user-view .bg-gray-50 { background-color: #2D3748; border-color: #4A5568; }
-        .night-mode .bg-white { background-color: #4A5568; }
-        .night-mode .text-gray-800 { color: #E2E8F0; }
-        .night-mode .text-gray-600 { color: #A0AEC0; }
-        .night-mode .text-gray-500 { color: #CBD5E0; }
-        .night-mode .border-gray-200 { border-color: #718096; }
-        .night-mode .text-blue-700 { color: #90CDF4; }
-        .night-mode .text-blue-600 { color: #BEE3F8; }
-        .night-mode .today-highlight { background-color: #1A365D; }
-        .night-mode .event-day { background-color: #4299e1; }
-        .night-mode .holiday { background-color: #ecc94b; color: #1A202C; }
-        .night-mode .sunday { color: #f56565; }
-        .night-mode select, .night-mode input { background-color: #2D3748; color: #E2E8F0; border-color: #718096;}
+        .night-mode { background-color: #111827; color: #D1D5DB; }
+        .night-mode #app-container { background-color: #1F2937; }
+        .night-mode header { background-color: #1E293B; border-bottom: 1px solid #374151; }
+        .night-mode #user-view .bg-gray-50 { background-color: #1F2937; border-color: #374151; }
+        .night-mode .bg-white { background-color: #374151; }
+        .night-mode .text-gray-800 { color: #F3F4F6; }
+        .night-mode .text-gray-700 { color: #D1D5DB; }
+        .night-mode .text-gray-600 { color: #9CA3AF; }
+        .night-mode .text-gray-500 { color: #6B7280; }
+        .night-mode .border-gray-200 { border-color: #4B5563; }
+        .night-mode .text-blue-700 { color: #22D3EE; }
+        .night-mode .text-blue-600 { color: #67E8F9; }
+        .night-mode .font-bold { color: #F9FAFB; }
+        .night-mode .today-highlight { background-color: #1E293B; }
+        .night-mode .event-day { background-color: #0E7490; }
+        .night-mode .holiday { background-color: #FBBF24; color: #111827; }
+        .night-mode .sunday { color: #F87171; }
+        .night-mode select, .night-mode input { background-color: #374151; color: #F3F4F6; border-color: #6B7280;}
         .night-mode #calendar-modal .bg-white,
         .night-mode #roll-no-modal .bg-white,
-        .night-mode #alert-modal .bg-white { background-color: #4A5568; }
-        .night-mode .holiday-container { background: linear-gradient(45deg, #4A5568, #2C3E50); }
-        .night-mode .holiday-title { color: #F6E05E; }
-        .night-mode .holiday-topic { color: #FEFCBF; }
-
+        .night-mode #alert-modal .bg-white { background-color: #374151; }
+        .night-mode .holiday-container { background: linear-gradient(45deg, #374151, #111827); }
+        .night-mode .holiday-title { color: #FBBF24; }
+        .night-mode .holiday-topic { color: #FDE68A; }
+        
         /* Icon Toggle Styles */
         #sun-icon { display: none; }
         .night-mode #sun-icon { display: block; }
@@ -313,7 +315,6 @@
             
             if (aliases[d]) return aliases[d];
 
-            // Check for partial matches from the generic schedule keys
             if (d.includes('comm med')) return 'Community Medicine';
             if (d.includes('fm&t')) return 'Forensic Medicine';
             if (d.includes('paediatrics')) return 'Pediatrics';
@@ -321,68 +322,50 @@
             if (d.includes('radio diagnosis')) return 'Radiodiagnosis';
             if (d.includes('psy')) return 'Psychiatry';
 
-            // Return the original name if no alias matches
             return dept;
         }
-
+        
         function mergeSchedules(genericSchedule, specificSchedule) {
-            // Standardize all department names before merging
             genericSchedule.forEach(e => e.department = standardizeDepartmentName(e.department));
             specificSchedule.forEach(e => e.department = standardizeDepartmentName(e.department));
 
-            const scheduleMap = new Map();
+            const finalScheduleMap = new Map();
             const specificEventsByWeek = new Map();
+            const holidayDates = new Set(specificSchedule.filter(e => e.isHoliday).map(e => e.date));
 
-            // Group specific events by week and department
             specificSchedule.forEach(event => {
+                if (event.isHoliday) return;
                 const weekStart = utils.formatDate(utils.getStartOfWeek(new Date(event.date + 'T00:00:00Z')));
                 if (!specificEventsByWeek.has(weekStart)) {
                     specificEventsByWeek.set(weekStart, new Set());
                 }
-                if (event.department && event.department !== 'Holiday') {
-                    specificEventsByWeek.get(weekStart).add(event.department);
-                }
+                specificEventsByWeek.get(weekStart).add(event.department);
             });
 
-            // Filter out generic events for departments that have specific events in the same week
-            const filteredGenericSchedule = genericSchedule.filter(event => {
+            genericSchedule.forEach(event => {
+                if (holidayDates.has(event.date)) return;
+
                 const weekStart = utils.formatDate(utils.getStartOfWeek(new Date(event.date + 'T00:00:00Z')));
-                if (specificEventsByWeek.has(weekStart)) {
-                    const deptsWithSpecificEvents = specificEventsByWeek.get(weekStart);
-                    return !deptsWithSpecificEvents.has(event.department);
+                const deptsWithSpecificEvents = specificEventsByWeek.get(weekStart);
+
+                if (!deptsWithSpecificEvents || !deptsWithSpecificEvents.has(event.department)) {
+                    const key = `${event.date}|${event.startTime}|${event.endTime}|${JSON.stringify((event.batch || []).sort())}`;
+                    finalScheduleMap.set(key, event);
                 }
-                return true;
             });
 
-            // Add all events to a map to handle duplicates and merging
-            [...filteredGenericSchedule, ...specificSchedule].forEach(event => {
-                const key = `${event.date}|${event.startTime}|${event.topic}|${event.instructor}|${JSON.stringify(event.batch ? event.batch.sort() : [])}`;
-                if (!scheduleMap.has(key)) {
-                    scheduleMap.set(key, event);
-                }
-            });
-            
-            // Handle holidays separately to ensure they properly override other events
-            const holidayDates = new Set(specificSchedule.filter(e => e.isHoliday).map(e => e.date));
-            const finalSchedule = Array.from(scheduleMap.values()).filter(event => {
-                return !holidayDates.has(event.date) || event.isHoliday;
-            });
-            
-            // Ensure only holiday events exist on holiday dates
-            holidayDates.forEach(date => {
-                const holidayEvent = specificSchedule.find(e => e.isHoliday && e.date === date);
-                if (holidayEvent) {
-                     finalSchedule.push(holidayEvent);
-                }
-            });
-            
-            // Remove duplicates that might have been re-added
-            const finalScheduleMap = new Map();
-            finalSchedule.forEach(event => {
-                 const key = `${event.date}|${event.startTime}|${event.topic}|${event.instructor}|${JSON.stringify(event.batch ? event.batch.sort() : [])}`;
-                 finalScheduleMap.set(key,event);
+            specificSchedule.forEach(event => {
+                if (event.isHoliday) return;
+                const key = `${event.date}|${event.startTime}|${event.endTime}|${JSON.stringify((event.batch || []).sort())}`;
+                finalScheduleMap.set(key, event);
             });
 
+            specificSchedule.forEach(event => {
+                if (event.isHoliday) {
+                    const key = `${event.date}|holiday|${event.topic}`;
+                    finalScheduleMap.set(key, event);
+                }
+            });
 
             return Array.from(finalScheduleMap.values());
         }
