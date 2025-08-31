@@ -455,7 +455,8 @@
 
                     if (isHoliday) {
                         const holidayEvent = dayEvents.find(e => e.isHoliday);
-                        daySlide.innerHTML += `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p><p>${holidayEvent.topic || ''}</p></div>`;
+                        const holidayTopic = (holidayEvent && holidayEvent.topic && holidayEvent.topic.toLowerCase() !== 'holiday') ? holidayEvent.topic : '';
+                        daySlide.innerHTML += `<div class="text-center text-green-600 py-20"><p class="text-4xl font-bold">Holiday</p><p>${holidayTopic}</p></div>`;
                     } else {
                         const classEvents = dayEvents.filter(e => selectedDept === 'all' || e.department === selectedDept)
                                                      .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
