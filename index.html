@@ -483,7 +483,7 @@
                 week.days.forEach(day => {
                     const dayString = utils.formatDate(day);
                     const daySlide = document.createElement('div');
-                    daySlide.className = 'day-slide p-4 lg:border lg:border-gray-200 lg:rounded-lg';
+                    daySlide.className = 'day-slide p-4 lg:p-2 lg:flex lg:flex-col lg:border lg:border-gray-200 lg:rounded-lg';
                     if (document.body.classList.contains('night-mode')) {
                         daySlide.classList.add('lg:border-gray-700');
                     }
@@ -492,7 +492,8 @@
                     if (dayString === utils.formatDate(new Date())) {
                         daySlide.classList.add('today-highlight');
                     }
-                    daySlide.innerHTML = `<h2 class="text-lg font-bold mb-2 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' })}</h2>`;
+                    
+                    let dayHtml = `<h2 class="text-lg font-bold mb-2 text-blue-700">${day.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'UTC' })}</h2>`;
                     
                     const dayEvents = scheduleData.filter(e => e.date === dayString);
                     const isHoliday = dayEvents.some(e => e.isHoliday);
@@ -500,8 +501,8 @@
                     if (isHoliday) {
                         const holidayEvent = dayEvents.find(e => e.isHoliday);
                         const holidayTopic = (holidayEvent && holidayEvent.topic && holidayEvent.topic.toLowerCase() !== 'holiday') ? holidayEvent.topic : '';
-                        daySlide.innerHTML += `
-                            <div class="holiday-container">
+                        dayHtml += `
+                            <div class="holiday-container flex-grow">
                                 <div class="holiday-icon">🎉</div>
                                 <p class="holiday-title">Holiday</p>
                                 <p class="holiday-topic">${holidayTopic}</p>
@@ -511,17 +512,18 @@
                                                      .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
 
                         if (classEvents.length > 0) {
-                            daySlide.innerHTML += classEvents.map(createEventHTML).join('');
-                        } else if (day.getUTCDay() === 0) { // It's a Sunday with no other events
-                             daySlide.innerHTML += `
-                                <div class="holiday-container">
+                            dayHtml += classEvents.map(createEventHTML).join('');
+                        } else if (day.getUTCDay() === 0) {
+                             dayHtml += `
+                                <div class="holiday-container flex-grow">
                                     <div class="holiday-icon">🎉</div>
                                     <p class="holiday-title">Holiday</p>
                                 </div>`;
-                        } else { // It's a weekday with no events
-                            daySlide.innerHTML += `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
+                        } else {
+                            dayHtml += `<div class="text-center text-gray-500 py-10"><p class="font-semibold">No sessions scheduled.</p></div>`;
                         }
                     }
+                    daySlide.innerHTML = dayHtml;
                     dayViewContainer.appendChild(daySlide);
                 });
             });
