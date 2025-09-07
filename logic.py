@@ -47,7 +47,7 @@ class ScheduleParser:
         # Rule for specific single batches (e.g., VI A, I3 C)
         specific_match = re.search(r'\b(VI|I3)\s+([A-D])\b', text, re.IGNORECASE)
         if specific_match:
-            return [f"Batch-{specific_match.group(2).upper()}"]
+            return [f"Batch - {specific_match.group(2).upper()}"]
 
         # Default rule for general term batches
         if re.search(r'\b(VI|I3|I3 VI)\b', text, re.IGNORECASE):
@@ -58,7 +58,8 @@ class ScheduleParser:
 
     def generate_review_text(self, parsed_data: list) -> str:
         """
-        Generates a formatted, human-readable text schedule for review.
+        Generates a formatted, human-readable text schedule for review
+        in the specified column order.
         """
         if not parsed_data:
             return "No schedule entries found matching the criteria."
@@ -69,25 +70,33 @@ class ScheduleParser:
             current_date = session["date"]
             if current_date != last_date:
                 if last_date is not None: output_lines.append("")
-                output_lines.append("="*50)
+                output_lines.append("="*80)
                 output_lines.append(current_date.strftime('%A, %d %B %Y').upper())
-                output_lines.append("="*50)
+                output_lines.append("="*80)
                 last_date = current_date
             
             topic = session.get("topic", "")
+            
+            # Get the batch display string
             batch_list = self._resolve_batch(topic)
-            batch_display = f"({', '.join(batch_list)})" if "ALL" not in batch_list else "(All Batches)"
+            batch_display = "All Batches" if batch_list[0] == "ALL" else ", ".join(batch_list)
+            
+            # Clean the raw batch text from the topic for display purposes
+            topic_cleaned = re.sub(r'\s*\((VI|I3|I3 VI|VI Term)\s*([A-D])?\)\s*', '', topic, flags=re.IGNORECASE).strip()
+            topic_cleaned = re.sub(r'\s*\(([A-D])\s*\+\s*([A-D])\)\s*', '', topic_cleaned, flags=re.IGNORECASE).strip()
             
             resolved_instructor = self._resolve_instructor(session.get("instructor", "N/A"))
 
+            # Append the formatted schedule entry in the new order
             output_lines.append(
                 f"{session.get('time_str', 'N/A')} | "
                 f"{session.get('department', 'N/A')} | "
-                f"{topic} | "
+                f"{batch_display} | "
+                f"{topic_cleaned} | "
                 f"{resolved_instructor} | "
-                f"{session.get('venue', 'N/A')} | "
-                f"{batch_display}"
+                f"{session.get('venue', 'N/A')}"
             )
+            output_lines.append("-" * 80)
         
         return "\n".join(output_lines)
 
@@ -111,7 +120,7 @@ class ScheduleParser:
                 "startTime": start_time,
                 "endTime": end_time,
                 "department": session["department"],
-                "topic": topic,
+                "topic": topic, # The original, unmodified topic is saved in the JSON
                 "instructor": resolved_instructor,
                 "location": session["venue"],
                 "batch": batch,
@@ -128,35 +137,27 @@ if __name__ == "__main__":
     faculty_content = """
     {
       "Forensic Medicine & Toxicology": [{"rank": "Maj", "name": "Ishita Manral", "abbreviation": "IM"}],
-      "Obs & Gynae": [{"rank": "Col", "name": "Sirisha Anne", "abbreviation": "SA"}]
+      "Obs & Gynae": [{"rank": "Col", "name": "Sirisha Anne", "abbreviation": "SA"}],
+      "ENT": [{"rank": "Col", "name": "Vikas Gupta", "abbreviation": "VG"}]
     }
     """
 
-    # Example data to demonstrate all new batch rules
     manually_parsed_data = [
       {
-        "date": datetime(2025, 9, 8),
-        "time_str": "15:00 - 16:00",
-        "department": "Forensic Medicine & Toxicology",
-        "topic": "Tutorial (VI A)", # Specific Batch
-        "instructor": "IM",
-        "venue": "Demo Room",
+        "date": datetime(2025, 8, 18),
+        "time_str": "10:30 - 13:00",
+        "department": "ENT",
+        "topic": "CLINICS: EXAMINATION OF EAR (I3 A)",
+        "instructor": "VG",
+        "venue": "Service ENT OPD",
       },
       {
         "date": datetime(2025, 9, 9),
         "time_str": "14:00 - 16:00",
         "department": "Obs & Gynae",
-        "topic": "Clinics (C+D)", # Combined Batch
+        "topic": "Clinics (C+D)",
         "instructor": "SA",
         "venue": "OPD",
-      },
-       {
-        "date": datetime(2025, 9, 10),
-        "time_str": "08:00 - 09:00",
-        "department": "Forensic Medicine & Toxicology",
-        "topic": "Lecture (VI Term)", # General Batch
-        "instructor": "IM",
-        "venue": "LH Sushruta",
       }
     ]
     
@@ -176,3 +177,4 @@ if __name__ == "__main__":
         print(final_json)
     else:
         print("\nOperation cancelled. JSON output was not generated.")
+        
