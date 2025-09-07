@@ -286,6 +286,11 @@
             return genericSchedule;
         }
 
+        /**
+         * Standardizes department names to a consistent format.
+         * @param {string} dept The original department name.
+         * @returns {string} The standardized department name.
+         */
         function standardizeDepartmentName(dept) {
             if (!dept) return dept;
             const d = dept.toLowerCase().trim();
@@ -434,24 +439,8 @@
         }
 
         function createEventHTML(event) {
-            // --- START: New Simplified Batch Logic ---
-            let batchText = 'N/A';
-            let isForAllBatches = false;
-
-            if (event.batch && event.batch.length > 0) {
-                const primaryBatch = event.batch[0]; // Data is clean from logic.py
-                if (primaryBatch === 'ALL') {
-                    batchText = 'All Batches';
-                    isForAllBatches = true;
-                } else {
-                    // Directly use the pre-formatted batch string (e.g., "Batch-A", "Batch - C & D")
-                    batchText = primaryBatch;
-                }
-            }
-            
-            const batchClass = isForAllBatches ? 'bg-gray-500' : 'bg-purple-600';
-            // --- END: New Simplified Batch Logic ---
-
+            const batchClass = event.batch && event.batch.includes('ALL') ? 'bg-gray-500' : 'bg-purple-600';
+            const batchText = event.batch ? (event.batch.includes('ALL') ? 'All Batches' : 'Batch ' + event.batch.join(', ')) : 'N/A';
             const genericIndicator = event.isGeneric ? '<span class="text-xs font-semibold text-gray-500 ml-2">(Term Schedule)</span>' : '';
             return `
                 <div class="bg-white border-l-4 ${utils.getDeptColor(event.department)} rounded-r-lg p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
@@ -683,7 +672,7 @@
                     if (event.isHoliday) return false;
                     if (event.batch.includes('ALL')) return true;
                     if (event.isClinic) return event.batch.includes(clinicBatch);
-                    return event.batch.some(b => b.includes(generalBatch));
+                    return event.batch.includes(generalBatch);
                 });
                 
                 if (eventsToAdd.length > 0) {
