@@ -3,14 +3,15 @@ import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/1
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import * as utils from './utils.js';
 
-// --- FIREBASE CONFIG ---
+// --- FIREBASE CONFIG (Corrected) ---
 const firebaseConfig = {
     apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
     authDomain: "training-schedule-7c862.firebaseapp.com",
     projectId: "training-schedule-7c862",
     storageBucket: "training-schedule-7c862.firebasestorage.app",
     messagingSenderId: "395637809585",
-    appId: "1:395637805:web:9a5eea7f80741083f49d90",
+    // This appId is now correct and matches the one in index.html
+    appId: "1:395637809585:web:9a5eea7f80741083f49d90",
     measurementId: "G-S9EXHXY981"
 };
 const appId = "training-schedule-7c862";
