@@ -439,8 +439,39 @@
         }
 
         function createEventHTML(event) {
-            const batchClass = event.batch && event.batch.includes('ALL') ? 'bg-gray-500' : 'bg-purple-600';
-            const batchText = event.batch ? (event.batch.includes('ALL') ? 'All Batches' : 'Batch ' + event.batch.join(', ')) : 'N/A';
+            const isForAllBatches = (event.batch && event.batch.includes('ALL')) || (event.batch && event.batch.includes('I3') && event.batch.includes('VI Term'));
+            const batchClass = isForAllBatches ? 'bg-gray-500' : 'bg-purple-600';
+            
+            // --- START: New Batch Text Logic ---
+            let batchText = 'N/A';
+            if (event.batch && event.batch.length > 0) {
+                const batch = event.batch;
+
+                if (isForAllBatches) {
+                    batchText = 'All Batches';
+                } else {
+                    // Filter for specific batch names like "Batch A" or just "A"
+                    const specificBatches = batch.filter(b => 
+                        b.toLowerCase().startsWith('batch') || /^[A-D]$/.test(b.trim())
+                    );
+
+                    if (specificBatches.length > 0) {
+                        // If we found specific batches, use them and clean them up
+                        batchText = specificBatches.map(b => {
+                            if (/^[A-D]$/.test(b.trim())) {
+                                return `Batch ${b.trim()}`; // e.g., 'A' -> 'Batch A'
+                            }
+                            // e.g., 'VI Term Batch A' -> 'Batch A'
+                            return b.replace(/^(vi term|i3)\s+/i, ''); 
+                        }).join(', ');
+                    } else {
+                        // Fallback for other cases, just join them.
+                        batchText = batch.join(', ');
+                    }
+                }
+            }
+            // --- END: New Batch Text Logic ---
+
             const genericIndicator = event.isGeneric ? '<span class="text-xs font-semibold text-gray-500 ml-2">(Term Schedule)</span>' : '';
             return `
                 <div class="bg-white border-l-4 ${utils.getDeptColor(event.department)} rounded-r-lg p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
