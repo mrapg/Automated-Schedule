@@ -27,20 +27,38 @@ class ScheduleParser:
         if not instructor_str or instructor_str == "N/A":
             return "N/A"
             
-        # Split by comma or space and filter out empty strings
         initials = [i.strip() for i in re.split(r'[,\s]+', instructor_str) if i]
 
         if len(initials) > 3:
-            return ", ".join(initials)  # Return original initials, but nicely formatted
+            return ", ".join(initials)
 
-        # Resolve initials to full names
         resolved_names = [self.instructor_lookup.get(initial, initial) for initial in initials]
         return ", ".join(resolved_names)
 
+    def _resolve_batch(self, text: str) -> list:
+        """
+        Resolves batch information from text based on complex rules.
+        """
+        # Rule for combined batches (e.g., A+B, C+D)
+        combined_match = re.search(r'\b([A-D])\s*\+\s*([A-D])\b', text, re.IGNORECASE)
+        if combined_match:
+            return [f"Batch - {combined_match.group(1).upper()} & {combined_match.group(2).upper()}"]
+
+        # Rule for specific single batches (e.g., VI A, I3 C)
+        specific_match = re.search(r'\b(VI|I3)\s+([A-D])\b', text, re.IGNORECASE)
+        if specific_match:
+            return [f"Batch-{specific_match.group(2).upper()}"]
+
+        # Default rule for general term batches
+        if re.search(r'\b(VI|I3|I3 VI)\b', text, re.IGNORECASE):
+            return ["ALL"]
+            
+        # Fallback if no match
+        return ["ALL"]
+
     def generate_review_text(self, parsed_data: list) -> str:
         """
-        Generates a formatted, human-readable text schedule for review,
-        including specific batch information and resolved instructor names.
+        Generates a formatted, human-readable text schedule for review.
         """
         if not parsed_data:
             return "No schedule entries found matching the criteria."
@@ -50,20 +68,16 @@ class ScheduleParser:
         for session in parsed_data:
             current_date = session["date"]
             if current_date != last_date:
-                if last_date is not None:
-                    output_lines.append("")
+                if last_date is not None: output_lines.append("")
                 output_lines.append("="*50)
                 output_lines.append(current_date.strftime('%A, %d %B %Y').upper())
                 output_lines.append("="*50)
                 last_date = current_date
             
             topic = session.get("topic", "")
-            batch_display = "(All Batches)"
-            match = re.search(r'\((VI Term|I3 Batch)\s*(Batch\s*[A-D])?\)', topic, re.IGNORECASE)
-            if match and match.group(2):
-                batch_display = f"({match.group(2)})"
+            batch_list = self._resolve_batch(topic)
+            batch_display = f"({', '.join(batch_list)})" if "ALL" not in batch_list else "(All Batches)"
             
-            # Use the resolver method for display
             resolved_instructor = self._resolve_instructor(session.get("instructor", "N/A"))
 
             output_lines.append(
@@ -79,8 +93,7 @@ class ScheduleParser:
 
     def generate_json_output(self, parsed_data: list) -> str:
         """
-        Generates the final, structured JSON output from the parsed data,
-        with conditionally resolved instructor names.
+        Generates the final, structured JSON output from the parsed data.
         """
         output_list = []
         for session in parsed_data:
@@ -89,17 +102,8 @@ class ScheduleParser:
             except (ValueError, KeyError):
                 start_time, end_time = "N/A", "N/A"
 
-            batch = ["ALL"]
             topic = session.get("topic", "")
-            
-            match = re.search(r'\((VI Term|I3 Batch)\s*(Batch\s*[A-D])?\)', topic, re.IGNORECASE)
-            if match:
-                if match.group(2):
-                    batch = [match.group(2)]
-                else:
-                    batch = ["ALL"]
-            
-            # Use the resolver method for the final JSON data
+            batch = self._resolve_batch(topic)
             resolved_instructor = self._resolve_instructor(session.get("instructor", "N/A"))
 
             json_obj = {
@@ -118,50 +122,41 @@ class ScheduleParser:
             
         return json.dumps(output_list, indent=2)
 
-# --- Main Execution with NEW Confirmation Step ---
+# --- Main Execution ---
 if __name__ == "__main__":
     
-    # NOTE: Using faculty.json content to make the example runnable and demonstrate the new logic.
     faculty_content = """
     {
-      "Forensic Medicine & Toxicology": [
-        {"rank": "Maj", "name": "Ishita Manral", "abbreviation": "IM"},
-        {"rank": "Maj", "name": "Antara Debbarma", "abbreviation": "AD"}
-      ],
-      "Ophthalmology": [
-        {"rank": "Brig", "name": "K Shyamsundar", "abbreviation": "KS"}, 
-        {"rank": "Brig", "name": "Sandeep Shankar", "abbreviation": "BSS"}, 
-        {"rank": "Col", "name": "Bhupesh Bhatkoti", "abbreviation": "BB"}, 
-        {"rank": "Col", "name": "Sankalp Seth", "abbreviation": "SS"}
-      ]
+      "Forensic Medicine & Toxicology": [{"rank": "Maj", "name": "Ishita Manral", "abbreviation": "IM"}],
+      "Obs & Gynae": [{"rank": "Col", "name": "Sirisha Anne", "abbreviation": "SA"}]
     }
     """
 
-    # Example data now uses initials, as it would after raw parsing.
+    # Example data to demonstrate all new batch rules
     manually_parsed_data = [
       {
         "date": datetime(2025, 9, 8),
         "time_str": "15:00 - 16:00",
         "department": "Forensic Medicine & Toxicology",
-        "topic": "Revision - Firearm (VI Term Batch A)",
-        "instructor": "IM", # Single instructor
-        "venue": "LH Sushruta",
+        "topic": "Tutorial (VI A)", # Specific Batch
+        "instructor": "IM",
+        "venue": "Demo Room",
       },
       {
-        "date": datetime(2025, 9, 12),
+        "date": datetime(2025, 9, 9),
+        "time_str": "14:00 - 16:00",
+        "department": "Obs & Gynae",
+        "topic": "Clinics (C+D)", # Combined Batch
+        "instructor": "SA",
+        "venue": "OPD",
+      },
+       {
+        "date": datetime(2025, 9, 10),
         "time_str": "08:00 - 09:00",
         "department": "Forensic Medicine & Toxicology",
-        "topic": "Revision - Asphyxia (VI Term)",
-        "instructor": "IM, AD", # Two instructors
+        "topic": "Lecture (VI Term)", # General Batch
+        "instructor": "IM",
         "venue": "LH Sushruta",
-      },
-      {
-        "date": datetime(2025, 9, 15),
-        "time_str": "10:00 - 13:00",
-        "department": "Ophthalmology",
-        "topic": "Clinics (OP 7.3)",
-        "instructor": "KS, BSS, BB, SS", # Four instructors
-        "venue": "Service Eye OPD/OT",
       }
     ]
     
