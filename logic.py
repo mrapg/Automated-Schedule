@@ -8,10 +8,8 @@ class ScheduleParser:
     with a user confirmation step.
     """
 
-    # ... (The __init__, _resolve_instructor, and other helper methods remain unchanged) ...
     def __init__(self, faculty_json: str):
         self.faculty_data = json.loads(faculty_json)
-        # ... rest of init ...
 
     def generate_review_text(self, parsed_data: list) -> str:
         """Generates a formatted, human-readable text schedule for review."""
@@ -52,15 +50,30 @@ class ScheduleParser:
             except (ValueError, KeyError):
                 start_time, end_time = "N/A", "N/A"
 
+            # New logic to extract specific batch
+            batch = ["ALL"]  # Default value
+            topic = session.get("topic", "")
+            
+            # Check for specific batch identifiers like (Batch A), (Batch B), etc.
+            match = re.search(r'\((VI Term|I3 Batch)\s*(Batch\s*[A-D])?\)', topic, re.IGNORECASE)
+            if match:
+                # If a specific batch (e.g., "Batch A") is found, use it
+                if match.group(2):
+                    batch = [match.group(2)]
+                # Otherwise, it's a general session for the term
+                else:
+                    batch = ["ALL"]
+
+
             json_obj = {
                 "date": session["date"].strftime('%Y-%m-%d'),
                 "startTime": start_time,
                 "endTime": end_time,
                 "department": session["department"],
-                "topic": session["topic"],
+                "topic": topic,
                 "instructor": session["instructor"],
                 "location": session["venue"],
-                "batch": session.get("batch", ["ALL"]),
+                "batch": batch,
                 "isHoliday": False,
                 "isClinic": session.get("is_clinic", False)
             }
@@ -79,7 +92,7 @@ if __name__ == "__main__":
         "date": datetime(2025, 9, 8),
         "time_str": "15:00 - 16:00",
         "department": "Forensic Medicine & Toxicology",
-        "topic": "Revision -Firearm",
+        "topic": "Revision -Firearm (VI Term Batch A)",
         "instructor": "Maj Ishita Manral",
         "venue": "LH Sushruta",
       },
@@ -87,7 +100,7 @@ if __name__ == "__main__":
         "date": datetime(2025, 9, 12),
         "time_str": "08:00 - 09:00",
         "department": "Forensic Medicine & Toxicology",
-        "topic": "Revision-asphyxia",
+        "topic": "Revision-asphyxia (VI Term)",
         "instructor": "Maj Antara Debbarma",
         "venue": "LH Sushruta",
       }
