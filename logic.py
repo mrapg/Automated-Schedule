@@ -12,7 +12,10 @@ class ScheduleParser:
         self.faculty_data = json.loads(faculty_json)
 
     def generate_review_text(self, parsed_data: list) -> str:
-        """Generates a formatted, human-readable text schedule for review."""
+        """
+        Generates a formatted, human-readable text schedule for review,
+        including specific batch information.
+        """
         if not parsed_data:
             return "No schedule entries found matching the criteria."
 
@@ -28,14 +31,24 @@ class ScheduleParser:
                 output_lines.append(current_date.strftime('%A, %d %B %Y').upper())
                 output_lines.append("="*50)
                 last_date = current_date
+            
+            # --- New logic to extract and format batch for display ---
+            topic = session.get("topic", "")
+            batch_display = "(All Batches)"  # Default value
+            # Check for specific batch identifiers
+            match = re.search(r'\((VI Term|I3 Batch)\s*(Batch\s*[A-D])?\)', topic, re.IGNORECASE)
+            if match and match.group(2):
+                batch_display = f"({match.group(2)})"
+            # --- End of new logic ---
 
-            # Recreate the familiar pipe-separated format for the session line
+            # Recreate the familiar pipe-separated format with batch info
             output_lines.append(
                 f"{session.get('time_str', 'N/A')} | "
                 f"{session.get('department', 'N/A')} | "
-                f"{session.get('topic', 'N/A')} | "
+                f"{topic} | "
                 f"{session.get('instructor', 'N/A')} | "
-                f"{session.get('venue', 'N/A')}"
+                f"{session.get('venue', 'N/A')} | "
+                f"{batch_display}" # Appended batch info
             )
         
         return "\n".join(output_lines)
@@ -50,20 +63,16 @@ class ScheduleParser:
             except (ValueError, KeyError):
                 start_time, end_time = "N/A", "N/A"
 
-            # New logic to extract specific batch
+            # Logic to extract specific batch for JSON
             batch = ["ALL"]  # Default value
             topic = session.get("topic", "")
             
-            # Check for specific batch identifiers like (Batch A), (Batch B), etc.
             match = re.search(r'\((VI Term|I3 Batch)\s*(Batch\s*[A-D])?\)', topic, re.IGNORECASE)
             if match:
-                # If a specific batch (e.g., "Batch A") is found, use it
                 if match.group(2):
                     batch = [match.group(2)]
-                # Otherwise, it's a general session for the term
                 else:
                     batch = ["ALL"]
-
 
             json_obj = {
                 "date": session["date"].strftime('%Y-%m-%d'),
@@ -85,14 +94,13 @@ class ScheduleParser:
 # --- Main Execution with NEW Confirmation Step ---
 if __name__ == "__main__":
     
-    # This is the correctly filtered data from your PDF, based on your rules.
-    # We will use this data to demonstrate the new confirmation workflow.
+    # Example data to demonstrate the updated review text format
     manually_parsed_data = [
       {
         "date": datetime(2025, 9, 8),
         "time_str": "15:00 - 16:00",
         "department": "Forensic Medicine & Toxicology",
-        "topic": "Revision -Firearm (VI Term Batch A)",
+        "topic": "Revision - Firearm (VI Term Batch A)",
         "instructor": "Maj Ishita Manral",
         "venue": "LH Sushruta",
       },
@@ -100,13 +108,12 @@ if __name__ == "__main__":
         "date": datetime(2025, 9, 12),
         "time_str": "08:00 - 09:00",
         "department": "Forensic Medicine & Toxicology",
-        "topic": "Revision-asphyxia (VI Term)",
+        "topic": "Revision - Asphyxia (VI Term)",
         "instructor": "Maj Antara Debbarma",
         "venue": "LH Sushruta",
       }
     ]
     
-    # We instantiate the parser (faculty data is needed for potential instructor mapping)
     parser = ScheduleParser(faculty_json="{}")
 
     # --- STEP 1: Generate and print the text output for user review ---
