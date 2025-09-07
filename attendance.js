@@ -1,16 +1,16 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, collection, getDocs, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+// Import all the new functions from utils
 import * as utils from './utils.js';
 
-// --- FIREBASE CONFIG (Corrected) ---
+// --- FIREBASE CONFIG ---
 const firebaseConfig = {
     apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
     authDomain: "training-schedule-7c862.firebaseapp.com",
     projectId: "training-schedule-7c862",
     storageBucket: "training-schedule-7c862.firebasestorage.app",
     messagingSenderId: "395637809585",
-    // This appId is now correct and matches the one in index.html
     appId: "1:395637809585:web:9a5eea7f80741083f49d90",
     measurementId: "G-S9EXHXY981"
 };
@@ -22,7 +22,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 signInAnonymously(auth).catch((error) => console.error("Anonymous sign-in failed:", error));
 
-// --- DOM ELEMENTS ---
+// (DOM element variables remain the same)
 const rollNumberInput = document.getElementById('roll-number');
 const targetAttendanceInput = document.getElementById('target-attendance');
 const loadingEl = document.getElementById('loading');
@@ -38,13 +38,12 @@ const classlistView = document.getElementById('classlist-view');
 const pastClassesContainer = document.getElementById('past-classes-container');
 const upcomingClassesContainer = document.getElementById('upcoming-classes-container');
 
+
 // --- APP STATE ---
 let scheduleData = [];
 let userRollNo = null;
-let userAttendance = new Set(); // Stores IDs of attended classes
+let userAttendance = new Set();
 const ATTENDANCE_SUBJECTS = ['Community Medicine', 'Forensic Medicine', 'ENT', 'Ophthalmology'];
-
-// --- FUNCTIONS ---
 
 /**
  * Creates a unique ID for a schedule event.
@@ -65,40 +64,63 @@ function isEventRelevantForUser(event, rollNo) {
     if (!ATTENDANCE_SUBJECTS.includes(event.department) || event.isHoliday) {
         return false;
     }
-    // Handle batch-specific classes (clinics)
     const topic = event.topic.toLowerCase();
     if (topic.includes('clinic')) {
         const clinicBatch = utils.getClinicBatch(rollNo);
         return event.batch.includes(clinicBatch);
     }
-    // For other tutorials/theory, check general batch or ALL
     const generalBatch = utils.getGeneralBatch(rollNo);
     return event.batch.includes('ALL') || event.batch.includes(generalBatch);
 }
 
 /**
- * Determines the attendance type (Theory or Practical).
+ * **[UPDATED]** Determines the attendance type (Theory or Practical).
  * @param {object} event The schedule event.
  * @returns {string|null} 'Theory', 'Practical', or null.
  */
 function getAttendanceType(event) {
     const topic = event.topic.toLowerCase();
-    switch (event.department) {
-        case 'Community Medicine':
-            return (topic.includes('clinic') || topic.includes('tutorial')) ? 'Practical' : 'Theory';
-        case 'Forensic Medicine':
-            return topic.includes('tutorial') ? 'Practical' : 'Theory';
-        case 'ENT':
-        case 'Ophthalmology':
-            return topic.includes('clinic') ? 'Practical' : 'Theory';
-        default:
-            return 'Theory'; // Default to theory for other relevant classes
+    const practicalKeywords = {
+        'Community Medicine': ['clinic', 'tutorial', 'practical', 'field visit'],
+        'Forensic Medicine': ['tutorial', 'demo', 'autopsy'],
+        'ENT': ['clinic', 'tutorial', 'practical', 'demo'],
+        'Ophthalmology': ['clinic', 'tutorial', 'demo', 'surgery']
+    };
+
+    if (practicalKeywords[event.department]) {
+        for (const keyword of practicalKeywords[event.department]) {
+            if (topic.includes(keyword)) {
+                return 'Practical';
+            }
+        }
     }
+    return 'Theory';
 }
 
+
 /**
- * Loads attendance data for the user from Firestore.
+ * **[UPDATED]** Fetches the specific schedule from Firestore and merges it with the generic term schedule.
  */
+async function fetchSchedule() {
+    loadingEl.style.display = 'block';
+    mainContentEl.style.display = 'none';
+
+    // 1. Fetch specific schedule from Firestore
+    const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+    const querySnapshot = await getDocs(scheduleCollectionRef);
+    const specificSchedule = querySnapshot.docs.map(doc => doc.data());
+
+    // 2. Generate the generic term schedule
+    const genericSchedule = utils.generateGenericSchedule();
+
+    // 3. Merge them together, with specific events and holidays overriding generic ones
+    scheduleData = utils.mergeSchedules(genericSchedule, specificSchedule)
+                        .sort((a,b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+
+    await loadUserAttendance();
+}
+
+// (The rest of attendance.js remains the same as the previous version)
 async function loadUserAttendance() {
     if (!userRollNo) return;
     const docRef = doc(db, `artifacts/${appId}/public/data/attendanceRecords`, `roll-${userRollNo}`);
@@ -115,9 +137,6 @@ async function loadUserAttendance() {
     processAllData();
 }
 
-/**
- * Saves the user's current attendance data to Firestore.
- */
 async function saveUserAttendance() {
     if (!userRollNo) return;
     const docRef = doc(db, `artifacts/${appId}/public/data/attendanceRecords`, `roll-${userRollNo}`);
@@ -129,21 +148,6 @@ async function saveUserAttendance() {
     }
 }
 
-/**
- * Fetches the entire schedule from Firestore.
- */
-async function fetchSchedule() {
-    loadingEl.style.display = 'block';
-    mainContentEl.style.display = 'none';
-    const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
-    const querySnapshot = await getDocs(scheduleCollectionRef);
-    scheduleData = querySnapshot.docs.map(doc => doc.data()).sort((a,b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
-    await loadUserAttendance(); // Load attendance after schedule is fetched
-}
-
-/**
- * Main processing function to calculate and render everything.
- */
 function processAllData() {
     if (!userRollNo || scheduleData.length === 0) {
         loadingEl.style.display = 'none';
@@ -168,11 +172,6 @@ function processAllData() {
     mainContentEl.style.display = 'block';
 }
 
-/**
- * Calculates the summary statistics for attendance.
- * @param {Array} relevantEvents All events relevant to the user.
- * @returns {object} The calculated summary data.
- */
 function calculateSummary(relevantEvents) {
     const summary = {};
     ATTENDANCE_SUBJECTS.forEach(subject => {
@@ -197,10 +196,6 @@ function calculateSummary(relevantEvents) {
     return summary;
 }
 
-/**
- * Renders the summary view with progress bars.
- * @param {object} summaryData The data calculated by calculateSummary.
- */
 function renderSummary(summaryData) {
     let html = '<h2 class="text-xl font-semibold mb-4">Subject Breakdown</h2>';
     ATTENDANCE_SUBJECTS.forEach(subject => {
@@ -229,11 +224,6 @@ function renderSummary(summaryData) {
     attendanceBreakdownEl.innerHTML = html;
 }
 
-/**
- * Renders the detailed list of past and upcoming classes.
- * @param {Array} pastEvents List of past event objects.
- * @param {Array} upcomingEvents List of upcoming event objects.
- */
 function renderClassList(pastEvents, upcomingEvents) {
     let pastHtml = '<h2 class="text-xl font-semibold mb-4">Past Classes</h2>';
     if(pastEvents.length > 0) {
@@ -272,11 +262,6 @@ function renderClassList(pastEvents, upcomingEvents) {
     upcomingClassesContainer.innerHTML = upcomingHtml;
 }
 
-/**
- * Calculates and displays projections.
- * @param {object} summaryData The summary data object.
- * @param {number} upcomingClassCount Total number of upcoming classes.
- */
 function calculateProjections(summaryData, upcomingClassCount) {
     const targetPercentage = parseInt(targetAttendanceInput.value) || 75;
     targetDisplayEl.textContent = `${targetPercentage}%`;
@@ -296,18 +281,14 @@ function calculateProjections(summaryData, upcomingClassCount) {
 
     classesNeededEl.textContent = classesNeeded;
 
-    // Projection calculation
-    const termEndDate = new Date('2025-11-28'); // From index.html
     const today = new Date();
-    const remainingWeeks = (termEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 7);
+    const remainingWeeks = (utils.termEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24 * 7);
     const avgUpcomingPerWeek = remainingWeeks > 0 ? upcomingClassCount / remainingWeeks : 0;
     
     const weeksNeeded = (avgUpcomingPerWeek > 0) ? Math.ceil(classesNeeded / avgUpcomingPerWeek) : 0;
     weeksNeededEl.textContent = weeksNeeded;
 }
 
-
-// --- EVENT LISTENERS ---
 let debounceTimer;
 rollNumberInput.addEventListener('input', () => {
     clearTimeout(debounceTimer);
@@ -316,17 +297,16 @@ rollNumberInput.addEventListener('input', () => {
         if (val && val >= 1 && val <= 150) {
             userRollNo = val;
             localStorage.setItem('userRollNo', userRollNo);
-            fetchSchedule(); // Re-fetch and process for the new roll number
+            fetchSchedule();
         }
-    }, 500); // Debounce to avoid rapid re-fetching
+    }, 500);
 });
 
 targetAttendanceInput.addEventListener('input', () => {
     localStorage.setItem('targetAttendance', targetAttendanceInput.value);
-    processAllData(); // Recalculate projections on change
+    processAllData();
 });
 
-// Event delegation for class attendance checkboxes
 pastClassesContainer.addEventListener('change', (e) => {
     if (e.target.type === 'checkbox') {
         const eventId = e.target.dataset.eventId;
@@ -336,11 +316,10 @@ pastClassesContainer.addEventListener('change', (e) => {
             userAttendance.delete(eventId);
         }
         saveUserAttendance();
-        processAllData(); // Recalculate summary and projections
+        processAllData();
     }
 });
 
-// Tab switching
 summaryTabBtn.addEventListener('click', () => {
     summaryView.style.display = 'block';
     classlistView.style.display = 'none';
@@ -355,9 +334,7 @@ classlistTabBtn.addEventListener('click', () => {
     classlistTabBtn.classList.add('active');
 });
 
-// --- INITIALIZATION ---
 function initialize() {
-    // Load saved preferences
     const savedRollNo = localStorage.getItem('userRollNo');
     const savedTarget = localStorage.getItem('targetAttendance');
     if (savedRollNo) {
@@ -367,7 +344,6 @@ function initialize() {
     if (savedTarget) {
         targetAttendanceInput.value = savedTarget;
     }
-    // Initial fetch of data
     fetchSchedule();
 }
 
