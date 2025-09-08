@@ -111,6 +111,16 @@ export function generateICS(events) {
         icsString.push(`SUMMARY:${event.topic} (${event.department})`);
         icsString.push(`LOCATION:${event.location}`);
         icsString.push(`DESCRIPTION:Instructor: ${event.instructor}`);
+        
+        // --- THIS IS THE NEW PART ---
+        // Add a 10-minute alarm to each event
+        icsString.push('BEGIN:VALARM');
+        icsString.push('TRIGGER:-PT10M'); // P=Period, T=Time, 10M=10 Minutes. The '-' means before the event.
+        icsString.push('ACTION:DISPLAY');
+        icsString.push(`DESCRIPTION:${event.topic}`); // This is the notification text.
+        icsString.push('END:VALARM');
+        // -----------------------------
+        
         icsString.push('END:VEVENT');
     });
 
