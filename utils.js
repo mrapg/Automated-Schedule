@@ -50,15 +50,15 @@ export function getDeptColor(department) {
 }
 
 /**
- * Determines the clinical batch from a roll number.
+ * Determines the clinical batch from a roll number in A-B-C-D order.
  * @param {number} rollNo The student's roll number.
  * @returns {string|null} The batch letter ('A', 'B', 'C', 'D') or null.
  */
 export function getClinicBatch(rollNo) {
-    if (rollNo >= 1 && rollNo <= 38) return 'A';
-    if (rollNo >= 39 && rollNo <= 76) return 'B';
-    if (rollNo >= 77 && rollNo <= 114) return 'C';
-    if (rollNo >= 115 && rollNo <= 150) return 'D';
+    if (rollNo >= 1 && rollNo <= 38) return 'A';    // Batch A
+    if (rollNo >= 39 && rollNo <= 76) return 'B';   // Batch B
+    if (rollNo >= 77 && rollNo <= 114) return 'C';  // Batch C
+    if (rollNo >= 115 && rollNo <= 150) return 'D'; // Batch D
     return null;
 }
 
