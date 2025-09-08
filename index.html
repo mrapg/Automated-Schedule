@@ -491,8 +491,28 @@
                                 <p class="holiday-topic">${holidayTopic}</p>
                             </div>`;
                     } else {
-                        const classEvents = dayEvents.filter(e => selectedDept === 'all' || e.department === selectedDept)
-                                                     .sort((a, b) => (a.startTime || "00:00").localeCompare(b.startTime || "00:00"));
+                        const classEvents = dayEvents
+                            .filter(e => selectedDept === 'all' || e.department === selectedDept)
+                            .sort((a, b) => {
+                                const batchOrder = { 'A': 1, 'B': 2, 'C': 3, 'D': 4 };
+                                
+                                const getBatchValue = (batchArray) => {
+                                    if (!Array.isArray(batchArray)) return 99;
+                                    const batch = batchArray.find(b => batchOrder.hasOwnProperty(b));
+                                    return batch ? batchOrder[batch] : 99; // Events with 'ALL' or other batches go last
+                                };
+
+                                const batchValueA = getBatchValue(a.batch);
+                                const batchValueB = getBatchValue(b.batch);
+
+                                // 1. Primary Sort: by Batch (A, B, C, D)
+                                if (batchValueA !== batchValueB) {
+                                    return batchValueA - batchValueB;
+                                }
+
+                                // 2. Secondary Sort: by Start Time
+                                return (a.startTime || "00:00").localeCompare(b.startTime || "00:00");
+                            });
 
                         if (classEvents.length > 0) {
                             daySlide.innerHTML += classEvents.map(createEventHTML).join('');
