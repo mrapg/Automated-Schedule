@@ -343,6 +343,8 @@
                 'psm': 'Community Medicine',
                 'comm medicine': 'Community Medicine',
                 'medicine': 'Internal Medicine',
+                'dept of int medicine': 'Internal Medicine', // <-- ADDED THIS
+                'internal medicine': 'Internal Medicine',     // <-- AND THIS
                 'obstetrics & gynaecology': 'Obs & Gynae',
                 'gynae': 'Obs & Gynae',
                 'fm&t': 'Forensic Medicine',
@@ -354,7 +356,7 @@
                 'radio diagnosis': 'Radiodiagnosis',
                 'psy': 'Psychiatry',
                 'anaes': 'Anaesthesiology',
-                'ent (ear nose and throat)': 'ENT'
+                'ent (ear nose and throat)': 'ENT' // This one already existed
             };
             
             if (aliases[d]) {
@@ -367,7 +369,7 @@
             let highestSimilarity = 0;
 
             for (const canonical of canonicalDepartments) {
-                const distance = levenshteinDistance(d, canonical);
+                const distance = levenshteinDistance(d, canonical.toLowerCase());
                 const similarity = 1 - (distance / Math.max(d.length, canonical.length));
 
                 if (similarity > highestSimilarity) {
@@ -761,3 +763,4 @@
     </script>
 </body>
 </html>
+
