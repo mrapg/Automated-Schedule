@@ -241,7 +241,83 @@
                 "14:00-15:00": { topic: "Tutorial Community Medicine", department: "Community Medicine", weeks: { from: 1, to: 19 } }
             }
         };
+        
+        // --- NEW: CLINICAL SCHEDULE RULES ---
+        const clinicalScheduleRules = [
+            // Internal Medicine
+            { department: "Internal Medicine", batch: "A", startDate: "2025-06-30", endDate: "2025-07-06" },
+            { department: "Internal Medicine", batch: "B", startDate: "2025-07-07", endDate: "2025-07-13" },
+            { department: "Internal Medicine", batch: "C", startDate: "2025-07-14", endDate: "2025-07-20" },
+            { department: "Internal Medicine", batch: "D", startDate: "2025-07-21", endDate: "2025-07-27" },
+            // Surgery
+            { department: "Surgery", batch: "A", startDate: "2025-07-07", endDate: "2025-07-13" },
+            { department: "Surgery", batch: "B", startDate: "2025-07-14", endDate: "2025-07-20" },
+            { department: "Surgery", batch: "C", startDate: "2025-07-21", endDate: "2025-07-27" },
+            { department: "Surgery", batch: "D", startDate: "2025-06-30", endDate: "2025-07-06" },
+            // Community Medicine
+            { department: "Community Medicine", batch: "A", startDate: "2025-07-14", endDate: "2025-07-20" },
+            { department: "Community Medicine", batch: "A", startDate: "2025-09-29", endDate: "2025-10-05" },
+            { department: "Community Medicine", batch: "B", startDate: "2025-07-21", endDate: "2025-07-27" },
+            { department: "Community Medicine", batch: "B", startDate: "2025-10-06", endDate: "2025-10-12" },
+            { department: "Community Medicine", batch: "C", startDate: "2025-06-30", endDate: "2025-07-06" },
+            { department: "Community Medicine", batch: "C", startDate: "2025-10-20", endDate: "2025-10-26" },
+            { department: "Community Medicine", batch: "D", startDate: "2025-07-07", endDate: "2025-07-13" },
+            { department: "Community Medicine", batch: "D", startDate: "2025-10-13", endDate: "2025-10-19" },
+            // Pediatrics
+            { department: "Pediatrics", batch: "A", startDate: "2025-07-21", endDate: "2025-07-27" },
+            { department: "Pediatrics", batch: "B", startDate: "2025-06-30", endDate: "2025-07-06" },
+            { department: "Pediatrics", batch: "C", startDate: "2025-07-07", endDate: "2025-07-13" },
+            { department: "Pediatrics", batch: "D", startDate: "2025-07-14", endDate: "2025-07-20" },
+            // Obs & Gynae
+            { department: "Obs & Gynae", batch: "A", startDate: "2025-07-28", endDate: "2025-08-10" },
+            { department: "Obs & Gynae", batch: "B", startDate: "2025-08-11", endDate: "2025-08-24" },
+            { department: "Obs & Gynae", batch: "C", startDate: "2025-08-25", endDate: "2025-09-07" },
+            { department: "Obs & Gynae", batch: "D", startDate: "2025-09-08", endDate: "2025-09-21" },
+            // Orthopaedics
+            { department: "Orthopaedics", batch: "A", startDate: "2025-08-11", endDate: "2025-08-24" },
+            { department: "Orthopaedics", batch: "B", startDate: "2025-08-25", endDate: "2025-09-07" },
+            { department: "Orthopaedics", batch: "C", startDate: "2025-09-08", endDate: "2025-09-21" },
+            { department: "Orthopaedics", batch: "D", startDate: "2025-07-28", endDate: "2025-08-10" },
+            // ENT
+            { department: "ENT", batch: "A", startDate: "2025-08-25", endDate: "2025-09-07" },
+            { department: "ENT", batch: "B", startDate: "2025-09-08", endDate: "2025-09-21" },
+            { department: "ENT", batch: "C", startDate: "2025-07-28", endDate: "2025-08-10" },
+            { department: "ENT", batch: "D", startDate: "2025-08-11", endDate: "2025-08-24" },
+            // Ophthalmology
+            { department: "Ophthalmology", batch: "A", startDate: "2025-09-08", endDate: "2025-09-21" },
+            { department: "Ophthalmology", batch: "B", startDate: "2025-07-28", endDate: "2025-08-10" },
+            { department: "Ophthalmology", batch: "C", startDate: "2025-08-11", endDate: "2025-08-24" },
+            { department: "Ophthalmology", batch: "D", startDate: "2025-08-25", endDate: "2025-09-07" },
+            // Respiratory Medicine
+            { department: "Respiratory Medicine", batch: "A", startDate: "2025-09-22", endDate: "2025-09-28" },
+            { department: "Respiratory Medicine", batch: "A", startDate: "2025-11-10", endDate: "2025-11-16" },
+            { department: "Respiratory Medicine", batch: "B", startDate: "2025-09-29", endDate: "2025-10-05" },
+            { department: "Respiratory Medicine", batch: "B", startDate: "2025-11-10", endDate: "2025-11-16" },
+            { department: "Respiratory Medicine", batch: "C", startDate: "2025-10-06", endDate: "2025-10-12" },
+            { department: "Respiratory Medicine", batch: "C", startDate: "2025-11-17", endDate: "2025-11-23" },
+            { department: "Respiratory Medicine", batch: "D", startDate: "2025-11-24", endDate: "2025-11-28" },
+            // Anaesthesiology
+            { department: "Anaesthesiology", batch: "A", startDate: "2025-10-20", endDate: "2025-10-26" },
+            { department: "Anaesthesiology", batch: "A", startDate: "2025-11-10", endDate: "2025-11-16", isEvening: true },
+            { department: "Anaesthesiology", batch: "B", startDate: "2025-10-27", endDate: "2025-10-31" },
+            { department: "Anaesthesiology", batch: "B", startDate: "2025-11-17", endDate: "2025-11-23" },
+            { department: "Anaesthesiology", batch: "C", startDate: "2025-10-13", endDate: "2025-10-19" },
+            { department: "Anaesthesiology", batch: "C", startDate: "2025-11-24", endDate: "2025-11-28" },
+            { department: "Anaesthesiology", batch: "D", startDate: "2025-09-22", endDate: "2025-09-28" },
+            { department: "Anaesthesiology", batch: "D", startDate: "2025-11-03", endDate: "2025-11-09" },
+            // Psychiatry
+            { department: "Psychiatry", batch: "A", startDate: "2025-10-06", endDate: "2025-10-12" },
+            { department: "Psychiatry", batch: "B", startDate: "2025-10-13", endDate: "2025-10-19" },
+            { department: "Psychiatry", batch: "C", startDate: "2025-09-22", endDate: "2025-09-28" },
+            { department: "Psychiatry", batch: "D", startDate: "2025-09-29", endDate: "2025-10-05" },
+            // Radiodiagnosis
+            { department: "Radiodiagnosis", batch: "A", startDate: "2025-10-13", endDate: "2025-10-19" },
+            { department: "Radiodiagnosis", batch: "B", startDate: "2025-09-22", endDate: "2025-09-28" },
+            { department: "Radiodiagnosis", batch: "C", startDate: "2025-09-29", endDate: "2025-10-05" },
+            { department: "Radiodiagnosis", batch: "D", startDate: "2025-10-06", endDate: "2025-10-12" }
+        ];
 
+        // --- UPDATED: generateGenericSchedule FUNCTION ---
         function generateGenericSchedule() {
             const genericSchedule = [];
             const getTermWeek = (currentDate) => {
@@ -249,19 +325,21 @@
                 return Math.floor(diff / (1000 * 60 * 60 * 24 * 7)) + 1;
             };
 
-            let currentDate = new Date(termStartDate);
-            while (currentDate <= termEndDate) {
-                const dayOfWeek = currentDate.getUTCDay();
-                if (dayOfWeek === 0) {
-                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+            // 1. Generate Academic Schedule (Lectures, Tutorials)
+            let academicDate = new Date(termStartDate);
+            while (academicDate <= termEndDate) {
+                const dayOfWeek = academicDate.getUTCDay();
+                if (dayOfWeek === 0) { // Skip Sundays
+                    academicDate.setUTCDate(academicDate.getUTCDate() + 1);
                     continue;
                 }
-                const termWeek = getTermWeek(currentDate);
+                const termWeek = getTermWeek(academicDate);
                 const dayRules = scheduleRules[dayOfWeek];
                 if (dayRules) {
                     for (const timeSlot in dayRules) {
                         let events = dayRules[timeSlot];
                         if (!Array.isArray(events)) events = [events];
+                        
                         events.forEach(rule => {
                             const { topic, department, weeks } = rule;
                             let isInWeek = false;
@@ -273,7 +351,7 @@
                             if (isInWeek) {
                                 const [startTime, endTime] = timeSlot.split('-');
                                 genericSchedule.push({
-                                    date: utils.formatDate(currentDate), startTime, endTime, topic, department,
+                                    date: utils.formatDate(academicDate), startTime, endTime, topic, department,
                                     instructor: "TBD", location: "TBD", batch: ["ALL"],
                                     isHoliday: false, isClinic: false, isGeneric: true 
                                 });
@@ -281,8 +359,36 @@
                         });
                     }
                 }
-                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                academicDate.setUTCDate(academicDate.getUTCDate() + 1);
             }
+
+            // 2. Generate Clinical Schedule
+            clinicalScheduleRules.forEach(rule => {
+                const startDate = new Date(rule.startDate + 'T00:00:00Z');
+                const endDate = new Date(rule.endDate + 'T00:00:00Z');
+                let currentDate = new Date(startDate);
+
+                while (currentDate <= endDate) {
+                    const dayOfWeek = currentDate.getUTCDay();
+                    if (dayOfWeek !== 0) { // Don't create postings on Sundays
+                        genericSchedule.push({
+                            date: utils.formatDate(currentDate),
+                            startTime: rule.isEvening ? "14:00" : "08:00",
+                            endTime: rule.isEvening ? "17:00" : "13:00",
+                            topic: `${rule.department} - Clinical Posting`,
+                            department: rule.department,
+                            instructor: "TBD",
+                            location: rule.department === 'Community Medicine' ? 'LH - SUSHRUTA (NLH)' : 'CH (SC), AICTS & MH Kirkee',
+                            batch: [rule.batch],
+                            isHoliday: false,
+                            isClinic: true,
+                            isGeneric: true
+                        });
+                    }
+                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                }
+            });
+
             return genericSchedule;
         }
         
@@ -763,4 +869,3 @@
     </script>
 </body>
 </html>
-
