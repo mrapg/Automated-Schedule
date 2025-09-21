@@ -242,7 +242,6 @@
             }
         };
         
-        // --- NEW: CLINICAL SCHEDULE RULES ---
         const clinicalScheduleRules = [
             // Internal Medicine
             { department: "Internal Medicine", batch: "A", startDate: "2025-06-30", endDate: "2025-07-06" },
@@ -373,8 +372,10 @@
                     if (dayOfWeek !== 0) { // Don't create postings on Sundays
                         genericSchedule.push({
                             date: utils.formatDate(currentDate),
-                            startTime: rule.isEvening ? "14:00" : "08:00",
+                            // --- THIS IS THE CHANGED PART ---
+                            startTime: rule.isEvening ? "14:00" : "11:00", // Changed from 08:00
                             endTime: rule.isEvening ? "17:00" : "13:00",
+                            // ---------------------------------
                             topic: `${rule.department} - Clinical Posting`,
                             department: rule.department,
                             instructor: "TBD",
