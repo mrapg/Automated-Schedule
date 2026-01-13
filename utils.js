@@ -23,12 +23,9 @@ export function getStartOfWeek(date) {
 
 /**
  * Returns a Tailwind CSS border color class based on the department.
- * @param {string} department The name of the department.
- * @returns {string} A Tailwind CSS class.
  */
 export function getDeptColor(department) {
     const colors = {
-        // Core Colors
         "Internal Medicine": "border-blue-500",
         "Community Medicine": "border-green-500",
         "Ophthalmology": "border-purple-500",
@@ -36,8 +33,6 @@ export function getDeptColor(department) {
         "ENT": "border-yellow-500",
         "Forensic Medicine": "border-red-500",
         "Orthopaedics": "border-orange-500",
-        
-        // Additional Department Colors
         "Surgery": "border-slate-500",
         "Dermatology": "border-amber-500",
         "Pediatrics": "border-cyan-500",
@@ -46,47 +41,39 @@ export function getDeptColor(department) {
         "Psychiatry": "border-rose-500",
         "Anaesthesiology": "border-lime-500"
     };
-    return colors[department] || "border-gray-500"; // Defaults to gray if not found
+    return colors[department] || "border-gray-500";
 }
 
 /**
- * Determines the clinical batch from a roll number in A-B-C-D order.
- * @param {number} rollNo The student's roll number.
- * @returns {string|null} The batch letter ('A', 'B', 'C', 'D') or null.
+ * Determines the batch from a roll number for Term VII (A, B, C).
+ * Batch-A (1-50), Batch-B (51-100), Batch-C (101-148).
  */
 export function getClinicBatch(rollNo) {
-    if (rollNo >= 1 && rollNo <= 38) return 'A';    // Batch A
-    if (rollNo >= 39 && rollNo <= 76) return 'B';   // Batch B
-    if (rollNo >= 77 && rollNo <= 114) return 'C';  // Batch C
-    if (rollNo >= 115 && rollNo <= 150) return 'D'; // Batch D
+    if (rollNo >= 1 && rollNo <= 50) return 'A';    
+    if (rollNo >= 51 && rollNo <= 100) return 'B';   
+    if (rollNo >= 101 && rollNo <= 150) return 'C';  
     return null;
 }
 
-/**
- * Determines the general batch from a roll number.
- * @param {number} rollNo The student's roll number.
- * @returns {string|null} The batch letter ('A', 'B', 'C') or null.
- */
 export function getGeneralBatch(rollNo) {
-    if (rollNo >= 1 && rollNo <= 50) return 'A';
-    if (rollNo >= 51 && rollNo <= 100) return 'B';
-    if (rollNo >= 101 && rollNo <= 150) return 'C';
-    return null;
+    return getClinicBatch(rollNo);
 }
 
 /**
  * Displays a custom alert modal with a message.
- * @param {string} message The message to display.
  */
 export function customAlert(message) {
-    document.getElementById('alert-message').textContent = message;
-    document.getElementById('alert-modal').classList.remove('hidden');
+    const alertModal = document.getElementById('alert-modal');
+    if (alertModal) {
+        document.getElementById('alert-message').textContent = message;
+        alertModal.classList.remove('hidden');
+    } else {
+        alert(message);
+    }
 }
 
 /**
- * Generates a more compatible ICS calendar file string from an array of events.
- * @param {Array<object>} events Array of schedule event objects.
- * @returns {string} A string in iCalendar format.
+ * Generates an ICS calendar file string from an array of events.
  */
 export function generateICS(events) {
     const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
@@ -100,9 +87,7 @@ export function generateICS(events) {
     ];
     
     events.forEach(event => {
-        // Create a more unique ID for each event
         const uid = `${event.date}-${event.startTime}-${event.topic.replace(/[^a-zA-Z0-9]/g, "")}@afmc.schedule`;
-        
         icsString.push('BEGIN:VEVENT');
         icsString.push(`UID:${uid}`);
         icsString.push(`DTSTAMP:${timestamp}`);
@@ -111,16 +96,11 @@ export function generateICS(events) {
         icsString.push(`SUMMARY:${event.topic} (${event.department})`);
         icsString.push(`LOCATION:${event.location}`);
         icsString.push(`DESCRIPTION:Instructor: ${event.instructor}`);
-        
-        // --- THIS IS THE NEW PART ---
-        // Add a 10-minute alarm to each event
         icsString.push('BEGIN:VALARM');
-        icsString.push('TRIGGER:-PT10M'); // P=Period, T=Time, 10M=10 Minutes. The '-' means before the event.
+        icsString.push('TRIGGER:-PT10M');
         icsString.push('ACTION:DISPLAY');
-        icsString.push(`DESCRIPTION:${event.topic}`); // This is the notification text.
+        icsString.push(`DESCRIPTION:${event.topic}`);
         icsString.push('END:VALARM');
-        // -----------------------------
-        
         icsString.push('END:VEVENT');
     });
 
@@ -128,11 +108,6 @@ export function generateICS(events) {
     return icsString.join('\r\n');
 }
 
-/**
- * Triggers a browser download for a blob of data.
- * @param {string} icsData The ICS data string.
- * @param {string} filename The desired filename for the download.
- */
 export function downloadICS(icsData, filename = 'MySchedule.ics') {
     const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
