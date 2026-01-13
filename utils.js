@@ -45,18 +45,25 @@ export function getDeptColor(department) {
 }
 
 /**
- * Determines the batch from a roll number for Term VII (A, B, C).
- * Batch-A (1-50), Batch-B (51-100), Batch-C (101-148).
+ * Determines the clinical unit from a roll number (4-unit distribution).
+ * Unit A: 1-38, Unit B: 39-76, Unit C: 77-113, Unit D: 114-148.
  */
 export function getClinicBatch(rollNo) {
-    if (rollNo >= 1 && rollNo <= 50) return 'A';    
-    if (rollNo >= 51 && rollNo <= 100) return 'B';   
-    if (rollNo >= 101 && rollNo <= 150) return 'C';  
+    if (rollNo >= 1 && rollNo <= 38) return 'A';    
+    if (rollNo >= 39 && rollNo <= 76) return 'B';   
+    if (rollNo >= 77 && rollNo <= 113) return 'C';  
+    if (rollNo >= 114 && rollNo <= 148) return 'D';
     return null;
 }
 
+/**
+ * Determines the general batch for Theory/Tutorials (3-unit distribution).
+ */
 export function getGeneralBatch(rollNo) {
-    return getClinicBatch(rollNo);
+    if (rollNo >= 1 && rollNo <= 50) return 'A';
+    if (rollNo >= 51 && rollNo <= 100) return 'B';
+    if (rollNo >= 101 && rollNo <= 150) return 'C';
+    return null;
 }
 
 /**
