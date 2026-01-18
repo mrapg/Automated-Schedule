@@ -3,8 +3,8 @@
   "short_name": "AFMC Schedule",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1E293B",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
   "description": "Weekly training schedule for AFMC.",
   "icons": [
     {
