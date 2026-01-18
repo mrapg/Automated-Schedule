@@ -4,315 +4,499 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AFMC VII Term Schedule</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1E293B"/>
+    <meta name="theme-color" content="#0f172a"/>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         html { scroll-behavior: smooth; }
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .day-view { scroll-snap-type: x mandatory; scroll-behavior: smooth; }
-        .day-slide { scroll-snap-align: start; flex-shrink: 0; width: 100%; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-        .holiday { background-color: #facc15; color: #713f12; border-radius: 50%; font-weight: bold; }
-        .event-day { background-color: #bfdbfe; border-radius: 50%; }
-        .sunday { color: #991b1b; }
-        .today-highlight { background-color: #dbeafe; }
-        .holiday-container { display: flex; flex-direction: column; justify-content: flex-start; align-items: center; padding: 2rem 1rem 4rem 1rem; text-align: center; background: linear-gradient(45deg, #fef3c7, #fde68a); border-radius: 0.5rem; min-height: 300px; }
-        .holiday-icon { font-size: 4.5rem; animation: bounce 2s infinite ease-in-out; }
-        .holiday-title { font-size: 2.75rem; font-weight: 800; color: #ca8a04; margin-top: 1rem; }
-        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-25px); } 60% { transform: translateY(-10px); } }
-        .night-mode { background-color: #111827; color: #D1D5DB; }
-        .night-mode #app-container { background-color: #1F2937; }
-        .night-mode header { background-color: #1E293B; border-bottom: 1px solid #374151; }
-        .night-mode .bg-white { background-color: #374151; }
-        .night-mode .text-gray-800, .night-mode .text-gray-700 { color: #F3F4F6; }
-        .night-mode .border-gray-200 { border-color: #4B5563; }
-        .night-mode .today-highlight { background-color: #1E293B; }
-        #sun-icon { display: none; }
-        .night-mode #sun-icon { display: block; }
-        .night-mode #moon-icon { display: none; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            background-color: #0f172a; 
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        
+        .day-view { 
+            scroll-snap-type: x mandatory; 
+            scroll-behavior: smooth; 
+            min-height: 500px;
+            overflow-x: auto;
+            display: flex;
+        }
+        .day-slide { 
+            scroll-snap-align: start; 
+            flex-shrink: 0; 
+            width: 100%; 
+            min-height: 400px; 
+        }
+        
+        .day-view::-webkit-scrollbar { height: 4px; }
+        .day-view::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        .card-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4); }
+        
+        /* Native UI Overrides for Dark Mode Visibility */
+        input[type="date"]::-webkit-calendar-picker-indicator { 
+            cursor: pointer; 
+            filter: invert(1);
+            opacity: 0; 
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        select { color-scheme: dark; outline: none; }
+        select option {
+            background-color: #0f172a !important; 
+            color: #f8fafc !important;
+            padding: 10px;
+        }
+
+        .modal-open { overflow: hidden; }
+
+        /* Animations */
+        .pulse-icon { animation: pulse-blue 2s infinite; }
+        @keyframes pulse-blue {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+
+        .live-dot { animation: blink 1.5s infinite; }
+        @keyframes blink {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .btn-glow-green { box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.2); }
+        .btn-glow-blue { box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.2); }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
-    <div id="app-container" class="max-w-lg mx-auto bg-white shadow-lg min-h-screen">
-        <header class="bg-blue-800 text-white p-4 flex justify-between items-center sticky top-0 z-10">
-            <div>
-                <h1 class="text-xl font-bold">AFMC Schedule (VII Term)</h1>
-                <p class="text-xs opacity-80">13 Batch: Jan 12 - May 17, 2026</p>
-                <p id="current-week-display" class="text-sm opacity-90 mt-1"></p>
-            </div>
-            <div class="flex items-center space-x-2">
-                 <button id="today-btn" class="p-2 rounded-full hover:bg-blue-700"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /><circle cx="12" cy="12" r="3" fill="currentColor" /></svg></button>
-                 <button id="calendar-view-btn" class="p-2 rounded-full hover:bg-blue-700"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 002-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg></button>
-                 <button id="night-mode-btn" class="p-2 rounded-full hover:bg-blue-700"><svg id="moon-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg><svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg></button>
-            </div>
-        </header>
-
-        <div id="user-view">
-            <div class="p-4 bg-gray-50 border-b border-gray-200">
-                <div class="grid grid-cols-2 gap-4">
-                    <select id="department-filter" class="w-full p-2 border rounded-md bg-white"><option value="all">All Depts</option></select>
-                    <button id="add-to-calendar-btn" class="w-full bg-green-600 text-white font-semibold py-2 rounded-md">Add to Calendar</button>
+<body class="transition-colors duration-200">
+    <!-- Onboarding Modal -->
+    <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/98 z-50 flex items-center justify-center p-6 hidden backdrop-blur-xl">
+        <div class="bg-slate-900 rounded-3xl p-10 max-w-sm w-full shadow-2xl text-center border border-slate-800">
+            <div class="mb-6 flex justify-center">
+                <div class="w-20 h-20 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30 pulse-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
                 </div>
             </div>
-            <div id="loading-indicator" class="text-center p-10"><p class="text-gray-500 font-semibold animate-pulse">Loading VII Term Schedule...</p></div>
-            <div id="day-view-container" class="overflow-x-auto day-view flex"></div>
+            <h2 class="text-3xl font-black text-white mb-2 tracking-tight uppercase">Welcome, Cadet</h2>
+            <p class="text-slate-400 mb-2 font-medium leading-relaxed uppercase text-[10px] tracking-widest text-blue-400">VII Term Duration</p>
+            <p class="text-white mb-8 font-black text-lg">12 JAN - 17 MAY 2026</p>
+            <div class="relative mb-8">
+                <input type="number" id="init-roll-input" placeholder="001" min="1" max="148" class="w-full p-5 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-4xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-white transition-all placeholder-slate-600">
+                <label class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 px-3 text-[10px] font-black text-blue-500 uppercase tracking-widest border border-slate-800 rounded-full">AFMC Roll No</label>
+            </div>
+            <div id="onboarding-error" class="hidden mb-4 text-xs font-bold text-red-500 uppercase tracking-tighter">Please enter roll (1-148)</div>
+            <button id="start-btn" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl hover:bg-blue-700 transition transform active:scale-95 shadow-xl shadow-blue-500/20 uppercase tracking-widest">View My Schedule</button>
         </div>
     </div>
 
-    <div id="calendar-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-20"><div class="bg-white rounded-lg p-4 w-11/12 max-w-md"><div id="calendar-header" class="flex justify-between items-center mb-4"><button id="prev-month-btn">&lt;</button><h3 id="month-year-display" class="font-semibold"></h3><button id="next-month-btn">&gt;</button></div><div id="calendar-grid" class="calendar-grid gap-2 text-center"></div><button id="close-calendar-modal" class="w-full mt-4 bg-red-500 text-white py-2 rounded-md">Close</button></div></div>
-    <div id="roll-no-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-20"><div class="bg-white rounded-lg p-6 w-11/12 max-w-sm text-center"><h3 class="font-semibold mb-4">Enter Roll Number (1-150)</h3><input type="number" id="roll-no-input" class="w-full p-2 border rounded-md mb-4 text-center" min="1" max="150"><button id="submit-roll-no-btn" class="w-full bg-green-500 text-white font-bold py-2 rounded">Download Week Schedule</button><button id="close-roll-no-modal" class="w-full mt-2 text-gray-500">Cancel</button></div></div>
-    <div id="alert-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-30"><div class="bg-white rounded-lg p-6 w-11/12 max-w-sm text-center"><p id="alert-message" class="mb-4"></p><button id="close-alert-modal" class="bg-blue-500 text-white px-4 py-2 rounded-md">OK</button></div></div>
+    <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl min-h-screen flex flex-col border-x border-slate-800">
+        <!-- Header -->
+        <header class="bg-slate-950 text-white p-4 sticky top-0 z-20 border-b border-slate-800 shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-black tracking-tight flex items-center gap-2">
+                        <span class="text-blue-400">AFMC</span> Schedule
+                    </h1>
+                    <p id="user-info-display" class="text-[9px] text-blue-400/70 uppercase font-black tracking-[0.2em] mt-0.5"></p>
+                </div>
+                <div class="flex items-center">
+                    <button id="change-roll-btn" class="px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 flex items-center gap-2 transition-all border border-slate-700 active:scale-95 group">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-100">Roll No.</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import * as utils from './utils.js'; 
+        <div id="user-view" class="flex-1 flex flex-col">
+            <!-- Navigation Interaction Bar -->
+            <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg">
+                <div class="flex space-x-2">
+                    <button id="today-btn" class="flex-1 bg-blue-600 btn-glow-blue text-white font-black py-2.5 rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-[10px]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Today
+                    </button>
+                    
+                    <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer overflow-hidden group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400 mr-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span id="date-picker-label" class="text-[10px] font-black text-slate-200 uppercase tracking-tighter">Go to Date</span>
+                        <input type="date" id="date-picker" class="absolute inset-0 opacity-0 cursor-pointer">
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400 mr-1.5 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        <select id="dept-filter" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10 bg-slate-950 text-white outline-none z-20">
+                            <option value="all">ALL DEPTS</option>
+                        </select>
+                        <span id="dept-filter-label" class="text-[9px] font-black text-slate-200 uppercase tracking-tighter truncate max-w-[70px]">All Depts</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-500 ml-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
 
-        const firebaseConfig = {
-                  apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
-                  authDomain: "training-schedule-7c862.firebaseapp.com",
-                  projectId: "training-schedule-7c862",
-                  storageBucket: "training-schedule-7c862.firebasestorage.app",
-                  messagingSenderId: "395637809585",
-                  appId: "1:395637809585:web:9a5eea7f80741083f49d90",
-                  measurementId: "G-S9EXHXY981"
-                };
-        const appId = "training-schedule-7c862";
+                    <button id="add-to-calendar-btn" class="flex-[1.5] bg-emerald-600 btn-glow-green text-white font-black py-2.5 rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center uppercase tracking-widest text-[9px]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Add to Calendar
+                    </button>
+                </div>
+            </div>
+            
+            <div id="loading-indicator" class="text-center p-24 hidden">
+                <div class="inline-block w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                <p class="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase">Generating</p>
+            </div>
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        signInAnonymously(auth);
+            <div id="day-view-container" class="day-view flex-1 bg-slate-900"></div>
+        </div>
+        
+        <div class="bg-slate-950/80 backdrop-blur border-t border-slate-800 p-2 text-center sticky bottom-0">
+             <p id="current-week-display" class="text-[9px] font-black text-blue-400 uppercase tracking-widest h-3.5"></p>
+        </div>
+    </div>
 
+    <script>
+        // --- CONFIG ---
         const termStartDate = new Date('2026-01-12T00:00:00Z');
         const termEndDate = new Date('2026-05-17T00:00:00Z');
 
         const scheduleRules = {
-            "1": { // Monday
-                "08:00-09:00": { topic: "Obst & Gynae Theory", department: "Obs & Gynae" },
-                "09:00-10:00": { topic: "Gen Surgery Theory", department: "Surgery" },
-                "14:00-15:00": [{ topic: "Tutorial OG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["B"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["C"], department: "Internal Medicine" }],
-                "15:00-16:00": [{ topic: "Tutorial OG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["B"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["C"], department: "Internal Medicine" }],
-                "16:00-17:00": { topic: "SDL Medicine", department: "Internal Medicine" }
-            },
-            "2": { // Tuesday
-                "08:00-09:00": { topic: "Gen Medicine Theory", department: "Internal Medicine" },
-                "09:00-10:00": [{ topic: "Paediatrics Theory", weekOfMonth: [1, 2], department: "Pediatrics" }, { topic: "Paediatrics SDL", weekOfMonth: [3, 4, 5], department: "Pediatrics" }],
-                "14:00-15:00": [{ topic: "Tutorial OG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["C"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["A"], department: "Internal Medicine" }],
-                "15:00-16:00": [{ topic: "Tutorial OG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["C"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["A"], department: "Internal Medicine" }],
-                "16:00-17:00": [{ topic: "Dermatology SDL", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "Psychiatry SDL", weekOfMonth: [3], department: "Psychiatry" }, { topic: "Resp Med SDL", weekOfMonth: [4], department: "Respiratory Medicine" }, { topic: "Anaesthesiology SDL", weekOfMonth: [5], department: "Anaesthesiology" }]
-            },
-            "3": { // Wednesday
-                "08:00-09:00": [{ topic: "ENT Theory", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthal Theory", weekOfMonth: [3, 4], department: "Ophthalmology" }],
-                "09:00-10:00": { topic: "Gen Medicine Theory", department: "Internal Medicine" },
-                "14:00-15:00": [{ topic: "Tutorial OG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["A"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["B"], department: "Internal Medicine" }],
-                "15:00-16:00": [{ topic: "Tutorial OG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["A"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["B"], department: "Internal Medicine" }],
-                "16:00-17:00": [{ topic: "ENT SDL", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthal SDL", weekOfMonth: [3], department: "Ophthalmology" }, { topic: "Radio SDL", weekOfMonth: [4, 5], department: "Radiodiagnosis" }]
-            },
-            "4": { // Thursday
-                "08:00-09:00": { topic: "Obst & Gynae Theory", department: "Obs & Gynae" },
-                "09:00-10:00": { topic: "Gen Medicine AETCOM", department: "Internal Medicine" },
-                "14:00-15:00": [{ topic: "Ortho Theory", weekOfMonth: [1, 2, 4], department: "Orthopaedics" }, { topic: "Ortho SDL", weekOfMonth: [3, 5], department: "Orthopaedics" }],
-                "15:00-16:00": [{ topic: "Paediatrics Tutorial", weekOfMonth: [1, 2], department: "Pediatrics" }, { topic: "Ortho Tutorial", weekOfMonth: [3, 4, 5], department: "Orthopaedics" }],
-                "16:00-17:00": [{ topic: "OG SDL", weekOfMonth: [1, 3, 5], department: "Obs & Gynae" }, { topic: "Mentorship", weekOfMonth: [2, 4], department: "Surgery" }]
-            },
-            "5": { // Friday
-                "08:00-09:00": { topic: "Gen Surgery Theory", department: "Surgery" },
-                "09:00-10:00": [{ topic: "Dermat Theory", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "Psy Theory", weekOfMonth: [3], department: "Psychiatry" }, { topic: "Anaes Theory", weekOfMonth: [4, 5], department: "Anaesthesiology" }],
-                "14:00-15:00": [{ topic: "Gen Medicine Theory", weekOfMonth: [1, 2], department: "Internal Medicine" }, { topic: "Ortho Tutorial", weekOfMonth: [3, 4, 5], department: "Orthopaedics" }],
-                "15:00-16:00": [{ topic: "Dermat Tutorial", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "Psy Tutorial", weekOfMonth: [3], department: "Psychiatry" }, { topic: "Ophthal Tutorial", weekOfMonth: [4, 5], department: "Ophthalmology" }],
-                "16:00-17:00": [{ topic: "ENT SDL", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthal SDL", weekOfMonth: [3], department: "Ophthalmology" }, { topic: "Radio SDL", weekOfMonth: [4, 5], department: "Radiodiagnosis" }]
-            },
-            "6": { // Saturday
-                "08:00-09:00": [{ topic: "ENT Tutorial", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthal Tutorial", weekOfMonth: [3], department: "Ophthalmology" }, { topic: "Anaes Theory", weekOfMonth: [4], department: "Anaesthesiology" }],
-                "09:00-10:00": { topic: "Pandemic Module (Integrated)", department: "Internal Medicine" },
-                "14:00-15:00": [{ topic: "Tutorial OG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["C"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["A"], department: "Internal Medicine" }],
-                "15:00-16:00": [{ topic: "Tutorial OG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial GS", batch: ["A"], department: "Surgery" }, { topic: "Tutorial GM", batch: ["B"], department: "Internal Medicine" }],
-                "16:00-17:00": { topic: "Mentorship", department: "Surgery" }
-            }
+            "1": { "08:00-09:00": { topic: "Obstetrics & Gynaecology Theory", department: "Obs & Gynae" }, "09:00-10:00": { topic: "General Surgery Theory", department: "Surgery" }, "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["B"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["C"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial OBG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["C"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["A"], department: "Internal Medicine" }], "16:00-17:00": [{ topic: "SDL Dermatology", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "SDL Psychiatry", weekOfMonth: [3], department: "Psychiatry" }, { topic: "SDL Respiratory Medicine", weekOfMonth: [4], department: "Respiratory Medicine" }, { topic: "SDL Anaesthesia", weekOfMonth: [5], department: "Anaesthesia" }] },
+            "2": { "08:00-09:00": { topic: "General Medicine Theory", department: "Internal Medicine" }, "09:00-10:00": [{ topic: "Paediatrics Theory", weekOfMonth: [1, 2], department: "Pediatrics" }, { topic: "SDL Paediatrics", weekOfMonth: [3, 4, 5], department: "Pediatrics" }], "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["A"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["B"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial OBG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["B"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["C"], department: "Internal Medicine" }], "16:00-17:00": [{ topic: "SDL ENT", weekOfMonth: [1, 2], department: "ENT" }, { topic: "SDL Ophthalmology", weekOfMonth: [3], department: "Ophthalmology" }, { topic: "SDL Radiology", weekOfMonth: [4, 5], department: "Radiodiagnosis" }] },
+            "3": { "08:00-09:00": [{ topic: "ENT Theory", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthalmology Theory", weekOfMonth: [3, 4], department: "Ophthalmology" }], "09:00-10:00": { topic: "General Medicine Theory", department: "Internal Medicine" }, "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["C"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["A"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial Dermatology", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "Tutorial Psychiatry", weekOfMonth: [3], department: "Psychiatry" }, { topic: "Tutorial Ophthalmology", weekOfMonth: [4, 5], department: "Ophthalmology" }], "16:00-17:00": { topic: "Mentorship", department: "Surgery" } },
+            "4": { "08:00-09:00": { topic: "Obstetrics & Gynaecology Theory", department: "Obs & Gynae" }, "09:00-10:00": [{ topic: "AETCOM (Med)", weekOfMonth: [1, 2], department: "AETCOM" }, { topic: "AETCOM (Surg)", weekOfMonth: [3], department: "AETCOM" }, { topic: "AETCOM (OBG)", weekOfMonth: [4, 5], department: "AETCOM" }], "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["A"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["B"], department: "Internal Medicine" }], "15:00-16:00": { topic: "Paediatrics Tutorial", department: "Pediatrics" }, "16:00-17:00": [{ topic: "SDL Surgery", weekOfMonth: [1, 3, 5], department: "Surgery" }, { topic: "SDL OBG", weekOfMonth: [2, 4], department: "Obs & Gynae" }] },
+            "5": { "08:00-09:00": { topic: "General Surgery Theory", department: "Surgery" }, "09:00-10:00": [{ topic: "ENT Theory", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthal Theory", weekOfMonth: [3], department: "Ophthalmology" }, { topic: "Anaesthesia Theory", weekOfMonth: [4], department: "Anaesthesia" }], "14:00-15:00": { topic: "Tutorial Ortho", weekOfMonth: [1, 2, 4], department: "Orthopaedics" }, "15:00-16:00": { topic: "Tutorial Ortho", weekOfMonth: [1, 2], department: "Orthopaedics" }, "16:00-17:00": [{ topic: "Tutorial OBG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial Surgery", batch: ["B"], department: "Surgery" }, { topic: "Tutorial Medicine", batch: ["C"], department: "Internal Medicine" }, { topic: "SDL Ortho", weekOfMonth: [3, 5], department: "Orthopaedics" }, { topic: "SDL Medicine", weekOfMonth: [3, 4, 5], department: "Internal Medicine" }] },
+            "6": { "08:00-09:00": [{ topic: "Dermat Theory", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "Psy Theory", weekOfMonth: [3, 4], department: "Psychiatry" }, { topic: "Anaesthesia Theory", weekOfMonth: [5], department: "Anaesthesia" }], "09:00-13:00": { topic: "Pandemic Module (Integrated)", department: "Internal Medicine" }, "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["C"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["A"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial OBG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["A"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["B"], department: "Internal Medicine" }], "16:00-17:00": { topic: "Mentorship", department: "Surgery" } }
         };
 
         const clinicalRotationRules = [
-            // Block 1: Weeks 1-6 (Jan 12 - Feb 22)
-            { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-22" },
-            { department: "Surgery", batch: "B", startDate: "2026-01-12", endDate: "2026-02-22" },
-            { department: "Obs & Gynae", batch: "C", startDate: "2026-01-12", endDate: "2026-02-22" },
-            // Block 2: Weeks 7-12 (Feb 23 - Apr 05)
-            { department: "Internal Medicine", batch: "B", startDate: "2026-02-23", endDate: "2026-04-05" },
-            { department: "Surgery", batch: "C", startDate: "2026-02-23", endDate: "2026-04-05" },
-            { department: "Obs & Gynae", batch: "A", startDate: "2026-02-23", endDate: "2026-04-05" },
-            // Block 3: Weeks 13-18 (Apr 06 - May 17)
-            { department: "Internal Medicine", batch: "C", startDate: "2026-04-06", endDate: "2026-05-17" },
-            { department: "Surgery", batch: "A", startDate: "2026-04-06", endDate: "2026-05-17" },
-            { department: "Obs & Gynae", batch: "B", startDate: "2026-04-06", endDate: "2026-05-17" }
+            { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" },
+            { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" },
+            { department: "Internal Medicine", batch: "C", startDate: "2026-03-09", endDate: "2026-03-29" },
+            { department: "Internal Medicine", batch: "D", startDate: "2026-03-30", endDate: "2026-04-19" },
+            { department: "Surgery", batch: "A", startDate: "2026-02-02", endDate: "2026-02-22" },
+            { department: "Surgery", batch: "B", startDate: "2026-03-09", endDate: "2026-03-29" },
+            { department: "Surgery", batch: "C", startDate: "2026-03-30", endDate: "2026-04-19" },
+            { department: "Surgery", batch: "D", startDate: "2026-01-12", endDate: "2026-02-01" },
+            { department: "Obs & Gynae", batch: "A", startDate: "2026-03-09", endDate: "2026-03-29" },
+            { department: "Obs & Gynae", batch: "B", startDate: "2026-03-30", endDate: "2026-04-19" },
+            { department: "Obs & Gynae", batch: "C", startDate: "2026-01-12", endDate: "2026-02-01" },
+            { department: "Obs & Gynae", batch: "D", startDate: "2026-02-02", endDate: "2026-02-22" },
+            { department: "Pediatrics", batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" },
+            { department: "Pediatrics", batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" },
+            { department: "Pediatrics", batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" },
+            { department: "Pediatrics", batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
+            { department: "Orthopaedics", batch: "A", startDate: "2026-04-13", endDate: "2026-04-19" },
+            { department: "Orthopaedics", batch: "B", startDate: "2026-01-26", endDate: "2026-02-01" },
+            { department: "Orthopaedics", batch: "C", startDate: "2026-02-16", endDate: "2026-02-22" },
+            { department: "Orthopaedics", batch: "D", startDate: "2026-03-23", endDate: "2026-03-29" },
+            { department: "Psychiatry", batch: "A", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Psychiatry", batch: "B", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Psychiatry", batch: "C", startDate: "2026-05-04", endDate: "2026-05-10" },
+            { department: "Psychiatry", batch: "D", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Dermatology", batch: "A", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Dermatology", batch: "B", startDate: "2026-05-04", endDate: "2026-05-10" },
+            { department: "Dermatology", batch: "C", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Dermatology", batch: "D", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Anaesthesia", batch: "A", startDate: "2026-05-04", endDate: "2026-05-10" },
+            { department: "Anaesthesia", batch: "B", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Anaesthesia", batch: "C", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Anaesthesia", batch: "D", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Emergency Medicine", batch: "A", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Emergency Medicine", batch: "B", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Emergency Medicine", batch: "C", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Emergency Medicine", batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
         ];
 
-        function generateGenericSchedule() {
-            const genericSchedule = [];
+        // --- HELPERS ---
+        const formatDate = (date) => date.toISOString().split('T')[0];
+        const getTodayStr = () => {
+            const now = new Date();
+            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        };
+        const getStartOfWeek = (date) => {
+            const d = new Date(date);
+            const day = d.getUTCDay();
+            const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+            return new Date(d.setUTCDate(diff));
+        };
+        const getDeptStyles = (dept) => {
+            const styles = { 
+                "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
+                "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
+                "Surgery": "border-slate-500 bg-slate-800/50 text-slate-200", 
+                "Pediatrics": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
+                "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", 
+                "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200", 
+                "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
+                "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
+                "Psychiatry": "border-red-500 bg-red-900/30 text-red-200", 
+                "Radiodiagnosis": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
+                "Anaesthesia": "border-lime-500 bg-lime-900/30 text-lime-200", 
+                "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
+                "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
+                "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200" 
+            };
+            return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
+        };
+        const getClinicBatch = (r) => {
+            if (r >= 1 && r <= 38) return 'A'; if (r >= 39 && r <= 76) return 'B'; if (r >= 77 && r <= 114) return 'C'; if (r >= 115 && r <= 148) return 'D';
+            return null;
+        };
+        const getGeneralBatch = (r) => {
+            if (r >= 1 && r <= 50) return 'A'; if (r >= 51 && r <= 100) return 'B'; if (r >= 101 && r <= 148) return 'C';
+            return null;
+        };
+
+        // --- CORE STATE ---
+        let rollNo = localStorage.getItem('afmc_roll_no');
+        let personalizedSchedule = [];
+        let currentFilter = 'all';
+
+        function initialize() {
+            setupOnboardingListeners();
+            if (!rollNo) {
+                document.getElementById('onboarding-overlay').classList.remove('hidden');
+                document.body.classList.add('modal-open');
+                return;
+            }
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            setTimeout(() => {
+                try {
+                    const r = parseInt(rollNo);
+                    const gBatch = getGeneralBatch(r);
+                    const cBatch = getClinicBatch(r);
+                    document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${gBatch} | Clinic: ${cBatch}`;
+                    generateSchedule(gBatch, cBatch);
+                    render();
+                    setupAppListeners();
+                    const today = getTodayStr();
+                    document.getElementById('date-picker').value = today;
+                    updateDatePickerLabel(today);
+                } catch (e) { console.error(e); } 
+                finally { document.getElementById('loading-indicator').classList.add('hidden'); }
+            }, 100);
+        }
+
+        function generateSchedule(gBatch, cBatch) {
+            const data = [];
             let current = new Date(termStartDate);
+            const electiveStart = new Date('2026-02-23T00:00:00Z');
+            const electiveEnd = new Date('2026-03-08T00:00:00Z');
             while (current <= termEndDate) {
                 const day = current.getUTCDay();
+                const ds = formatDate(current);
+                const isElective = current >= electiveStart && current <= electiveEnd;
                 if (day !== 0) {
-                    const weekOfMonth = Math.ceil(current.getUTCDate() / 7);
-                    const rules = scheduleRules[day];
-                    if (rules) {
-                        for (const time in rules) {
-                            let events = rules[time];
-                            if (!Array.isArray(events)) events = [events];
-                            events.forEach(rule => {
-                                if (rule.weekOfMonth && !rule.weekOfMonth.includes(weekOfMonth)) return;
-                                const [start, end] = time.split('-');
-                                genericSchedule.push({
-                                    date: utils.formatDate(current), startTime: start, endTime: end,
-                                    topic: rule.topic, department: rule.department, instructor: "TBD",
-                                    location: "Sushruta Hall", batch: rule.batch || ["ALL"],
-                                    isHoliday: false, isClinic: false, isGeneric: true
+                    if (!isElective) {
+                        const weekOfMonth = Math.ceil(current.getUTCDate() / 7);
+                        const rules = scheduleRules[day];
+                        if (rules) {
+                            for (const time in rules) {
+                                let events = rules[time];
+                                if (!Array.isArray(events)) events = [events];
+                                events.forEach(rule => {
+                                    if (rule.weekOfMonth && !rule.weekOfMonth.includes(weekOfMonth)) return;
+                                    if (rule.batch && !rule.batch.includes(gBatch)) return;
+                                    data.push({ date: ds, startTime: time.split('-')[0], endTime: time.split('-')[1], topic: rule.topic, department: rule.department, location: "Sushruta Hall" });
                                 });
-                            });
+                            }
                         }
+                        clinicalRotationRules.forEach(rot => {
+                            const start = new Date(rot.startDate + 'T00:00:00Z');
+                            const end = new Date(rot.endDate + 'T00:00:00Z');
+                            if (current >= start && current <= end && rot.batch === cBatch) {
+                                data.push({ date: ds, startTime: "11:00", endTime: "13:00", topic: `${rot.department} Clinics`, department: rot.department, location: "OPD/Ward" });
+                            }
+                        });
+                    } else {
+                        data.push({ date: ds, startTime: "11:00", endTime: "13:00", topic: "Elective Rotation", department: "Electives", location: "Hospital Block" });
+                        data.push({ date: ds, startTime: "17:00", endTime: "20:00", topic: "Labour Room Duty", department: "Obs & Gynae", location: "Labour Room" });
                     }
-                    clinicalRotationRules.forEach(rot => {
-                        const start = new Date(rot.startDate + 'T00:00:00Z');
-                        const end = new Date(rot.endDate + 'T00:00:00Z');
-                        if (current >= start && current <= end) {
-                            genericSchedule.push({
-                                date: utils.formatDate(current), startTime: "11:00", endTime: "13:00",
-                                topic: `${rot.department} Clinics`, department: rot.department,
-                                instructor: "TBD", location: "CH (SC) / MH Kirkee", batch: [rot.batch],
-                                isHoliday: false, isClinic: true, isGeneric: true
-                            });
-                        }
-                    });
                 }
                 current.setUTCDate(current.getUTCDate() + 1);
             }
-            return genericSchedule;
-        }
+            personalizedSchedule = data;
 
-        let scheduleData = [];
-        let allWeeks = [];
-        let currentVisibleWeekStart = null;
-        let calendarDate = new Date();
-        let intersectionObserver;
-        const dayViewContainer = document.getElementById('day-view-container');
-        const weekDisplay = document.getElementById('current-week-display');
-        const deptFilter = document.getElementById('department-filter');
-
-        function initialize() {
-            applyInitialTheme();
-            const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
-            onSnapshot(scheduleCollectionRef, (snapshot) => {
-                const specific = snapshot.docs.map(doc => doc.data());
-                const generic = generateGenericSchedule();
-                scheduleData = [...generic, ...specific];
-                processAndGroupData();
-                populateFilters();
-                renderFullSchedule();
-                document.getElementById('loading-indicator').classList.add('hidden');
-            });
-            setupEventListeners();
-        }
-
-        function applyInitialTheme() {
-            if (localStorage.getItem('theme') === 'night') document.body.classList.add('night-mode');
-        }
-
-        function processAndGroupData() {
-            const uniqueDates = [...new Set(scheduleData.map(e => e.date))].sort();
-            const weekStarts = [...new Set(uniqueDates.map(d => utils.formatDate(utils.getStartOfWeek(new Date(d + 'T00:00:00Z')))))].sort();
-            allWeeks = weekStarts.map(s => {
-                const d = new Date(s + 'T00:00:00Z');
-                const days = Array.from({length: 7}, (_, i) => { const dd = new Date(d); dd.setUTCDate(d.getUTCDate() + i); return dd; });
-                return { startDate: d, endDate: days[6], days };
+            // Populate Filter
+            const select = document.getElementById('dept-filter');
+            const depts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
+            select.innerHTML = '<option value="all">ALL DEPTS</option>';
+            depts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d.toUpperCase();
+                select.appendChild(opt);
             });
         }
 
-        function populateFilters() {
-            const departments = [...new Set(scheduleData.map(item => item.department).filter(d => d && !['Holiday', 'Multi-Dept', 'AETCOM'].includes(d)))].sort();
-            deptFilter.innerHTML = '<option value="all">All Departments</option>';
-            departments.forEach(d => deptFilter.innerHTML += `<option value="${d}">${d}</option>`);
-        }
-
-        function renderFullSchedule() {
-            if (intersectionObserver) intersectionObserver.disconnect();
-            dayViewContainer.innerHTML = '';
-            const selectedDept = deptFilter.value;
-            allWeeks.forEach(week => {
-                week.days.forEach(day => {
-                    const ds = utils.formatDate(day);
+        function render() {
+            const container = document.getElementById('day-view-container');
+            container.innerHTML = '';
+            const todayStr = getTodayStr();
+            
+            // Build slides by iterating through dates in range
+            let cur = new Date(termStartDate);
+            while (cur <= termEndDate) {
+                const ds = formatDate(cur);
+                const dayEvents = personalizedSchedule.filter(e => e.date === ds);
+                const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
+                
+                if (currentFilter === 'all' || filteredEvents.length > 0) {
                     const slide = document.createElement('div');
-                    slide.className = 'day-slide p-4';
+                    slide.className = 'day-slide p-5';
                     slide.dataset.date = ds;
-                    slide.dataset.weekStart = utils.formatDate(week.startDate);
-                    if (ds === utils.formatDate(new Date())) slide.classList.add('today-highlight');
-                    slide.innerHTML = `<h2 class="text-2xl font-bold mb-4 text-blue-700">${day.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC'})}</h2>`;
-                    const dayEvents = scheduleData.filter(e => e.date === ds);
-                    if (dayEvents.some(e => e.isHoliday)) {
-                        const h = dayEvents.find(e => e.isHoliday);
-                        slide.innerHTML += `<div class="holiday-container"><div class="holiday-icon">🎉</div><p class="holiday-title">Holiday</p><p class="holiday-topic">${h.topic || ''}</p></div>`;
-                    } else {
-                        const filtered = dayEvents.filter(e => selectedDept === 'all' || e.department === selectedDept).sort((a,b) => a.startTime.localeCompare(b.startTime));
-                        if (filtered.length > 0) {
-                            slide.innerHTML += filtered.map(e => `<div class="bg-white border-l-4 ${utils.getDeptColor(e.department)} p-4 mb-3 shadow-sm rounded-r-lg">
-                                <div class="flex justify-between items-start"><div><p class="font-bold text-lg">${e.topic}${e.isGeneric ? ' <span class="text-xs text-gray-400">(Term)</span>' : ''}</p><p class="text-sm text-gray-600">${e.department}</p></div><div class="text-right"><p class="font-semibold text-blue-600">${e.startTime} - ${e.endTime}</p></div></div>
-                                <div class="mt-2 text-xs text-gray-500 flex justify-between"><span>Batch: ${e.batch.join(', ')}</span><span>${e.location}</span></div>
+                    
+                    const isToday = ds === todayStr;
+                    slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
+                        ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
+                        ${cur.toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC'}).toUpperCase()} 
+                        ${isToday ? ' <span class="text-xs bg-blue-600 text-white dark:bg-blue-900/60 dark:text-blue-200 px-3 py-1 rounded-full ml-2 align-middle tracking-widest no-underline">TODAY</span>' : ''}
+                    </h2>`;
+                    
+                    const sortedEvents = filteredEvents.sort((a,b) => a.startTime.localeCompare(b.startTime));
+                    if (sortedEvents.length) {
+                        slide.innerHTML += sortedEvents.map(e => `
+                            <div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform active:scale-[0.98]">
+                                <div class="flex justify-between items-start gap-3">
+                                    <div class="flex-1">
+                                        <p class="font-black text-slate-50 leading-[1.1] text-2xl mb-1.5 uppercase tracking-tighter">${e.topic}</p>
+                                        <p class="text-[10px] opacity-70 uppercase font-black tracking-widest">${e.department}</p>
+                                    </div>
+                                    <div class="text-right flex flex-col items-end shrink-0">
+                                        <div class="bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none">
+                                            ${e.startTime}
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
+                                    </div>
+                                </div>
+                                <div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest">
+                                    <span class="flex items-center">📍 ${e.location}</span>
+                                </div>
                             </div>`).join('');
-                        } else {
-                            slide.innerHTML += `<div class="text-center text-gray-500 py-10"><p>No sessions scheduled.</p></div>`;
-                        }
+                    } else {
+                        const message = cur.getUTCDay() === 0 ? '🏖️ SUNDAY FUNDAY' : 'REST DAY';
+                        slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
                     }
-                    dayViewContainer.appendChild(slide);
-                });
-            });
-            setupIntersectionObserver();
-            goToToday(false);
-        }
+                    container.appendChild(slide);
+                }
+                cur.setUTCDate(cur.getUTCDate() + 1);
+            }
 
-        function setupIntersectionObserver() {
-            intersectionObserver = new IntersectionObserver((entries) => {
+            const observer = new IntersectionObserver((entries) => {
                 entries.forEach(e => {
                     if (e.isIntersecting) {
-                        currentVisibleWeekStart = e.target.dataset.weekStart;
-                        const w = allWeeks.find(week => utils.formatDate(week.startDate) === currentVisibleWeekStart);
-                        if (w) weekDisplay.textContent = `${w.startDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})} - ${w.endDate.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC'})}`;
+                        const date = new Date(e.target.dataset.date + 'T00:00:00Z');
+                        const start = getStartOfWeek(date);
+                        const end = new Date(start);
+                        end.setUTCDate(start.getUTCDate() + 6);
+                        document.getElementById('current-week-display').textContent = `${start.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})} - ${end.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})}, 2026`.toUpperCase();
                     }
                 });
-            }, { threshold: 0.5, root: dayViewContainer });
-            document.querySelectorAll('.day-slide').forEach(s => intersectionObserver.observe(s));
+            }, { threshold: 0.5, root: container });
+            document.querySelectorAll('.day-slide').forEach(s => observer.observe(s));
+            
+            const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
+            if (todaySlide) scrollToSlide(todaySlide, false);
         }
 
-        function goToToday(smooth = true) {
-            const s = document.querySelector(`.day-slide[data-date="${utils.formatDate(new Date())}"]`);
-            if (s) s.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'nearest', inline: 'start' });
+        function scrollToSlide(slideElement, smooth = true) {
+            if (!slideElement) return;
+            const container = document.getElementById('day-view-container');
+            window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+            container.scrollTo({ left: slideElement.offsetLeft, behavior: smooth ? 'smooth' : 'auto' });
         }
 
-        function setupEventListeners() {
-            deptFilter.onchange = renderFullSchedule;
-            document.getElementById('today-btn').onclick = () => goToToday(true);
-            document.getElementById('night-mode-btn').onclick = () => {
-                document.body.classList.toggle('night-mode');
-                localStorage.setItem('theme', document.body.classList.contains('night-mode') ? 'night' : 'light');
+        function updateDatePickerLabel(dateStr) {
+            const date = new Date(dateStr);
+            const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            document.getElementById('date-picker-label').textContent = formatted.toUpperCase();
+        }
+
+        function setupOnboardingListeners() {
+            document.getElementById('start-btn').onclick = () => {
+                const val = parseInt(document.getElementById('init-roll-input').value);
+                if (val >= 1 && val <= 148) {
+                    localStorage.setItem('afmc_roll_no', val);
+                    rollNo = val;
+                    document.getElementById('onboarding-overlay').classList.add('hidden');
+                    document.body.classList.remove('modal-open');
+                    initialize();
+                } else {
+                    document.getElementById('onboarding-error').classList.remove('hidden');
+                }
             };
-            document.getElementById('add-to-calendar-btn').onclick = () => document.getElementById('roll-no-modal').classList.remove('hidden');
-            document.getElementById('close-roll-no-modal').onclick = () => document.getElementById('roll-no-modal').classList.add('hidden');
-            document.getElementById('close-alert-modal').onclick = () => document.getElementById('alert-modal').classList.add('hidden');
-            document.getElementById('submit-roll-no-btn').onclick = () => {
-                const roll = parseInt(document.getElementById('roll-no-input').value);
-                if (!roll || roll < 1 || roll > 150) return utils.customAlert("Enter valid roll number.");
-                const cBatch = utils.getClinicBatch(roll);
-                const gBatch = utils.getGeneralBatch(roll);
-                const events = scheduleData.filter(e => {
-                    if (e.batch.includes('ALL')) return true;
-                    return e.isClinic ? e.batch.includes(cBatch) : e.batch.includes(gBatch);
+        }
+
+        function setupAppListeners() {
+            document.getElementById('change-roll-btn').onclick = () => { 
+                localStorage.removeItem('afmc_roll_no'); 
+                location.reload(); 
+            };
+            
+            document.getElementById('today-btn').onclick = () => {
+                const todayStr = getTodayStr();
+                const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
+                if (todaySlide) {
+                    scrollToSlide(todaySlide);
+                    document.getElementById('date-picker').value = todayStr;
+                    updateDatePickerLabel(todayStr);
+                }
+            };
+
+            document.getElementById('date-picker').onchange = (e) => {
+                const chosenDate = e.target.value;
+                const targetSlide = document.querySelector(`.day-slide[data-date="${chosenDate}"]`);
+                if (targetSlide) {
+                    scrollToSlide(targetSlide);
+                    updateDatePickerLabel(chosenDate);
+                }
+            };
+
+            document.getElementById('dept-filter').onchange = (e) => {
+                currentFilter = e.target.value;
+                document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text;
+                render();
+            };
+
+            document.getElementById('add-to-calendar-btn').onclick = () => {
+                const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
+                let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+                personalizedSchedule.forEach(e => {
+                    ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT');
                 });
-                utils.downloadICS(utils.generateICS(events), `AFMC_Schedule_Roll_${roll}.ics`);
-                document.getElementById('roll-no-modal').classList.add('hidden');
+                ics.push('END:VCALENDAR');
+                const blob = new Blob([ics.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `AFMC_Schedule_Roll_${rollNo}.ics`;
+                link.click();
             };
         }
-        initialize();
+
+        window.onload = initialize;
     </script>
 </body>
 </html>
