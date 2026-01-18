@@ -1,125 +1,111 @@
-// utils.js
+/**
+ * utils.js
+ * Optimized utility functions for AFMC VII Term Schedule
+ */
 
 /**
- * Formats a Date object into a 'YYYY-MM-DD' string.
- * @param {Date} date The date to format.
- * @returns {string} The formatted date string. 
+ * Formats a Date object into a 'YYYY-MM-DD' string using local date parts.
+ * @param {Date} date 
+ * @returns {string}
  */
-export function formatDate(date) {
+export const formatDate = (date) => {
     return date.toISOString().split('T')[0];
-}
+};
 
 /**
- * Gets the start of the week (Monday) for a given date.
- * @param {Date} date The date to find the start of the week for.
- * @returns {Date} A new Date object representing the start of the week.
+ * Returns a 'YYYY-MM-DD' string for the current local date.
  */
-export function getStartOfWeek(date) {
+export const getTodayStr = () => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+/**
+ * Gets the start of the week (Monday) for a given date in UTC.
+ * @param {Date} date 
+ * @returns {Date}
+ */
+export const getStartOfWeek = (date) => {
     const d = new Date(date);
     const day = d.getUTCDay();
-    const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); // adjust when day is Sunday
+    const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
     return new Date(d.setUTCDate(diff));
-}
+};
 
 /**
- * Returns a Tailwind CSS border color class based on the department.
+ * Returns Tailwind CSS border and background classes for dark mode based on department.
  */
-export function getDeptColor(department) {
-    const colors = {
-        "Internal Medicine": "border-blue-500",
-        "Community Medicine": "border-green-500",
-        "Ophthalmology": "border-purple-500",
-        "Obs & Gynae": "border-pink-500",
-        "ENT": "border-yellow-500",
-        "Forensic Medicine": "border-red-500",
-        "Orthopaedics": "border-orange-500",
-        "Surgery": "border-slate-500",
-        "Dermatology": "border-amber-500",
-        "Pediatrics": "border-cyan-500",
-        "Respiratory Medicine": "border-teal-500",
-        "Radiodiagnosis": "border-indigo-500",
-        "Psychiatry": "border-rose-500",
-        "Anaesthesiology": "border-lime-500"
+export const getDeptStyles = (dept) => {
+    const styles = { 
+        "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
+        "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
+        "Surgery": "border-slate-500 bg-slate-800/50 text-slate-200", 
+        "Pediatrics": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
+        "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", 
+        "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200", 
+        "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
+        "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
+        "Psychiatry": "border-red-500 bg-red-900/30 text-red-200", 
+        "Radiodiagnosis": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
+        "Anaesthesia": "border-lime-500 bg-lime-900/30 text-lime-200", 
+        "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
+        "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
+        "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200" 
     };
-    return colors[department] || "border-gray-500";
-}
+    return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
+};
 
 /**
- * Determines the clinical unit from a roll number (4-unit distribution).
- * Unit A: 1-38, Unit B: 39-76, Unit C: 77-113, Unit D: 114-148.
+ * Unit A: 1-38, Unit B: 39-76, Unit C: 77-114, Unit D: 115-148.
  */
-export function getClinicBatch(rollNo) {
-    if (rollNo >= 1 && rollNo <= 38) return 'A';    
-    if (rollNo >= 39 && rollNo <= 76) return 'B';   
-    if (rollNo >= 77 && rollNo <= 113) return 'C';  
-    if (rollNo >= 114 && rollNo <= 148) return 'D';
+export const getClinicBatch = (r) => {
+    if (r >= 1 && r <= 38) return 'A'; 
+    if (r >= 39 && r <= 76) return 'B'; 
+    if (r >= 77 && r <= 114) return 'C'; 
+    if (r >= 115 && r <= 148) return 'D';
     return null;
-}
+};
 
 /**
- * Determines the general batch for Theory/Tutorials (3-unit distribution).
+ * Batch A: 1-50, Batch B: 51-100, Batch C: 101-148.
  */
-export function getGeneralBatch(rollNo) {
-    if (rollNo >= 1 && rollNo <= 50) return 'A';
-    if (rollNo >= 51 && rollNo <= 100) return 'B';
-    if (rollNo >= 101 && rollNo <= 150) return 'C';
+export const getGeneralBatch = (r) => {
+    if (r >= 1 && r <= 50) return 'A'; 
+    if (r >= 51 && r <= 100) return 'B'; 
+    if (r >= 101 && r <= 148) return 'C';
     return null;
-}
+};
 
 /**
- * Displays a custom alert modal with a message.
+ * Generates and downloads an ICS file for the personalized schedule.
  */
-export function customAlert(message) {
-    const alertModal = document.getElementById('alert-modal');
-    if (alertModal) {
-        document.getElementById('alert-message').textContent = message;
-        alertModal.classList.remove('hidden');
-    } else {
-        alert(message);
-    }
-}
-
-/**
- * Generates an ICS calendar file string from an array of events.
- */
-export function generateICS(events) {
+export function downloadCalendar(events, rollNo) {
     const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
-    const now = new Date();
-    const timestamp = `${now.getUTCFullYear()}${(now.getUTCMonth() + 1).toString().padStart(2, '0')}${now.getUTCDate().toString().padStart(2, '0')}T${now.getUTCHours().toString().padStart(2, '0')}${now.getUTCMinutes().toString().padStart(2, '0')}${now.getUTCSeconds().toString().padStart(2, '0')}Z`;
-
-    let icsString = [
+    
+    let ics = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
-        'PRODID:-//YourAppName//AFMC Schedule//EN'
+        'PRODID:-//AFMC//Schedule//EN',
+        'CALSCALE:GREGORIAN',
+        'METHOD:PUBLISH'
     ];
-    
-    events.forEach(event => {
-        const uid = `${event.date}-${event.startTime}-${event.topic.replace(/[^a-zA-Z0-9]/g, "")}@afmc.schedule`;
-        icsString.push('BEGIN:VEVENT');
-        icsString.push(`UID:${uid}`);
-        icsString.push(`DTSTAMP:${timestamp}`);
-        icsString.push(`DTSTART;TZID=Asia/Kolkata:${toICSDate(event.date, event.startTime)}`);
-        icsString.push(`DTEND;TZID=Asia/Kolkata:${toICSDate(event.date, event.endTime)}`);
-        icsString.push(`SUMMARY:${event.topic} (${event.department})`);
-        icsString.push(`LOCATION:${event.location}`);
-        icsString.push(`DESCRIPTION:Instructor: ${event.instructor}`);
-        icsString.push('BEGIN:VALARM');
-        icsString.push('TRIGGER:-PT10M');
-        icsString.push('ACTION:DISPLAY');
-        icsString.push(`DESCRIPTION:${event.topic}`);
-        icsString.push('END:VALARM');
-        icsString.push('END:VEVENT');
+
+    events.forEach(e => {
+        ics.push('BEGIN:VEVENT');
+        ics.push(`SUMMARY:${e.topic}`);
+        ics.push(`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`);
+        ics.push(`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`);
+        ics.push(`LOCATION:${e.location}`);
+        ics.push(`DESCRIPTION:DEPT: ${e.department}`);
+        ics.push('END:VEVENT');
     });
 
-    icsString.push('END:VCALENDAR');
-    return icsString.join('\r\n');
-}
+    ics.push('END:VCALENDAR');
 
-export function downloadICS(icsData, filename = 'MySchedule.ics') {
-    const blob = new Blob([icsData], { type: 'text/calendar;charset=utf-8' });
+    const blob = new Blob([ics.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = filename;
+    link.download = `AFMC_Schedule_Roll_${rollNo}.ics`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
