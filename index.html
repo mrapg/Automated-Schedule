@@ -214,6 +214,15 @@
         const termEndDate = new Date('2026-05-17T00:00:00Z');
         const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
+        // --- DEPT NORMALIZATION HELPER ---
+        const normalizeDept = (dept) => {
+            if (!dept) return dept;
+            const d = String(dept).toUpperCase();
+            // Map variations of Paediatrics/Pediatrics to a unified key
+            if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC")) return "Paediatrics";
+            return dept;
+        };
+
         const scheduleRules = {
             "Monday": {
                 theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "General Surgery" },
@@ -286,10 +295,10 @@
             { department: "Obs & Gynae", batch: "B", startDate: "2026-03-30", endDate: "2026-04-19" },
             { department: "Obs & Gynae", batch: "C", startDate: "2026-01-12", endDate: "2026-02-01" },
             { department: "Obs & Gynae", batch: "D", startDate: "2026-02-02", endDate: "2026-02-22" },
-            { department: "Pediatrics", batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" },
-            { department: "Pediatrics", batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" },
-            { department: "Pediatrics", batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" },
-            { department: "Pediatrics", batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
+            { department: "Paediatrics", batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" },
+            { department: "Paediatrics", batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" },
+            { department: "Paediatrics", batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" },
+            { department: "Paediatrics", batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
             { department: "Orthopaedics", batch: "A", startDate: "2026-04-13", endDate: "2026-04-19" },
             { department: "Orthopaedics", batch: "B", startDate: "2026-01-26", endDate: "2026-02-01" },
             { department: "Orthopaedics", batch: "C", startDate: "2026-02-16", endDate: "2026-02-22" },
@@ -313,7 +322,35 @@
         ];
 
         // --- HELPERS ---
-        const formatDate = (date) => date.toISOString().split('T')[0];
+        const getDeptStyles = (dept) => {
+            const styles = { 
+                "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
+                "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
+                "Surgery": "border-slate-500 bg-slate-800/50 text-slate-200", 
+                "Paediatrics": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
+                "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", 
+                "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200", 
+                "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
+                "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
+                "Psychiatry": "border-red-500 bg-red-900/30 text-red-200", 
+                "Radiodiagnosis": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
+                "Anaesthesia": "border-lime-500 bg-lime-900/30 text-lime-200", 
+                "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
+                "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
+                "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200" 
+            };
+            return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
+        };
+
+        const getClinicBatch = (r) => {
+            if (r >= 1 && r <= 38) return 'A'; if (r >= 39 && r <= 76) return 'B'; if (r >= 77 && r <= 114) return 'C'; if (r >= 115 && r <= 148) return 'D';
+            return null;
+        };
+        const getGeneralBatch = (r) => {
+            if (r >= 1 && r <= 50) return 'A'; if (r >= 51 && r <= 100) return 'B'; if (r >= 101 && r <= 148) return 'C';
+            return null;
+        };
+
         const getTodayStr = () => {
             const now = new Date();
             return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -330,34 +367,6 @@
             const firstDayOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
             const firstDayWeekday = firstDayOfMonth.getUTCDay() === 0 ? 7 : firstDayOfMonth.getUTCDay();
             return Math.ceil((day + firstDayWeekday - 1) / 7);
-        };
-
-        const getDeptStyles = (dept) => {
-            const styles = { 
-                "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
-                "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
-                "Surgery": "border-slate-500 bg-slate-800/50 text-slate-200", 
-                "Pediatrics": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
-                "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", 
-                "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200", 
-                "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
-                "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
-                "Psychiatry": "border-red-500 bg-red-900/30 text-red-200", 
-                "Radiodiagnosis": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
-                "Anaesthesia": "border-lime-500 bg-lime-900/30 text-lime-200", 
-                "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
-                "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
-                "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200" 
-            };
-            return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
-        };
-        const getClinicBatch = (r) => {
-            if (r >= 1 && r <= 38) return 'A'; if (r >= 39 && r <= 76) return 'B'; if (r >= 77 && r <= 114) return 'C'; if (r >= 115 && r <= 148) return 'D';
-            return null;
-        };
-        const getGeneralBatch = (r) => {
-            if (r >= 1 && r <= 50) return 'A'; if (r >= 51 && r <= 100) return 'B'; if (r >= 101 && r <= 148) return 'C';
-            return null;
         };
 
         // --- CORE STATE ---
@@ -408,15 +417,19 @@
 
             while (current <= termEndDate) {
                 const dayName = current.toLocaleDateString('en-US', {weekday: 'long', timeZone: 'UTC'});
-                const ds = formatDate(current);
+                const ds = current.toISOString().split('T')[0];
                 const isElective = current >= eStart && current <= eEnd;
                 const week = getAcademicWeek(current);
                 const rules = scheduleRules[dayName];
 
+                // Standardize dynamic events on input
                 const filteredDynamic = dynamicEvents.filter(e => {
                     return e.date === ds && (e.batch.includes("ALL") || e.batch.includes(gBatch) || e.batch.includes(cBatch));
                 });
-                filteredDynamic.forEach(e => data.push({...e}));
+                
+                filteredDynamic.forEach(e => {
+                    data.push({ ...e, department: normalizeDept(e.department) });
+                });
 
                 const isHoliday = filteredDynamic.some(e => e.isHoliday);
 
@@ -473,6 +486,7 @@
             }
             personalizedSchedule = data;
 
+            // Sync Filter Options
             const select = document.getElementById('dept-filter');
             const depts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
             select.innerHTML = '<option value="all">ALL DEPTS</option>';
@@ -486,7 +500,15 @@
 
         function addEntry(data, date, timeRange, topic, dept, loc) {
             const [start, end] = timeRange.split('-');
-            data.push({ date, startTime: start, endTime: end, topic, department: dept, location: loc, isDynamic: false });
+            data.push({ 
+                date, 
+                startTime: start, 
+                endTime: end, 
+                topic, 
+                department: normalizeDept(dept), // Standardize here
+                location: loc, 
+                isDynamic: false 
+            });
         }
 
         function render() {
@@ -496,7 +518,7 @@
             
             let cur = new Date(termStartDate);
             while (cur <= termEndDate) {
-                const ds = formatDate(cur);
+                const ds = cur.toISOString().split('T')[0];
                 const dayEvents = personalizedSchedule.filter(e => e.date === ds);
                 const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
                 
@@ -513,7 +535,7 @@
                     
                     const sortedEvents = filteredEvents.sort((a,b) => a.startTime.localeCompare(b.startTime));
                     if (sortedEvents.length) {
-                        slide.innerHTML += sortedEvents.map((e, idx) => {
+                        slide.innerHTML += sortedEvents.map((e) => {
                             const eventIdx = personalizedSchedule.indexOf(e);
                             return `
                             <div 
