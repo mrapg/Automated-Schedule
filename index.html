@@ -178,19 +178,71 @@
     </div>
 
     <script>
-        // --- CONFIG ---
+        // --- CONFIG & RULES
         const termStartDate = new Date('2026-01-12T00:00:00Z');
         const termEndDate = new Date('2026-05-17T00:00:00Z');
+        const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
         const scheduleRules = {
-            "1": { "08:00-09:00": { topic: "Obstetrics & Gynaecology Theory", department: "Obs & Gynae" }, "09:00-10:00": { topic: "General Surgery Theory", department: "Surgery" }, "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["B"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["C"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial OBG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["C"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["A"], department: "Internal Medicine" }], "16:00-17:00": [{ topic: "SDL Dermatology", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "SDL Psychiatry", weekOfMonth: [3], department: "Psychiatry" }, { topic: "SDL Respiratory Medicine", weekOfMonth: [4], department: "Respiratory Medicine" }, { topic: "SDL Anaesthesia", weekOfMonth: [5], department: "Anaesthesia" }] },
-            "2": { "08:00-09:00": { topic: "General Medicine Theory", department: "Internal Medicine" }, "09:00-10:00": [{ topic: "Paediatrics Theory", weekOfMonth: [1, 2], department: "Pediatrics" }, { topic: "SDL Paediatrics", weekOfMonth: [3, 4, 5], department: "Pediatrics" }], "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["A"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["B"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial OBG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["B"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["C"], department: "Internal Medicine" }], "16:00-17:00": [{ topic: "SDL ENT", weekOfMonth: [1, 2], department: "ENT" }, { topic: "SDL Ophthalmology", weekOfMonth: [3], department: "Ophthalmology" }, { topic: "SDL Radiology", weekOfMonth: [4, 5], department: "Radiodiagnosis" }] },
-            "3": { "08:00-09:00": [{ topic: "ENT Theory", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthalmology Theory", weekOfMonth: [3, 4], department: "Ophthalmology" }], "09:00-10:00": { topic: "General Medicine Theory", department: "Internal Medicine" }, "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["C"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["A"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial Dermatology", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "Tutorial Psychiatry", weekOfMonth: [3], department: "Psychiatry" }, { topic: "Tutorial Ophthalmology", weekOfMonth: [4, 5], department: "Ophthalmology" }], "16:00-17:00": { topic: "Mentorship", department: "Surgery" } },
-            "4": { "08:00-09:00": { topic: "Obstetrics & Gynaecology Theory", department: "Obs & Gynae" }, "09:00-10:00": [{ topic: "AETCOM (Med)", weekOfMonth: [1, 2], department: "AETCOM" }, { topic: "AETCOM (Surg)", weekOfMonth: [3], department: "AETCOM" }, { topic: "AETCOM (OBG)", weekOfMonth: [4, 5], department: "AETCOM" }], "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["A"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["B"], department: "Internal Medicine" }], "15:00-16:00": { topic: "Paediatrics Tutorial", department: "Pediatrics" }, "16:00-17:00": [{ topic: "SDL Surgery", weekOfMonth: [1, 3, 5], department: "Surgery" }, { topic: "SDL OBG", weekOfMonth: [2, 4], department: "Obs & Gynae" }] },
-            "5": { "08:00-09:00": { topic: "General Surgery Theory", department: "Surgery" }, "09:00-10:00": [{ topic: "ENT Theory", weekOfMonth: [1, 2], department: "ENT" }, { topic: "Ophthal Theory", weekOfMonth: [3], department: "Ophthalmology" }, { topic: "Anaesthesia Theory", weekOfMonth: [4], department: "Anaesthesia" }], "14:00-15:00": { topic: "Tutorial Ortho", weekOfMonth: [1, 2, 4], department: "Orthopaedics" }, "15:00-16:00": { topic: "Tutorial Ortho", weekOfMonth: [1, 2], department: "Orthopaedics" }, "16:00-17:00": [{ topic: "Tutorial OBG", batch: ["A"], department: "Obs & Gynae" }, { topic: "Tutorial Surgery", batch: ["B"], department: "Surgery" }, { topic: "Tutorial Medicine", batch: ["C"], department: "Internal Medicine" }, { topic: "SDL Ortho", weekOfMonth: [3, 5], department: "Orthopaedics" }, { topic: "SDL Medicine", weekOfMonth: [3, 4, 5], department: "Internal Medicine" }] },
-            "6": { "08:00-09:00": [{ topic: "Dermat Theory", weekOfMonth: [1, 2], department: "Dermatology" }, { topic: "Psy Theory", weekOfMonth: [3, 4], department: "Psychiatry" }, { topic: "Anaesthesia Theory", weekOfMonth: [5], department: "Anaesthesia" }], "09:00-13:00": { topic: "Pandemic Module (Integrated)", department: "Internal Medicine" }, "14:00-15:00": [{ topic: "Tutorial OBG", batch: ["B"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["C"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["A"], department: "Internal Medicine" }], "15:00-16:00": [{ topic: "Tutorial OBG", batch: ["C"], department: "Obs & Gynae" }, { topic: "Tutorial Gen Surgery", batch: ["A"], department: "Surgery" }, { topic: "Tutorial Gen Medicine", batch: ["B"], department: "Internal Medicine" }], "16:00-17:00": { topic: "Mentorship", department: "Surgery" } }
+            "Monday": {
+                theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "General Surgery" },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" },
+                    "15:00-16:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" }
+                },
+                sdl: { "16:00-17:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Respiratory Medicine", 5: "Anaesthesia" } }
+            },
+            "Tuesday": {
+                theory: { 
+                    "08:00-09:00": "General Medicine", 
+                    "09:00-10:00": { 1: "Paediatrics", 2: "Paediatrics", 3: "SDL Paediatrics", 4: "SDL Paediatrics", 5: "SDL Paediatrics" } 
+                },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" },
+                    "15:00-16:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
+                },
+                sdl: { "16:00-17:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Radiology", 5: "Radiology" } }
+            },
+            "Wednesday": {
+                theory: { 
+                    "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" },
+                    "09:00-10:00": "General Medicine" 
+                },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
+                    "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology", 5: "Ophthalmology" }
+                },
+                mentorship: { "16:00-17:00": "Mentorship" }
+            },
+            "Thursday": {
+                theory: { 
+                    "08:00-09:00": "Obstetrics & Gynaecology", 
+                    "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)", 5: "AETCOM (OBG)" } 
+                },
+                tutorials: { "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }, "15:00-16:00": "Paediatrics" },
+                sdl: { "16:00-17:00": { 1: "General Surgery", 2: "OBG", 3: "General Surgery", 4: "OBG", 5: "General Surgery" } }
+            },
+            "Friday": {
+                theory: { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Anaesthesia" } },
+                tutorials: {
+                    "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 4: "Orthopaedics" },
+                    "15:00-16:00": { 1: "Orthopaedics", 2: "Orthopaedics" },
+                    "16:00-17:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
+                },
+                sdl: { "16:00-17:00": { 3: ["Orthopaedics", "General Medicine"], 4: ["General Medicine"], 5: ["Orthopaedics", "General Medicine"] } }
+            },
+            "Saturday": {
+                theory: { "08:00-09:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Psychiatry", 5: "Anaesthesia" } },
+                pandemic: { "09:00-13:00": "Pandemic Module (Integrated)" },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
+                    "15:00-16:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }
+                },
+                mentorship: { "16:00-17:00": "Mentorship" }
+            }
         };
 
+        // Preserved Clinical Rotation Rules
         const clinicalRotationRules = [
             { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" },
             { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" },
@@ -242,6 +294,9 @@
             const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
             return new Date(d.setUTCDate(diff));
         };
+        // Returns 1, 2, 3, 4, or 5 based on the occurrence of the weekday in the month
+        const getAcademicWeek = (date) => Math.ceil(date.getUTCDate() / 7);
+
         const getDeptStyles = (dept) => {
             const styles = { 
                 "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
@@ -303,37 +358,75 @@
         function generateSchedule(gBatch, cBatch) {
             const data = [];
             let current = new Date(termStartDate);
-            const electiveStart = new Date('2026-02-23T00:00:00Z');
-            const electiveEnd = new Date('2026-03-08T00:00:00Z');
+            const eStart = new Date(electivePeriod.start + 'T00:00:00Z');
+            const eEnd = new Date(electivePeriod.end + 'T00:00:00Z');
+
             while (current <= termEndDate) {
-                const day = current.getUTCDay();
+                const dayName = current.toLocaleDateString('en-US', {weekday: 'long', timeZone: 'UTC'});
                 const ds = formatDate(current);
-                const isElective = current >= electiveStart && current <= electiveEnd;
-                if (day !== 0) {
+                const isElective = current >= eStart && current <= eEnd;
+                const week = getAcademicWeek(current);
+                const rules = scheduleRules[dayName];
+
+                if (dayName !== "Sunday" && rules) {
                     if (!isElective) {
-                        const weekOfMonth = Math.ceil(current.getUTCDate() / 7);
-                        const rules = scheduleRules[day];
-                        if (rules) {
-                            for (const time in rules) {
-                                let events = rules[time];
-                                if (!Array.isArray(events)) events = [events];
-                                events.forEach(rule => {
-                                    if (rule.weekOfMonth && !rule.weekOfMonth.includes(weekOfMonth)) return;
-                                    if (rule.batch && !rule.batch.includes(gBatch)) return;
-                                    data.push({ date: ds, startTime: time.split('-')[0], endTime: time.split('-')[1], topic: rule.topic, department: rule.department, location: "Sushruta Hall" });
-                                });
+                        // 1. Theory Processing
+                        for (const [time, config] of Object.entries(rules.theory || {})) {
+                            const topic = typeof config === 'string' ? config : config[week];
+                            if (topic) addEntry(data, ds, time, topic, topic, "Sushruta Hall");
+                        }
+
+                        // 2. Pandemic Module (Saturdays)
+                        if (rules.pandemic) {
+                            for (const [time, topic] of Object.entries(rules.pandemic)) {
+                                addEntry(data, ds, time, topic, "Internal Medicine", "Integrated Hall");
                             }
                         }
+
+                        // 3. Clinic Slot (11:00-13:00)
                         clinicalRotationRules.forEach(rot => {
                             const start = new Date(rot.startDate + 'T00:00:00Z');
                             const end = new Date(rot.endDate + 'T00:00:00Z');
                             if (current >= start && current <= end && rot.batch === cBatch) {
-                                data.push({ date: ds, startTime: "11:00", endTime: "13:00", topic: `${rot.department} Clinics`, department: rot.department, location: "OPD/Ward" });
+                                addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
                             }
                         });
+
+                        // 4. Tutorial Processing
+                        for (const [time, config] of Object.entries(rules.tutorials || {})) {
+                            if (typeof config === 'string') {
+                                addEntry(data, ds, time, `${config} Tutorial`, config, "Tutorial Room");
+                            } else {
+                                for (const [topic, target] of Object.entries(config)) {
+                                    if (target === gBatch || (typeof target === 'number' && target === week)) {
+                                        addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                    }
+                                }
+                            }
+                        }
+
+                        // 5. SDL Processing
+                        for (const [time, config] of Object.entries(rules.sdl || {})) {
+                            let topic = config[week];
+                            if (topic) {
+                                if (Array.isArray(topic)) {
+                                    topic.forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
+                                } else {
+                                    addEntry(data, ds, time, `SDL ${topic}`, topic, "Library/Dept");
+                                }
+                            }
+                        }
+
+                        // 6. Mentorship
+                        if (rules.mentorship) {
+                            for (const [time, topic] of Object.entries(rules.mentorship)) {
+                                addEntry(data, ds, time, topic, "Surgery", "Dept Office");
+                            }
+                        }
                     } else {
-                        data.push({ date: ds, startTime: "11:00", endTime: "13:00", topic: "Elective Rotation", department: "Electives", location: "Hospital Block" });
-                        data.push({ date: ds, startTime: "17:00", endTime: "20:00", topic: "Labour Room Duty", department: "Obs & Gynae", location: "Labour Room" });
+                        // ELECTIVE PERIOD RULES
+                        addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
+                        addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
                     }
                 }
                 current.setUTCDate(current.getUTCDate() + 1);
@@ -352,12 +445,16 @@
             });
         }
 
+        function addEntry(data, date, timeRange, topic, dept, loc) {
+            const [start, end] = timeRange.split('-');
+            data.push({ date, startTime: start, endTime: end, topic, department: dept, location: loc });
+        }
+
         function render() {
             const container = document.getElementById('day-view-container');
             container.innerHTML = '';
             const todayStr = getTodayStr();
             
-            // Build slides by iterating through dates in range
             let cur = new Date(termStartDate);
             while (cur <= termEndDate) {
                 const ds = formatDate(cur);
@@ -500,3 +597,4 @@
     </script>
 </body>
 </html>
+
