@@ -25,65 +25,35 @@
             </label>
             <div class="mb-3 p-3 bg-gray-800 rounded-md text-sm text-gray-300">
                 <p><strong>Expected Format:</strong> Array of schedule objects with fields:</p>
-                <code class="text-blue-300">date, startTime, endTime, topic, department, instructor, location, batch, isHoliday, isClinic</code>
+                <code class="text-blue-300">date, startTime, endTime, topic, department, instructor, location, batch, isHoliday</code>
             </div>
             <textarea 
                 id="schedule-input" 
-                rows="18" 
-                class="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" 
-                placeholder='Paste your schedule data here as JSON array, for example:
-[
+                rows="15" 
+                class="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 font-mono text-sm" 
+                placeholder='[
   {
-    "date": "2024-12-16",
-    "startTime": "09:00",
-    "endTime": "10:00", 
-    "topic": "Internal Medicine Lecture",
+    "date": "2026-01-19",
+    "startTime": "14:00",
+    "endTime": "15:00", 
+    "topic": "Clinical Case Discussion",
     "department": "Internal Medicine",
-    "instructor": "Dr. Sharma",
-    "location": "Hall A",
+    "instructor": "Col S. Sharma",
+    "location": "Ward 7",
     "batch": ["ALL"],
-    "isHoliday": false,
-    "isClinic": false
-  },
-  {
-    "date": "2024-12-16", 
-    "startTime": "10:30",
-    "endTime": "11:30",
-    "topic": "Community Medicine Practical", 
-    "department": "Community Medicine",
-    "instructor": "Prof. Kumar",
-    "location": "Lab 1",
-    "batch": ["ALL"],
-    "isHoliday": false,
-    "isClinic": false
+    "isHoliday": false
   }
 ]'></textarea>
         </div>
         
-        <!-- Action Buttons -->
         <div class="flex gap-4 mb-6">
-            <button id="validate-btn" class="flex-1 bg-yellow-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-yellow-700 transition">
-                🔍 Validate Data
-            </button>
-            <button id="update-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition">
-                ✅ Save Schedule Data
-            </button>
-            <button id="clear-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-lg hover:bg-gray-700 transition">
-                🗑️ Clear
-            </button>
+            <button id="validate-btn" class="flex-1 bg-yellow-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-yellow-700 transition">🔍 Validate JSON</button>
+            <button id="update-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition">✅ Save to Firebase</button>
+            <button id="clear-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-lg hover:bg-gray-700 transition">🗑️ Clear</button>
         </div>
 
-        <!-- Status Messages -->
-        <div id="status-message" class="hidden mb-4 p-4 rounded-lg"></div>
+        <div id="status-message" class="hidden mb-4 p-4 rounded-lg font-bold uppercase tracking-widest text-xs"></div>
 
-        <!-- Sample Data Helper -->
-        <div class="mb-6">
-            <button id="load-sample-btn" class="w-full bg-purple-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-purple-700 transition text-sm">
-                📋 Load Sample Data (for testing)
-            </button>
-        </div>
-
-        <!-- Navigation -->
         <div class="text-center">
             <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
         </div>
@@ -94,19 +64,18 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, writeBatch, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- FIREBASE CONFIG (Replace with your actual config) ---
+        // --- FIREBASE CONFIG ---
         const firebaseConfig = {
-                  apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
-                  authDomain: "training-schedule-7c862.firebaseapp.com",
-                  projectId: "training-schedule-7c862",
-                  storageBucket: "training-schedule-7c862.firebasestorage.app",
-                  messagingSenderId: "395637809585",
-                  appId: "1:395637809585:web:9a5eea7f80741083f49d90",
-                  measurementId: "G-S9EXHXY981"
-                };
-                const appId = "training-schedule-7c862";	
+            apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
+            authDomain: "training-schedule-7c862.firebaseapp.com",
+            projectId: "training-schedule-7c862",
+            storageBucket: "training-schedule-7c862.firebasestorage.app",
+            messagingSenderId: "395637809585",
+            appId: "1:395637809585:web:9a5eea7f80741083f49d90",
+            measurementId: "G-S9EXHXY981"
+        };
+        const appId = "training-schedule-7c862";	
 
-        // --- INITIALIZE FIREBASE ---
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
@@ -115,218 +84,72 @@
 
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
-        // --- DOM ELEMENTS ---
         const scheduleInput = document.getElementById('schedule-input');
         const updateBtn = document.getElementById('update-btn');
         const validateBtn = document.getElementById('validate-btn');
         const clearBtn = document.getElementById('clear-btn');
-        const loadSampleBtn = document.getElementById('load-sample-btn');
         const statusMessage = document.getElementById('status-message');
 
-        // --- SAMPLE DATA ---
-        const sampleData = [
-            {
-                "date": "2024-12-16",
-                "startTime": "09:00",
-                "endTime": "10:00",
-                "topic": "Internal Medicine Lecture",
-                "department": "Internal Medicine",
-                "instructor": "Dr. Sharma",
-                "location": "Hall A",
-                "batch": ["ALL"],
-                "isHoliday": false,
-                "isClinic": false
-            },
-            {
-                "date": "2024-12-16",
-                "startTime": "10:30",
-                "endTime": "11:30",
-                "topic": "Community Medicine Practical",
-                "department": "Community Medicine", 
-                "instructor": "Prof. Kumar",
-                "location": "Lab 1",
-                "batch": ["ALL"],
-                "isHoliday": false,
-                "isClinic": false
-            },
-            {
-                "date": "2024-12-17",
-                "startTime": "08:00",
-                "endTime": "09:00",
-                "topic": "ENT Clinical Session",
-                "department": "ENT",
-                "instructor": "Dr. Gupta",
-                "location": "OPD Block",
-                "batch": ["ALL"],
-                "isHoliday": false,
-                "isClinic": true
-            },
-            {
-                "date": "2024-12-19",
-                "startTime": "00:00",
-                "endTime": "23:59",
-                "topic": "National Day Holiday",
-                "department": "Holiday",
-                "instructor": "N/A",
-                "location": "N/A",
-                "batch": ["ALL"],
-                "isHoliday": true,
-                "isClinic": false
-            }
-        ];
-
-        // --- UTILITY FUNCTIONS ---
         function showStatus(message, type = 'info') {
-            statusMessage.className = `mb-4 p-4 rounded-lg`;
-            
-            if (type === 'success') {
-                statusMessage.className += ' bg-green-800 text-green-200 border border-green-600';
-            } else if (type === 'error') {
-                statusMessage.className += ' bg-red-800 text-red-200 border border-red-600';
-            } else if (type === 'warning') {
-                statusMessage.className += ' bg-yellow-800 text-yellow-200 border border-yellow-600';
-            } else {
-                statusMessage.className += ' bg-blue-800 text-blue-200 border border-blue-600';
-            }
+            statusMessage.className = `mb-4 p-4 rounded-lg font-bold uppercase tracking-widest text-xs`;
+            if (type === 'success') statusMessage.className += ' bg-green-800 text-green-200';
+            else if (type === 'error') statusMessage.className += ' bg-red-800 text-red-200';
+            else statusMessage.className += ' bg-blue-800 text-blue-200';
             
             statusMessage.textContent = message;
             statusMessage.classList.remove('hidden');
-            
-            // Auto-hide after 5 seconds
-            setTimeout(() => {
-                statusMessage.classList.add('hidden');
-            }, 5000);
+            setTimeout(() => statusMessage.classList.add('hidden'), 5000);
         }
 
         function validateScheduleData(data) {
+            if (!Array.isArray(data)) return ["Data must be an array"];
             const errors = [];
-            
-            if (!Array.isArray(data)) {
-                errors.push("Data must be an array of schedule objects");
-                return errors;
-            }
-            
             data.forEach((event, index) => {
-                const requiredFields = ['date', 'startTime', 'endTime', 'topic', 'department', 'instructor', 'location', 'batch'];
-                
-                requiredFields.forEach(field => {
-                    if (!event.hasOwnProperty(field)) {
-                        errors.push(`Event ${index + 1}: Missing required field '${field}'`);
-                    }
-                });
-                
-                // Validate date format (YYYY-MM-DD)
-                if (event.date && !/^\d{4}-\d{2}-\d{2}$/.test(event.date)) {
-                    errors.push(`Event ${index + 1}: Invalid date format. Use YYYY-MM-DD`);
-                }
-                
-                // Validate time format (HH:MM)
-                if (event.startTime && !/^\d{2}:\d{2}$/.test(event.startTime)) {
-                    errors.push(`Event ${index + 1}: Invalid startTime format. Use HH:MM`);
-                }
-                
-                if (event.endTime && !/^\d{2}:\d{2}$/.test(event.endTime)) {
-                    errors.push(`Event ${index + 1}: Invalid endTime format. Use HH:MM`);
-                }
-                
-                // Validate batch is array
-                if (event.batch && !Array.isArray(event.batch)) {
-                    errors.push(`Event ${index + 1}: batch must be an array`);
-                }
+                const required = ['date', 'startTime', 'endTime', 'topic', 'department', 'batch'];
+                required.forEach(f => { if (!event[f]) errors.push(`Event ${index+1}: Missing ${f}`); });
+                if (event.date && !/^\d{4}-\d{2}-\d{2}$/.test(event.date)) errors.push(`Event ${index+1}: Date format YYYY-MM-DD`);
             });
-            
             return errors;
         }
 
-        // --- EVENT HANDLERS ---
         document.addEventListener('DOMContentLoaded', () => {
             const password = "afmc";
-            let isAuthenticated = sessionStorage.getItem('isAdminAuthenticated');
+            let authenticated = sessionStorage.getItem('isAdminAuthenticated');
 
-            function authenticate() {
-                if (isAuthenticated) return true;
+            if (!authenticated) {
                 const input = prompt("Enter admin password:");
-                if (input === password) {
-                    sessionStorage.setItem('isAdminAuthenticated', 'true');
-                    return true;
-                } else {
-                    alert("Incorrect password. Access denied.");
-                    document.body.innerHTML = '<div class="text-center text-red-500 text-2xl p-8">Access Denied</div>';
-                    return false;
-                }
+                if (input === password) { sessionStorage.setItem('isAdminAuthenticated', 'true'); }
+                else { document.body.innerHTML = '<div class="text-red-500 p-8">Access Denied</div>'; return; }
             }
 
-            if (!authenticate()) return;
-
-            // Load sample data
-            loadSampleBtn.addEventListener('click', () => {
-                scheduleInput.value = JSON.stringify(sampleData, null, 2);
-                showStatus('Sample data loaded successfully!', 'success');
-            });
-
-            // Validate data
-            validateBtn.addEventListener('click', () => {
-                const inputText = scheduleInput.value.trim();
-                if (!inputText) {
-                    showStatus('Please paste schedule data first.', 'warning');
-                    return;
-                }
-
+            validateBtn.onclick = () => {
                 try {
-                    const scheduleArray = JSON.parse(inputText);
-                    const errors = validateScheduleData(scheduleArray);
-                    
-                    if (errors.length === 0) {
-                        showStatus(`✅ Validation successful! Found ${scheduleArray.length} valid schedule events.`, 'success');
-                    } else {
-                        showStatus(`❌ Validation failed:\n${errors.join('\n')}`, 'error');
-                    }
-                } catch (error) {
-                    showStatus('❌ Invalid JSON format. Please check your data structure.', 'error');
-                }
-            });
+                    const data = JSON.parse(scheduleInput.value);
+                    const errors = validateScheduleData(data);
+                    if (errors.length === 0) showStatus(`✅ Valid! Found ${data.length} events.`, 'success');
+                    else showStatus(`❌ ${errors[0]}`, 'error');
+                } catch (e) { showStatus("❌ Invalid JSON format", "error"); }
+            };
 
-            // Save data to Firebase
-            updateBtn.addEventListener('click', async () => {
-                const inputText = scheduleInput.value.trim();
-                if (!inputText) {
-                    showStatus('Text area is empty. Please paste the schedule data.', 'warning');
-                    return;
-                }
-
+            updateBtn.onclick = async () => {
                 try {
-                    const newScheduleArray = JSON.parse(inputText);
-                    const errors = validateScheduleData(newScheduleArray);
-                    
-                    if (errors.length > 0) {
-                        showStatus(`❌ Please fix validation errors before saving:\n${errors.join('\n')}`, 'error');
-                        return;
-                    }
+                    const data = JSON.parse(scheduleInput.value);
+                    const errors = validateScheduleData(data);
+                    if (errors.length > 0) return showStatus(errors[0], "error");
 
-                    showStatus('Saving to Firebase...', 'info');
-                    
+                    showStatus("Saving...", "info");
                     const batch = writeBatch(db);
-                    newScheduleArray.forEach(event => {
+                    data.forEach(event => {
                         const docRef = doc(scheduleCollectionRef);
                         batch.set(docRef, event);
                     });
-                    
                     await batch.commit();
-
-                    showStatus(`🎉 Successfully added ${newScheduleArray.length} schedule events to Firebase!`, 'success');
+                    showStatus(`🎉 Successfully saved ${data.length} events!`, "success");
                     scheduleInput.value = '';
+                } catch (e) { showStatus(`❌ ${e.message}`, "error"); }
+            };
 
-                } catch (error) {
-                    showStatus(`❌ Error: ${error.message}`, 'error');
-                    console.error('Save error:', error);
-                }
-            });
-
-            // Clear data
-            clearBtn.addEventListener('click', () => {
-                scheduleInput.value = '';
-                showStatus('Data cleared.', 'info');
-            });
+            clearBtn.onclick = () => { scheduleInput.value = ''; showStatus("Cleared."); };
         });
     </script>
 </body>
