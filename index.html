@@ -218,8 +218,19 @@
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
-            // Map variations of Paediatrics/Pediatrics to a unified key
+            
+            // Paediatrics logic
             if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC")) return "Paediatrics";
+            
+            // Medicine logic: Map Gen Med, Internal Med, and AETCOM (Med) to Internal Medicine
+            if (d.includes("MEDICINE") || d.includes("AETCOM (MED)")) return "Internal Medicine";
+            
+            // Surgery logic: Map Gen Surgery, Surgery, and AETCOM (Surg) to Surgery
+            if (d.includes("SURGERY") || d.includes("AETCOM (SURG)")) return "Surgery";
+
+            // OBG logic: Map OBG, Gynae, and AETCOM (OBG) to Obs & Gynae
+            if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
+            
             return dept;
         };
 
@@ -422,7 +433,7 @@
                 const week = getAcademicWeek(current);
                 const rules = scheduleRules[dayName];
 
-                // Standardize dynamic events on input
+                // 1. COLLECT DYNAMIC EVENTS FOR THE DAY
                 const filteredDynamic = dynamicEvents.filter(e => {
                     return e.date === ds && (e.batch.includes("ALL") || e.batch.includes(gBatch) || e.batch.includes(cBatch));
                 });
@@ -431,55 +442,81 @@
                     data.push({ ...e, department: normalizeDept(e.department) });
                 });
 
+                // Set of department groups that have specific uploaded schedules today
+                const dynamicDeptGroups = new Set(filteredDynamic.map(e => normalizeDept(e.department)));
                 const isHoliday = filteredDynamic.some(e => e.isHoliday);
 
+                // Helper to check if a static rule's department group is already covered by dynamic events
+                const isOverridden = (dept) => dynamicDeptGroups.has(normalizeDept(dept));
+
+                // 2. PROCESS STATIC TEMPLATE RULES (Skip if overridden by dynamic data or is a holiday)
                 if (dayName !== "Sunday" && rules && !isHoliday) {
                     if (!isElective) {
+                        // Theory
                         for (const [time, config] of Object.entries(rules.theory || {})) {
                             const topic = typeof config === 'string' ? config : config[week];
-                            if (topic) addEntry(data, ds, time, topic, topic, "Sushruta Hall");
+                            if (topic && !isOverridden(topic)) {
+                                addEntry(data, ds, time, topic, topic, "Sushruta Hall");
+                            }
                         }
-                        if (rules.pandemic) {
+                        // Pandemic Module
+                        if (rules.pandemic && !isOverridden("Internal Medicine")) {
                             for (const [time, topic] of Object.entries(rules.pandemic)) {
                                 addEntry(data, ds, time, topic, "Internal Medicine", "Integrated Hall");
                             }
                         }
+                        // Clinical Rotation Clinics - ALWAYS ADDED, NEVER OVERRIDDEN
                         clinicalRotationRules.forEach(rot => {
                             const start = new Date(rot.startDate + 'T00:00:00Z');
                             const end = new Date(rot.endDate + 'T00:00:00Z');
                             if (current >= start && current <= end && rot.batch === cBatch) {
+                                // Clinics are always generic
                                 addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
                             }
                         });
+                        // Tutorials
                         for (const [time, config] of Object.entries(rules.tutorials || {})) {
                             if (typeof config === 'string') {
-                                addEntry(data, ds, time, `${config} Tutorial`, config, "Tutorial Room");
+                                if (!isOverridden(config)) {
+                                    addEntry(data, ds, time, `${config} Tutorial`, config, "Tutorial Room");
+                                }
                             } else {
                                 for (const [topic, target] of Object.entries(config)) {
                                     if (target === gBatch || (typeof target === 'number' && target === week)) {
-                                        addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                        if (!isOverridden(topic)) {
+                                            addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                        }
                                     }
                                 }
                             }
                         }
+                        // SDL
                         for (const [time, config] of Object.entries(rules.sdl || {})) {
                             let topic = config[week];
                             if (topic) {
-                                if (Array.isArray(topic)) {
-                                    topic.forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
-                                } else {
-                                    addEntry(data, ds, time, `SDL ${topic}`, topic, "Library/Dept");
-                                }
+                                const topics = Array.isArray(topic) ? topic : [topic];
+                                topics.forEach(t => {
+                                    if (!isOverridden(t)) {
+                                        addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept");
+                                    }
+                                });
                             }
                         }
-                        if (rules.mentorship) {
+                        // Mentorship
+                        if (rules.mentorship && !isOverridden("Surgery")) {
                             for (const [time, topic] of Object.entries(rules.mentorship)) {
                                 addEntry(data, ds, time, topic, "Surgery", "Dept Office");
                             }
                         }
                     } else {
-                        addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
-                        addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
+                        // ELECTIVE PERIOD
+                        // Generic clinics remain generic
+                        if (!isOverridden("Electives")) {
+                            addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
+                        }
+                        if (!isOverridden("Obs & Gynae")) {
+                            addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
+                        }
                     }
                 }
                 current.setUTCDate(current.getUTCDate() + 1);
@@ -505,7 +542,7 @@
                 startTime: start, 
                 endTime: end, 
                 topic, 
-                department: normalizeDept(dept), // Standardize here
+                department: normalizeDept(dept), 
                 location: loc, 
                 isDynamic: false 
             });
@@ -545,7 +582,7 @@
                                 <div class="flex justify-between items-start gap-3">
                                     <div class="flex-1">
                                         <div class="flex items-center gap-2 mb-1.5">
-                                            <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter">${e.topic}</p>
+                                            <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${e.topic}</p>
                                             ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
                                         </div>
                                         <p class="text-[10px] opacity-70 uppercase font-black tracking-widest">${e.department}</p>
