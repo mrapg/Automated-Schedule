@@ -86,6 +86,7 @@
         
         .clickable-card:active { transform: scale(0.96); }
 
+        /* Truncation & Containment Logic */
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -186,6 +187,7 @@
         </header>
 
         <div id="user-view" class="flex-1 flex flex-col">
+            <!-- Filter & Navigation Bar -->
             <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg">
                 <div class="flex space-x-2">
                     <button id="today-btn" class="flex-1 bg-blue-600 btn-glow-blue text-white font-black py-2.5 rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-[10px]">
@@ -276,30 +278,24 @@
             });
         }
 
-        // Logic to detect iOS
         const isIos = () => {
             const userAgent = window.navigator.userAgent.toLowerCase();
             return /iphone|ipad|ipod/.test(userAgent);
         }
-        // Logic to check if already in standalone mode
         const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone) || (window.matchMedia('(display-mode: standalone)').matches);
 
         window.addEventListener('beforeinstallprompt', (e) => {
-            // Prevent Chrome 67 and earlier from automatically showing the prompt
             e.preventDefault();
-            // Stash the event so it can be triggered later.
             deferredPrompt = e;
-            // Update UI notify the user they can install the PWA
             if (!isInStandaloneMode()) {
                 installBanner.classList.add('visible');
             }
         });
 
-        // iOS specific helper
         window.addEventListener('DOMContentLoaded', () => {
             if (isIos() && !isInStandaloneMode()) {
                 installText.innerText = "Tap Share and 'Add to Home Screen'";
-                installBtn.classList.add('hidden'); // Hide the button since it doesn't work on iOS
+                installBtn.classList.add('hidden');
                 installBanner.classList.add('visible');
             }
         });
@@ -355,7 +351,7 @@
                 sdl: { "16:00-17:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Radiology", 5: "Radiology" } }
             },
             "Wednesday": {
-                theory: { "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" }, "09:00-10:00": "General Medicine" },
+                theory: { "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology", 5: "Anaesthesia" }, "09:00-10:00": "General Medicine" },
                 tutorials: {
                     "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
                     "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology", 5: "Ophthalmology" }
@@ -368,7 +364,7 @@
                 sdl: { "16:00-17:00": { 1: "General Surgery", 2: "OBG", 3: "General Surgery", 4: "OBG", 5: "General Surgery" } }
             },
             "Friday": {
-                theory: { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Anaesthesia" } },
+                theory: { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Anaesthesia", 5: "Anaesthesia" } },
                 tutorials: {
                     "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 4: "Orthopaedics" },
                     "15:00-16:00": { 1: "Orthopaedics", 2: "Orthopaedics" },
@@ -426,7 +422,7 @@
             { department: "Emergency Medicine", batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
         ];
 
-        // --- STYLES ---
+        // --- THEME STYLES ---
         const getDeptStyles = (dept) => {
             const styles = { 
                 "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
@@ -452,7 +448,6 @@
         const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
         const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
         
-        // Academic Week Logic
         const getAcademicWeek = (date) => {
             const day = date.getUTCDate();
             const firstDayOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
@@ -464,6 +459,7 @@
         let rollNo = localStorage.getItem('afmc_roll_no');
         let personalizedSchedule = [];
         let currentFilter = 'all';
+        let currentlyVisibleDate = getTodayStr(); // Tracks visible week for calendar export
 
         async function initialize() {
             setupOnboardingListeners();
@@ -645,7 +641,9 @@
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(e => {
                     if (e.isIntersecting) {
-                        const date = new Date(e.target.dataset.date + 'T00:00:00Z');
+                        const ds = e.target.dataset.date;
+                        currentlyVisibleDate = ds; // Update current visible date
+                        const date = new Date(ds + 'T00:00:00Z');
                         const start = getStartOfWeek(date);
                         const end = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
                         document.getElementById('current-week-display').textContent = `${start.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})} - ${end.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})}, 2026`.toUpperCase();
@@ -708,13 +706,36 @@
             document.getElementById('today-btn').onclick = () => { const todayStr = getTodayStr(); const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`); if (todaySlide) { scrollToSlide(todaySlide); updateDatePickerLabel(todayStr); } };
             document.getElementById('date-picker').onchange = (e) => { const targetSlide = document.querySelector(`.day-slide[data-date="${e.target.value}"]`); if (targetSlide) { scrollToSlide(targetSlide); updateDatePickerLabel(e.target.value); } };
             document.getElementById('dept-filter').onchange = (e) => { currentFilter = e.target.value; document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text; render(); };
+            
             document.getElementById('add-to-calendar-btn').onclick = () => {
                 const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
+                
+                // Identify the visible week range
+                const visibleDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
+                const weekStart = getStartOfWeek(visibleDate);
+                const weekEnd = new Date(weekStart);
+                weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+                
+                // Filter schedule for this week only
+                const weekEvents = personalizedSchedule.filter(e => {
+                    const eDate = new Date(e.date + 'T00:00:00Z');
+                    return eDate >= weekStart && eDate <= weekEnd;
+                });
+
+                if (weekEvents.length === 0) return;
+
                 let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-                personalizedSchedule.forEach(e => { ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT'); });
+                weekEvents.forEach(e => { 
+                    ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT'); 
+                });
                 ics.push('END:VCALENDAR');
-                const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); link.download = `AFMC_Schedule_Roll_${rollNo}.ics`; link.click();
+                
+                const link = document.createElement('a'); 
+                link.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); 
+                link.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`; 
+                link.click();
             };
+            
             document.getElementById('close-detail').onclick = closeDetail;
             document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
         }
