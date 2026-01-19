@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AFMC VII Term Schedule</title>
     <meta name="theme-color" content="#0f172a"/>
+    <!-- PWA Integration -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -56,6 +60,7 @@
 
         .modal-open { overflow: hidden; }
 
+        /* Animations */
         .pulse-icon { animation: pulse-blue 2s infinite; }
         @keyframes pulse-blue {
             0% { transform: scale(1); opacity: 0.8; }
@@ -73,7 +78,6 @@
         .btn-glow-green { box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.2); }
         .btn-glow-blue { box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.2); }
 
-        /* Detail Panel Styles */
         #detail-panel {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -81,9 +85,54 @@
         .panel-visible { transform: translateY(0); }
         
         .clickable-card:active { transform: scale(0.96); }
+
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
+
+        /* PWA Install Banner Animation */
+        #install-banner {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        #install-banner.visible {
+            max-height: 150px;
+            opacity: 1;
+            padding: 1rem;
+        }
     </style>
 </head>
 <body class="transition-colors duration-200">
+    <!-- PWA Install Banner -->
+    <div id="install-banner" class="bg-blue-900/40 border-b border-blue-500/30 backdrop-blur-md sticky top-0 z-[100] max-w-lg mx-auto">
+        <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-widest text-white">AFMC Schedule</p>
+                    <p id="install-text" class="text-[9px] text-blue-300 font-bold uppercase tracking-tighter">Install for offline access</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="install-btn" class="bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg shadow-lg active:scale-95 transition-transform">Install</button>
+                <button id="close-install-banner" class="p-2 text-slate-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Onboarding Modal -->
     <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/98 z-50 flex items-center justify-center p-6 hidden backdrop-blur-xl">
         <div class="bg-slate-900 rounded-3xl p-10 max-w-sm w-full shadow-2xl text-center border border-slate-800">
@@ -193,8 +242,9 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+        // --- FIREBASE INITIALIZATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
             authDomain: "training-schedule-7c862.firebaseapp.com",
@@ -207,6 +257,68 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+
+        // --- OFFLINE PERSISTENCE (PWA SUPPORT) ---
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code == 'failed-precondition') console.warn('Offline persistence failed: multiple tabs open');
+            else if (err.code == 'unimplemented') console.warn('Offline persistence not supported by browser');
+        });
+
+        // --- SERVICE WORKER & INSTALL LOGIC ---
+        let deferredPrompt;
+        const installBanner = document.getElementById('install-banner');
+        const installBtn = document.getElementById('install-btn');
+        const installText = document.getElementById('install-text');
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration failed', err));
+            });
+        }
+
+        // Logic to detect iOS
+        const isIos = () => {
+            const userAgent = window.navigator.userAgent.toLowerCase();
+            return /iphone|ipad|ipod/.test(userAgent);
+        }
+        // Logic to check if already in standalone mode
+        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone) || (window.matchMedia('(display-mode: standalone)').matches);
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            // Update UI notify the user they can install the PWA
+            if (!isInStandaloneMode()) {
+                installBanner.classList.add('visible');
+            }
+        });
+
+        // iOS specific helper
+        window.addEventListener('DOMContentLoaded', () => {
+            if (isIos() && !isInStandaloneMode()) {
+                installText.innerText = "Tap Share and 'Add to Home Screen'";
+                installBtn.classList.add('hidden'); // Hide the button since it doesn't work on iOS
+                installBanner.classList.add('visible');
+            }
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBanner.classList.remove('visible');
+                }
+                deferredPrompt = null;
+            }
+        });
+
+        document.getElementById('close-install-banner').onclick = () => {
+            installBanner.classList.remove('visible');
+        };
+
         const appId = "training-schedule-7c862";
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
@@ -214,23 +326,14 @@
         const termEndDate = new Date('2026-05-17T00:00:00Z');
         const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
-        // --- DEPT NORMALIZATION HELPER ---
+        // --- DEPT NORMALIZATION (Consolidates all variations) ---
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
-            
-            // Paediatrics logic
             if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC")) return "Paediatrics";
-            
-            // Medicine logic: Map Gen Med, Internal Med, and AETCOM (Med) to Internal Medicine
             if (d.includes("MEDICINE") || d.includes("AETCOM (MED)")) return "Internal Medicine";
-            
-            // Surgery logic: Map Gen Surgery, Surgery, and AETCOM (Surg) to Surgery
             if (d.includes("SURGERY") || d.includes("AETCOM (SURG)")) return "Surgery";
-
-            // OBG logic: Map OBG, Gynae, and AETCOM (OBG) to Obs & Gynae
             if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
-            
             return dept;
         };
 
@@ -244,10 +347,7 @@
                 sdl: { "16:00-17:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Respiratory Medicine", 5: "Anaesthesia" } }
             },
             "Tuesday": {
-                theory: { 
-                    "08:00-09:00": "General Medicine", 
-                    "09:00-10:00": { 1: "Paediatrics", 2: "Paediatrics", 3: "SDL Paediatrics", 4: "SDL Paediatrics", 5: "SDL Paediatrics" } 
-                },
+                theory: { "08:00-09:00": "General Medicine", "09:00-10:00": { 1: "Paediatrics", 2: "Paediatrics", 3: "SDL Paediatrics", 4: "SDL Paediatrics", 5: "SDL Paediatrics" } },
                 tutorials: {
                     "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" },
                     "15:00-16:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
@@ -255,10 +355,7 @@
                 sdl: { "16:00-17:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Radiology", 5: "Radiology" } }
             },
             "Wednesday": {
-                theory: { 
-                    "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" },
-                    "09:00-10:00": "General Medicine" 
-                },
+                theory: { "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" }, "09:00-10:00": "General Medicine" },
                 tutorials: {
                     "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
                     "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology", 5: "Ophthalmology" }
@@ -266,10 +363,7 @@
                 mentorship: { "16:00-17:00": "Mentorship" }
             },
             "Thursday": {
-                theory: { 
-                    "08:00-09:00": "Obstetrics & Gynaecology", 
-                    "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)", 5: "AETCOM (OBG)" } 
-                },
+                theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)", 5: "AETCOM (OBG)" } },
                 tutorials: { "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }, "15:00-16:00": "Paediatrics" },
                 sdl: { "16:00-17:00": { 1: "General Surgery", 2: "OBG", 3: "General Surgery", 4: "OBG", 5: "General Surgery" } }
             },
@@ -332,7 +426,7 @@
             { department: "Emergency Medicine", batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
         ];
 
-        // --- HELPERS ---
+        // --- STYLES ---
         const getDeptStyles = (dept) => {
             const styles = { 
                 "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
@@ -353,26 +447,12 @@
             return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
         };
 
-        const getClinicBatch = (r) => {
-            if (r >= 1 && r <= 38) return 'A'; if (r >= 39 && r <= 76) return 'B'; if (r >= 77 && r <= 114) return 'C'; if (r >= 115 && r <= 148) return 'D';
-            return null;
-        };
-        const getGeneralBatch = (r) => {
-            if (r >= 1 && r <= 50) return 'A'; if (r >= 51 && r <= 100) return 'B'; if (r >= 101 && r <= 148) return 'C';
-            return null;
-        };
-
-        const getTodayStr = () => {
-            const now = new Date();
-            return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        };
-        const getStartOfWeek = (date) => {
-            const d = new Date(date);
-            const day = d.getUTCDay();
-            const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
-            return new Date(d.setUTCDate(diff));
-        };
-
+        const getClinicBatch = (r) => { if (r >= 1 && r <= 38) return 'A'; if (r >= 39 && r <= 76) return 'B'; if (r >= 77 && r <= 114) return 'C'; if (r >= 115 && r <= 148) return 'D'; return null; };
+        const getGeneralBatch = (r) => { if (r >= 1 && r <= 50) return 'A'; if (r >= 51 && r <= 100) return 'B'; if (r >= 101 && r <= 148) return 'C'; return null; };
+        const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
+        const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
+        
+        // Academic Week Logic
         const getAcademicWeek = (date) => {
             const day = date.getUTCDate();
             const firstDayOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
@@ -380,7 +460,7 @@
             return Math.ceil((day + firstDayWeekday - 1) / 7);
         };
 
-        // --- CORE STATE ---
+        // --- CORE STATE & INIT ---
         let rollNo = localStorage.getItem('afmc_roll_no');
         let personalizedSchedule = [];
         let currentFilter = 'all';
@@ -400,8 +480,8 @@
                 const cBatch = getClinicBatch(r);
                 document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${gBatch} | Clinic: ${cBatch}`;
                 
-                const dynamicEvents = [];
                 const querySnapshot = await getDocs(scheduleCollectionRef);
+                const dynamicEvents = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     data.id = doc.id;
@@ -433,119 +513,79 @@
                 const week = getAcademicWeek(current);
                 const rules = scheduleRules[dayName];
 
-                // 1. COLLECT DYNAMIC EVENTS FOR THE DAY
                 const filteredDynamic = dynamicEvents.filter(e => {
                     return e.date === ds && (e.batch.includes("ALL") || e.batch.includes(gBatch) || e.batch.includes(cBatch));
                 });
                 
-                filteredDynamic.forEach(e => {
-                    data.push({ ...e, department: normalizeDept(e.department) });
-                });
+                filteredDynamic.forEach(e => data.push({ ...e, department: normalizeDept(e.department) }));
 
-                // Set of department groups that have specific uploaded schedules today
                 const dynamicDeptGroups = new Set(filteredDynamic.map(e => normalizeDept(e.department)));
                 const isHoliday = filteredDynamic.some(e => e.isHoliday);
-
-                // Helper to check if a static rule's department group is already covered by dynamic events
                 const isOverridden = (dept) => dynamicDeptGroups.has(normalizeDept(dept));
 
-                // 2. PROCESS STATIC TEMPLATE RULES (Skip if overridden by dynamic data or is a holiday)
                 if (dayName !== "Sunday" && rules && !isHoliday) {
                     if (!isElective) {
-                        // Theory
                         for (const [time, config] of Object.entries(rules.theory || {})) {
                             const topic = typeof config === 'string' ? config : config[week];
-                            if (topic && !isOverridden(topic)) {
-                                addEntry(data, ds, time, topic, topic, "Sushruta Hall");
-                            }
+                            if (topic && !isOverridden(topic)) addEntry(data, ds, time, topic, topic, "Sushruta Hall");
                         }
-                        // Pandemic Module
                         if (rules.pandemic && !isOverridden("Internal Medicine")) {
-                            for (const [time, topic] of Object.entries(rules.pandemic)) {
-                                addEntry(data, ds, time, topic, "Internal Medicine", "Integrated Hall");
-                            }
+                            for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "Integrated Hall");
                         }
-                        // Clinical Rotation Clinics - ALWAYS ADDED, NEVER OVERRIDDEN
+                        // Clinics: Protected
                         clinicalRotationRules.forEach(rot => {
                             const start = new Date(rot.startDate + 'T00:00:00Z');
                             const end = new Date(rot.endDate + 'T00:00:00Z');
                             if (current >= start && current <= end && rot.batch === cBatch) {
-                                // Clinics are always generic
                                 addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
                             }
                         });
-                        // Tutorials
                         for (const [time, config] of Object.entries(rules.tutorials || {})) {
                             if (typeof config === 'string') {
-                                if (!isOverridden(config)) {
-                                    addEntry(data, ds, time, `${config} Tutorial`, config, "Tutorial Room");
-                                }
+                                if (!isOverridden(config)) addEntry(data, ds, time, `${config} Tutorial`, config, "Tutorial Room");
                             } else {
                                 for (const [topic, target] of Object.entries(config)) {
-                                    if (target === gBatch || (typeof target === 'number' && target === week)) {
-                                        if (!isOverridden(topic)) {
-                                            addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
-                                        }
+                                    if ((target === gBatch || (typeof target === 'number' && target === week)) && !isOverridden(topic)) {
+                                        addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
                                     }
                                 }
                             }
                         }
-                        // SDL
                         for (const [time, config] of Object.entries(rules.sdl || {})) {
                             let topic = config[week];
                             if (topic) {
-                                const topics = Array.isArray(topic) ? topic : [topic];
-                                topics.forEach(t => {
-                                    if (!isOverridden(t)) {
-                                        addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept");
-                                    }
+                                (Array.isArray(topic) ? topic : [topic]).forEach(t => {
+                                    if (!isOverridden(t)) addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept");
                                 });
                             }
                         }
-                        // Mentorship
                         if (rules.mentorship && !isOverridden("Surgery")) {
                             for (const [time, topic] of Object.entries(rules.mentorship)) {
                                 addEntry(data, ds, time, topic, "Surgery", "Dept Office");
                             }
                         }
                     } else {
-                        // ELECTIVE PERIOD
-                        // Generic clinics remain generic
-                        if (!isOverridden("Electives")) {
-                            addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
-                        }
-                        if (!isOverridden("Obs & Gynae")) {
-                            addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
-                        }
+                        if (!isOverridden("Electives")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
+                        if (!isOverridden("Obs & Gynae")) addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
                     }
                 }
                 current.setUTCDate(current.getUTCDate() + 1);
             }
             personalizedSchedule = data;
 
-            // Sync Filter Options
             const select = document.getElementById('dept-filter');
             const depts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
             select.innerHTML = '<option value="all">ALL DEPTS</option>';
             depts.forEach(d => {
                 const opt = document.createElement('option');
-                opt.value = d;
-                opt.textContent = d.toUpperCase();
+                opt.value = d; opt.textContent = d.toUpperCase();
                 select.appendChild(opt);
             });
         }
 
         function addEntry(data, date, timeRange, topic, dept, loc) {
             const [start, end] = timeRange.split('-');
-            data.push({ 
-                date, 
-                startTime: start, 
-                endTime: end, 
-                topic, 
-                department: normalizeDept(dept), 
-                location: loc, 
-                isDynamic: false 
-            });
+            data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
         }
 
         function render() {
@@ -563,7 +603,6 @@
                     const slide = document.createElement('div');
                     slide.className = 'day-slide p-5';
                     slide.dataset.date = ds;
-                    
                     const isToday = ds === todayStr;
                     slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
                         ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
@@ -575,23 +614,19 @@
                         slide.innerHTML += sortedEvents.map((e) => {
                             const eventIdx = personalizedSchedule.indexOf(e);
                             return `
-                            <div 
-                                class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform ${e.isDynamic ? 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95' : ''}"
-                                ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${eventIdx})"` : ''}
-                            >
-                                <div class="flex justify-between items-start gap-3">
-                                    <div class="flex-1">
-                                        <div class="flex items-center gap-2 mb-1.5">
+                            <div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform ${e.isDynamic ? 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95' : ''}"
+                                ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${eventIdx})"` : ''}>
+                                <div class="flex justify-between items-start gap-3 flex-nowrap">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                                             <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${e.topic}</p>
                                             ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
                                         </div>
-                                        <p class="text-[10px] opacity-70 uppercase font-black tracking-widest">${e.department}</p>
+                                        <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${e.department}</p>
                                     </div>
-                                    <div class="text-right flex flex-col items-end shrink-0">
-                                        <div class="bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none">
-                                            ${e.startTime}
-                                        </div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
+                                    <div class="text-right flex flex-col items-end shrink-0 ml-1">
+                                        <div class="bg-blue-700 text-white px-4 py-2 rounded-2xl text-lg sm:text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none whitespace-nowrap">${e.startTime}</div>
+                                        <p class="text-[9px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
                                     </div>
                                 </div>
                                 <div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest">
@@ -599,7 +634,7 @@
                                 </div>
                             </div>`}).join('');
                     } else {
-                        const message = cur.getUTCDay() === 0 ? '🏖️ SUNDAY FUNDAY' : 'REST DAY';
+                        const message = cur.getUTCDay() === 0 ? '🏖️ SUNDAY' : 'REST DAY';
                         slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
                     }
                     container.appendChild(slide);
@@ -612,8 +647,7 @@
                     if (e.isIntersecting) {
                         const date = new Date(e.target.dataset.date + 'T00:00:00Z');
                         const start = getStartOfWeek(date);
-                        const end = new Date(start);
-                        end.setUTCDate(start.getUTCDate() + 6);
+                        const end = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
                         document.getElementById('current-week-display').textContent = `${start.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})} - ${end.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})}, 2026`.toUpperCase();
                     }
                 });
@@ -627,54 +661,26 @@
         window.showDetails = (date, index) => {
             const event = personalizedSchedule[index];
             if (!event || !event.isDynamic) return;
-
             const content = document.getElementById('detail-content');
             content.innerHTML = `
                 <div class="space-y-6">
-                    <div>
-                        <p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p>
-                        <h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3>
-                    </div>
+                    <div><p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p><h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3></div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                            <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p>
-                            <p class="text-white font-black text-lg uppercase">${event.instructor || 'Staff'}</p>
-                        </div>
-                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                            <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p>
-                            <p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p>
-                        </div>
+                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${event.instructor || 'Staff'}</p></div>
+                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p><p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p></div>
                     </div>
-                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                        <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p>
-                        <p class="text-white font-black text-lg uppercase">📍 ${event.location}</p>
-                    </div>
-                    <div class="flex gap-2">
-                         <span class="px-3 py-1 bg-slate-800 rounded-full text-[9px] font-black text-slate-400 uppercase tracking-widest border border-slate-700">${event.department}</span>
-                         <span class="px-3 py-1 bg-slate-800 rounded-full text-[9px] font-black text-slate-400 uppercase tracking-widest border border-slate-700">Batch ${event.batch.join(', ')}</span>
-                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${event.location}</p></div>
                 </div>
             `;
-
-            const overlay = document.getElementById('detail-overlay');
-            const panel = document.getElementById('detail-panel');
-            overlay.classList.remove('hidden');
-            setTimeout(() => {
-                panel.classList.remove('panel-hidden');
-                panel.classList.add('panel-visible');
-            }, 10);
+            document.getElementById('detail-overlay').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('detail-panel').classList.remove('panel-hidden'); document.getElementById('detail-panel').classList.add('panel-visible'); }, 10);
             document.body.classList.add('modal-open');
         };
 
         function closeDetail() {
-            const overlay = document.getElementById('detail-overlay');
-            const panel = document.getElementById('detail-panel');
-            panel.classList.remove('panel-visible');
-            panel.classList.add('panel-hidden');
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-                document.body.classList.remove('modal-open');
-            }, 300);
+            document.getElementById('detail-panel').classList.remove('panel-visible');
+            document.getElementById('detail-panel').classList.add('panel-hidden');
+            setTimeout(() => { document.getElementById('detail-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); }, 300);
         }
 
         function scrollToSlide(slideElement, smooth = true) {
@@ -686,58 +692,31 @@
 
         function updateDatePickerLabel(dateStr) {
             const date = new Date(dateStr);
-            const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            document.getElementById('date-picker-label').textContent = formatted.toUpperCase();
+            document.getElementById('date-picker-label').textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
         }
 
         function setupOnboardingListeners() {
             document.getElementById('start-btn').onclick = () => {
                 const val = parseInt(document.getElementById('init-roll-input').value);
-                if (val >= 1 && val <= 148) {
-                    localStorage.setItem('afmc_roll_no', val);
-                    rollNo = val;
-                    document.getElementById('onboarding-overlay').classList.add('hidden');
-                    document.body.classList.remove('modal-open');
-                    initialize();
-                } else {
-                    document.getElementById('onboarding-error').classList.remove('hidden');
-                }
+                if (val >= 1 && val <= 148) { localStorage.setItem('afmc_roll_no', val); rollNo = val; document.getElementById('onboarding-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); initialize(); }
+                else { document.getElementById('onboarding-error').classList.remove('hidden'); }
             };
         }
 
         function setupAppListeners() {
             document.getElementById('change-roll-btn').onclick = () => { localStorage.removeItem('afmc_roll_no'); location.reload(); };
-            document.getElementById('today-btn').onclick = () => {
-                const todayStr = getTodayStr();
-                const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
-                if (todaySlide) { scrollToSlide(todaySlide); updateDatePickerLabel(todayStr); }
-            };
-            document.getElementById('date-picker').onchange = (e) => {
-                const chosenDate = e.target.value;
-                const targetSlide = document.querySelector(`.day-slide[data-date="${chosenDate}"]`);
-                if (targetSlide) { scrollToSlide(targetSlide); updateDatePickerLabel(chosenDate); }
-            };
-            document.getElementById('dept-filter').onchange = (e) => {
-                currentFilter = e.target.value;
-                document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text;
-                render();
-            };
+            document.getElementById('today-btn').onclick = () => { const todayStr = getTodayStr(); const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`); if (todaySlide) { scrollToSlide(todaySlide); updateDatePickerLabel(todayStr); } };
+            document.getElementById('date-picker').onchange = (e) => { const targetSlide = document.querySelector(`.day-slide[data-date="${e.target.value}"]`); if (targetSlide) { scrollToSlide(targetSlide); updateDatePickerLabel(e.target.value); } };
+            document.getElementById('dept-filter').onchange = (e) => { currentFilter = e.target.value; document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text; render(); };
             document.getElementById('add-to-calendar-btn').onclick = () => {
                 const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
                 let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-                personalizedSchedule.forEach(e => {
-                    ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT');
-                });
+                personalizedSchedule.forEach(e => { ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT'); });
                 ics.push('END:VCALENDAR');
-                const blob = new Blob([ics.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
-                const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
-                link.download = `AFMC_Schedule_Roll_${rollNo}.ics`; link.click();
+                const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); link.download = `AFMC_Schedule_Roll_${rollNo}.ics`; link.click();
             };
-
             document.getElementById('close-detail').onclick = closeDetail;
-            document.getElementById('detail-overlay').onclick = (e) => {
-                if (e.target.id === 'detail-overlay') closeDetail();
-            };
+            document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
         }
 
         window.onload = initialize;
