@@ -86,7 +86,7 @@
         
         .clickable-card:active { transform: scale(0.96); }
 
-        /* Truncation Utility */
+        /* Truncation & Containment Logic */
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -148,10 +148,10 @@
             <p class="text-slate-400 mb-2 font-medium leading-relaxed uppercase text-[10px] tracking-widest text-blue-400">VII Term Duration</p>
             <p class="text-white mb-8 font-black text-lg">12 JAN - 17 MAY 2026</p>
             <div class="relative mb-8">
-                <input type="number" id="init-roll-input" placeholder="001" min="1" max="148" class="w-full p-5 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-4xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-white transition-all placeholder-slate-600">
+                <input type="number" id="init-roll-input" placeholder="001" min="1" max="150" class="w-full p-5 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-4xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-white transition-all placeholder-slate-600">
                 <label class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 px-3 text-[10px] font-black text-blue-500 uppercase tracking-widest border border-slate-800 rounded-full">AFMC Roll No</label>
             </div>
-            <div id="onboarding-error" class="hidden mb-4 text-xs font-bold text-red-500 uppercase tracking-tighter">Please enter roll (1-148)</div>
+            <div id="onboarding-error" class="hidden mb-4 text-xs font-bold text-red-500 uppercase tracking-tighter">Please enter roll (1-150)</div>
             <button id="start-btn" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl hover:bg-blue-700 transition transform active:scale-95 shadow-xl shadow-blue-500/20 uppercase tracking-widest">View My Schedule</button>
         </div>
     </div>
@@ -321,7 +321,7 @@
         const termEndDate = new Date('2026-05-17T00:00:00Z');
         const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
-        // --- DEPT NORMALIZATION (Refined to be precise) ---
+        // --- DEPT NORMALIZATION ---
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
@@ -421,7 +421,7 @@
             { department: "Emergency Medicine", batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
         ];
 
-        // --- STYLES ---
+        // --- THEME STYLES ---
         const getDeptStyles = (dept) => {
             const styles = { 
                 "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
@@ -443,8 +443,19 @@
             return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
         };
 
-        const getClinicBatch = (r) => { if (r >= 1 && r <= 38) return 'A'; if (r >= 39 && r <= 76) return 'B'; if (r >= 77 && r <= 114) return 'C'; if (r >= 115 && r <= 148) return 'D'; return null; };
-        const getGeneralBatch = (r) => { if (r >= 1 && r <= 50) return 'A'; if (r >= 51 && r <= 100) return 'B'; if (r >= 101 && r <= 148) return 'C'; return null; };
+        const getClinicBatch = (r) => { 
+            if (r >= 1 && r <= 38) return 'A'; 
+            if (r >= 39 && r <= 76) return 'B'; 
+            if (r >= 77 && r <= 114) return 'C'; 
+            if (r >= 115 && r <= 150) return 'D'; // Extended to 150
+            return null; 
+        };
+        const getGeneralBatch = (r) => { 
+            if (r >= 1 && r <= 50) return 'A'; 
+            if (r >= 51 && r <= 100) return 'B'; 
+            if (r >= 101 && r <= 150) return 'C'; // Extended to 150
+            return null; 
+        };
         const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
         const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
         
@@ -530,6 +541,7 @@
                         if (rules.pandemic && !isDeptOverridden("Internal Medicine")) {
                             for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "Integrated Hall");
                         }
+                        // Clinics: Protected
                         clinicalRotationRules.forEach(rot => {
                             const start = new Date(rot.startDate + 'T00:00:00Z');
                             const end = new Date(rot.endDate + 'T00:00:00Z');
@@ -568,6 +580,7 @@
             }
             personalizedSchedule = data;
 
+            // Sync Filter Options
             const select = document.getElementById('dept-filter');
             const depts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
             select.innerHTML = '<option value="all">ALL DEPTS</option>';
@@ -695,7 +708,13 @@
         function setupOnboardingListeners() {
             document.getElementById('start-btn').onclick = () => {
                 const val = parseInt(document.getElementById('init-roll-input').value);
-                if (val >= 1 && val <= 148) { localStorage.setItem('afmc_roll_no', val); rollNo = val; document.getElementById('onboarding-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); initialize(); }
+                if (val >= 1 && val <= 150) { // Check extended to 150
+                    localStorage.setItem('afmc_roll_no', val); 
+                    rollNo = val; 
+                    document.getElementById('onboarding-overlay').classList.add('hidden'); 
+                    document.body.classList.remove('modal-open'); 
+                    initialize(); 
+                }
                 else { document.getElementById('onboarding-error').classList.remove('hidden'); }
             };
         }
