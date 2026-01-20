@@ -18,6 +18,9 @@
             <p class="text-gray-400">Add and manage AFMC training schedule data</p>
         </div>
         
+        <!-- Status Message (Moved up for better visibility) -->
+        <div id="status-message" class="hidden mb-6 p-4 rounded-lg font-bold uppercase tracking-widest text-xs border"></div>
+
         <!-- Schedule Input Section -->
         <div class="mb-6">
             <label for="schedule-input" class="block text-sm font-medium text-gray-400 mb-3">
@@ -52,8 +55,6 @@
             <button id="clear-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-lg hover:bg-gray-700 transition">🗑️ Clear</button>
         </div>
 
-        <div id="status-message" class="hidden mb-4 p-4 rounded-lg font-bold uppercase tracking-widest text-xs"></div>
-
         <div class="text-center">
             <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
         </div>
@@ -61,26 +62,24 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
         import { getFirestore, collection, writeBatch, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- FIREBASE CONFIG ---
+        // --- FIREBASE CONFIGURATION ---
         const firebaseConfig = {
-            apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
-            authDomain: "training-schedule-7c862.firebaseapp.com",
-            projectId: "training-schedule-7c862",
-            storageBucket: "training-schedule-7c862.firebasestorage.app",
-            messagingSenderId: "395637809585",
-            appId: "1:395637809585:web:9a5eea7f80741083f49d90",
-            measurementId: "G-S9EXHXY981"
+            apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+            authDomain: "schedule-debeb.firebaseapp.com",
+            projectId: "schedule-debeb",
+            storageBucket: "schedule-debeb.firebasestorage.app",
+            messagingSenderId: "139527638715",
+            appId: "1:139527638715:web:cfce01b41f323fd113239e",
+            measurementId: "G-KB7RQN5DD4"
         };
-        const appId = "training-schedule-7c862";	
+        const appId = "schedule-debeb";	
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        signInAnonymously(auth).catch((error) => console.error("Anonymous sign-in failed:", error));
 
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
@@ -90,16 +89,47 @@
         const clearBtn = document.getElementById('clear-btn');
         const statusMessage = document.getElementById('status-message');
 
-        function showStatus(message, type = 'info') {
-            statusMessage.className = `mb-4 p-4 rounded-lg font-bold uppercase tracking-widest text-xs`;
-            if (type === 'success') statusMessage.className += ' bg-green-800 text-green-200';
-            else if (type === 'error') statusMessage.className += ' bg-red-800 text-red-200';
-            else statusMessage.className += ' bg-blue-800 text-blue-200';
+        let isAuthReady = false;
+
+        function showStatus(message, type = 'info', persist = false) {
+            statusMessage.className = `mb-6 p-4 rounded-lg font-bold uppercase tracking-widest text-xs border`;
+            if (type === 'success') statusMessage.className += ' bg-green-800/20 text-green-200 border-green-500/50';
+            else if (type === 'error') statusMessage.className += ' bg-red-800/20 text-red-200 border-red-500/50';
+            else statusMessage.className += ' bg-blue-800/20 text-blue-200 border-blue-500/50';
             
             statusMessage.textContent = message;
             statusMessage.classList.remove('hidden');
-            setTimeout(() => statusMessage.classList.add('hidden'), 5000);
+            if (!persist) {
+                setTimeout(() => {
+                    if (statusMessage.textContent === message) statusMessage.classList.add('hidden');
+                }, 5000);
+            }
         }
+
+        // --- AUTHENTICATION HANDLING ---
+        const initAuth = async () => {
+            try {
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("Authentication Error:", error);
+                if (error.code === 'auth/configuration-not-found') {
+                    showStatus("⚠️ Authentication Error: 'Anonymous' provider is disabled. Please enable it in the Firebase Console (Build > Authentication > Sign-in method).", "error", true);
+                } else {
+                    showStatus(`⚠️ Auth Error: ${error.message}`, "error", true);
+                }
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                isAuthReady = true;
+                console.log("Authenticated as:", user.uid);
+            } else {
+                isAuthReady = false;
+            }
+        });
+
+        initAuth();
 
         function validateScheduleData(data) {
             if (!Array.isArray(data)) return ["Data must be an array"];
@@ -132,6 +162,11 @@
             };
 
             updateBtn.onclick = async () => {
+                if (!isAuthReady) {
+                    showStatus("❌ Cannot save: Not authenticated with Firebase.", "error");
+                    return;
+                }
+
                 try {
                     const data = JSON.parse(scheduleInput.value);
                     const errors = validateScheduleData(data);
@@ -146,7 +181,9 @@
                     await batch.commit();
                     showStatus(`🎉 Successfully saved ${data.length} events!`, "success");
                     scheduleInput.value = '';
-                } catch (e) { showStatus(`❌ ${e.message}`, "error"); }
+                } catch (e) { 
+                    showStatus(`❌ Error saving data: ${e.message}`, "error"); 
+                }
             };
 
             clearBtn.onclick = () => { scheduleInput.value = ''; showStatus("Cleared."); };
