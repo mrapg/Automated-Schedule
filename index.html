@@ -86,7 +86,6 @@
         
         .clickable-card:active { transform: scale(0.96); }
 
-        /* Truncation & Layout Pinning */
         .line-clamp-2 {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -94,7 +93,6 @@
             overflow: hidden;
         }
 
-        /* PWA Install Banner Animation */
         #install-banner {
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             max-height: 0;
@@ -109,6 +107,11 @@
     </style>
 </head>
 <body class="transition-colors duration-200">
+    <!-- Offline Notification -->
+    <div id="offline-notice" class="hidden bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest text-center py-1 sticky top-0 z-[110]">
+        Viewing Offline Cache
+    </div>
+
     <!-- PWA Install Banner -->
     <div id="install-banner" class="bg-blue-900/40 border-b border-blue-500/30 backdrop-blur-md sticky top-0 z-[100] max-w-lg mx-auto">
         <div class="flex items-center justify-between gap-4">
@@ -247,95 +250,56 @@
 
         // --- FIREBASE INITIALIZATION ---
         const firebaseConfig = {
-            apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
-            authDomain: "training-schedule-7c862.firebaseapp.com",
-            projectId: "training-schedule-7c862",
-            storageBucket: "training-schedule-7c862.firebasestorage.app",
-            messagingSenderId: "395637809585",
-            appId: "1:395637809585:web:9a5eea7f80741083f49d90",
-            measurementId: "G-S9EXHXY981"
+            apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+            authDomain: "schedule-debeb.firebaseapp.com",
+            projectId: "schedule-debeb",
+            storageBucket: "schedule-debeb.firebasestorage.app",
+            messagingSenderId: "139527638715",
+            appId: "1:139527638715:web:cfce01b41f323fd113239e",
+            measurementId: "G-KB7RQN5DD4"
         };
+        const appId = "schedule-debeb";
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- OFFLINE PERSISTENCE (PWA SUPPORT) ---
+        // --- OFFLINE PERSISTENCE ---
         enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code == 'failed-precondition') console.warn('Offline persistence failed: multiple tabs open');
-            else if (err.code == 'unimplemented') console.warn('Offline persistence not supported by browser');
+            if (err.code == 'failed-precondition') console.warn('Offline persistence failed');
         });
-
-        // --- SERVICE WORKER & INSTALL LOGIC ---
-        let deferredPrompt;
-        const installBanner = document.getElementById('install-banner');
-        const installBtn = document.getElementById('install-btn');
-        const installText = document.getElementById('install-text');
-
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Registration failed', err));
-            });
-        }
-
-        const isIos = () => {
-            const userAgent = window.navigator.userAgent.toLowerCase();
-            return /iphone|ipad|ipod/.test(userAgent);
-        }
-        const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone) || (window.matchMedia('(display-mode: standalone)').matches);
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            if (!isInStandaloneMode()) {
-                installBanner.classList.add('visible');
-            }
-        });
-
-        window.addEventListener('DOMContentLoaded', () => {
-            if (isIos() && !isInStandaloneMode()) {
-                installText.innerText = "Tap Share and 'Add to Home Screen'";
-                installBtn.classList.add('hidden');
-                installBanner.classList.add('visible');
-            }
-        });
-
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBanner.classList.remove('visible');
-                }
-                deferredPrompt = null;
-            }
-        });
-
-        document.getElementById('close-install-banner').onclick = () => {
-            installBanner.classList.remove('visible');
-        };
-
-        const appId = "training-schedule-7c862";
-        const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
         const termStartDate = new Date('2026-01-12T00:00:00Z');
         const termEndDate = new Date('2026-05-17T00:00:00Z');
         const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
-        // --- DEPT NORMALIZATION (Refined to be precise) ---
+        // --- SERVICE WORKER & OFFLINE UI ---
+        const offlineNotice = document.getElementById('offline-notice');
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
+            });
+        }
+        window.addEventListener('online', () => offlineNotice.classList.add('hidden'));
+        window.addEventListener('offline', () => offlineNotice.classList.remove('hidden'));
+        if (!navigator.onLine) offlineNotice.classList.remove('hidden');
+
+        // --- WEEK CALCULATION (Nth Occurrence Logic) ---
+        /**
+         * Calculates the Nth occurrence of a weekday in the month.
+         * Example: Jan 21st (Wednesday) is the 3rd Wednesday, returns 3.
+         */
+        const getAcademicWeek = (date) => {
+            const day = date.getUTCDate();
+            return Math.ceil(day / 7);
+        };
+
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
             if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC")) return "Paediatrics";
-            
-            // Internal Medicine (Targeted: Don't catch Respiratory or Emergency)
             if (d.includes("INTERNAL MEDICINE") || d.includes("GENERAL MEDICINE") || d === "MEDICINE" || d === "AETCOM (MED)") return "Internal Medicine";
-            
-            // Surgery
             if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
-
-            // Obs & Gynae
             if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
-            
             return dept;
         };
 
@@ -426,11 +390,9 @@
             { department: "Emergency Medicine", batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
         ];
 
-        // --- THEME STYLES ---
         const getDeptStyles = (dept) => {
             const styles = { 
                 "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
-                "Respiratory Medicine": "border-blue-500 bg-blue-900/30 text-blue-200",
                 "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
                 "Surgery": "border-slate-500 bg-slate-800/50 text-slate-200", 
                 "Paediatrics": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
@@ -463,9 +425,7 @@
         };
         const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
         const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
-        const getAcademicWeek = (date) => { const day = date.getUTCDate(); const firstDayOfMonth = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1)); const firstDayWeekday = firstDayOfMonth.getUTCDay() === 0 ? 7 : firstDayOfMonth.getUTCDay(); return Math.ceil((day + firstDayWeekday - 1) / 7); };
 
-        // --- CORE STATE & INIT ---
         let rollNo = localStorage.getItem('afmc_roll_no');
         let personalizedSchedule = [];
         let currentFilter = 'all';
@@ -486,6 +446,7 @@
                 const cBatch = getClinicBatch(r);
                 document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${gBatch} | Clinic: ${cBatch}`;
                 
+                const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
                 const querySnapshot = await getDocs(scheduleCollectionRef);
                 const dynamicEvents = [];
                 querySnapshot.forEach((doc) => {
@@ -519,66 +480,76 @@
                 const week = getAcademicWeek(current);
                 const rules = scheduleRules[dayName];
 
-                // --- SMART BATCH FILTERING ---
                 const filteredDynamicForMe = dynamicEvents.filter(e => {
                     if (e.date !== ds) return false;
                     if (e.batch.includes("ALL")) return true;
-
-                    // Detect context: Clinic events use cBatch, others use gBatch
                     const topic = (e.topic || "").toLowerCase();
                     const dept = (e.department || "").toLowerCase();
                     const isClinical = topic.includes("clinic") || dept.includes("clinic") || 
                                        topic.includes("ward") || topic.includes("opd") ||
                                        topic.includes("posting");
-                    
                     return isClinical ? e.batch.includes(cBatch) : e.batch.includes(gBatch);
                 });
                 
-                filteredDynamicForMe.forEach(e => data.push({ ...e, department: normalizeDept(e.department) }));
+                // Add specific schedule entries first
+                filteredDynamicForMe.forEach(e => {
+                    const entry = { ...e, department: normalizeDept(e.department) };
+                    // FORCE LOCATION: If specific event is for the whole batch, set location to NLH Sushruta
+                    if (e.batch && e.batch.includes("ALL")) {
+                        entry.location = "NLH Sushruta";
+                    }
+                    data.push(entry);
+                });
 
-                // Track overrides by Dept + StartTime to prevent blocking unrelated sessions
-                const dynamicKeySet = new Set(filteredDynamicForMe.map(e => `${normalizeDept(e.department)}_${e.startTime}`));
+                const dynamicTimeSet = new Set(filteredDynamicForMe.map(e => e.startTime));
                 const isGlobalHoliday = dynamicEvents.some(e => e.date === ds && e.isHoliday && e.batch.includes("ALL"));
-                const isSlotOverridden = (dept, timeRange) => dynamicKeySet.has(`${normalizeDept(dept)}_${timeRange.split('-')[0]}`);
+                const isSlotOverridden = (timeRange) => dynamicTimeSet.has(timeRange.split('-')[0]);
 
                 if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
                     if (!isElective) {
                         for (const [time, config] of Object.entries(rules.theory || {})) {
                             const topic = typeof config === 'string' ? config : config[week];
-                            if (topic && !isSlotOverridden(topic, time)) addEntry(data, ds, time, topic, topic, "Sushruta Hall");
+                            // GENERIC: Theory classes are whole-batch, so use NLH Sushruta
+                            if (topic && !isSlotOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
                         }
-                        if (rules.pandemic && !isSlotOverridden("Internal Medicine", "09:00-13:00")) {
-                            for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "Integrated Hall");
+                        if (rules.pandemic && !isSlotOverridden("09:00")) {
+                            // GENERIC: Pandemic modules are whole-batch, so use NLH Sushruta
+                            for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
                         }
                         clinicalRotationRules.forEach(rot => {
                             const start = new Date(rot.startDate + 'T00:00:00Z');
                             const end = new Date(rot.endDate + 'T00:00:00Z');
                             if (current >= start && current <= end && rot.batch === cBatch) {
-                                addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
+                                if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
                             }
                         });
                         for (const [time, config] of Object.entries(rules.tutorials || {})) {
                             if (typeof config === 'string') {
-                                if (!isSlotOverridden(config, time)) addEntry(data, ds, time, `${config} Tutorial`, config, "Tutorial Room");
+                                // GENERIC: Whole-batch tutorial (e.g. Paediatrics on Thu), use NLH Sushruta
+                                if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config} Tutorial`, config, "NLH Sushruta");
                             } else {
-                                for (const [topic, target] of Object.entries(config)) {
-                                    if ((target === gBatch || (typeof target === 'number' && target === week)) && !isSlotOverridden(topic, time)) {
-                                        addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                if (config[week] && !Object.values(config).some(val => val === 'A' || val === 'B' || val === 'C')) {
+                                     // GENERIC: Whole-batch rotating tutorial (e.g. Wed), use NLH Sushruta
+                                     if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config[week]} Tutorial`, config[week], "NLH Sushruta");
+                                } else {
+                                    // Batch-specific tutorials
+                                    for (const [topic, target] of Object.entries(config)) {
+                                        if ((target === gBatch || (typeof target === 'number' && target === week)) && !isSlotOverridden(time)) {
+                                            addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                        }
                                     }
                                 }
                             }
                         }
                         for (const [time, config] of Object.entries(rules.sdl || {})) {
                             let topic = config[week];
-                            if (topic) {
-                                (Array.isArray(topic) ? topic : [topic]).forEach(t => {
-                                    if (!isSlotOverridden(t, time)) addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept");
-                                });
+                            if (topic && !isSlotOverridden(time)) {
+                                (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
                             }
                         }
                     } else {
-                        if (!isSlotOverridden("Electives", "11:00-13:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
-                        if (!isSlotOverridden("Obs & Gynae", "17:00-20:00")) addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
+                        if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
+                        if (!isSlotOverridden("17:00")) addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
                     }
                 }
                 current.setUTCDate(current.getUTCDate() + 1);
@@ -632,7 +603,7 @@
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-2 mb-1.5 flex-wrap">
                                             <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${e.topic}</p>
-                                            ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
+                                            ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Specific</span>' : ''}
                                         </div>
                                         <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${e.department}</p>
                                     </div>
@@ -646,7 +617,7 @@
                                 </div>
                             </div>`}).join('');
                     } else {
-                        const message = cur.getUTCDay() === 0 ? '🏖️ SUNDAY' : 'REST DAY';
+                        const message = cur.getUTCDay() === 0 ? '🛌 SUNDAY' : 'REST DAY';
                         slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
                     }
                     container.appendChild(slide);
