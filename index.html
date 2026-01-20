@@ -246,15 +246,15 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- FIREBASE INITIALIZATION ---
+        // --- NEW FIREBASE CONFIGURATION ---
         const firebaseConfig = {
-            apiKey: "AIzaSyC6jkkGL8OA47muh3Bwer9qFRMUejmnso8",
-            authDomain: "training-schedule-7c862.firebaseapp.com",
-            projectId: "training-schedule-7c862",
-            storageBucket: "training-schedule-7c862.firebasestorage.app",
-            messagingSenderId: "395637809585",
-            appId: "1:395637809585:web:9a5eea7f80741083f49d90",
-            measurementId: "G-S9EXHXY981"
+            apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+            authDomain: "schedule-debeb.firebaseapp.com",
+            projectId: "schedule-debeb",
+            storageBucket: "schedule-debeb.firebasestorage.app",
+            messagingSenderId: "139527638715",
+            appId: "1:139527638715:web:cfce01b41f323fd113239e",
+            measurementId: "G-KB7RQN5DD4"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -315,28 +315,22 @@
             installBanner.classList.remove('visible');
         };
 
-        const appId = "training-schedule-7c862";
+        // --- APP LOGIC ---
+        const appId = "schedule-debeb"; // Updated Project ID
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
         const termStartDate = new Date('2026-01-12T00:00:00Z');
         const termEndDate = new Date('2026-05-17T00:00:00Z');
         const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
-        // --- DEPT NORMALIZATION (Refined to be precise) ---
+        // --- DEPT NORMALIZATION ---
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
             
-            // Paediatrics
             if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC")) return "Paediatrics";
-            
-            // Internal Medicine (Targeted: Don't catch Respiratory or Emergency)
             if (d.includes("INTERNAL MEDICINE") || d.includes("GENERAL MEDICINE") || d === "MEDICINE" || d === "AETCOM (MED)") return "Internal Medicine";
-            
-            // Surgery
             if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
-
-            // Obs & Gynae
             if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
             
             return dept;
@@ -365,7 +359,6 @@
                     "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
                     "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology" }
                 }
-                // Mentorship removed from generic Wednesday
             },
             "Thursday": {
                 theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)" } },
@@ -388,7 +381,6 @@
                     "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
                     "15:00-16:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }
                 }
-                // Mentorship removed from generic Saturday
             }
         };
 
@@ -647,7 +639,7 @@
                                 </div>
                             </div>`}).join('');
                     } else {
-                        const message = cur.getUTCDay() === 0 ? '🏖️ SUNDAY' : 'REST DAY';
+                        const message = cur.getUTCDay() === 0 ? '🛌 SUNDAY' : 'REST DAY';
                         slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
                     }
                     container.appendChild(slide);
