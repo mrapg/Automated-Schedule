@@ -107,12 +107,10 @@
     </style>
 </head>
 <body class="transition-colors duration-200">
-    <!-- Offline Notification -->
     <div id="offline-notice" class="hidden bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest text-center py-1 sticky top-0 z-[110]">
         Viewing Offline Cache
     </div>
 
-    <!-- PWA Install Banner -->
     <div id="install-banner" class="bg-blue-900/40 border-b border-blue-500/30 backdrop-blur-md sticky top-0 z-[100] max-w-lg mx-auto">
         <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-3">
@@ -137,7 +135,6 @@
         </div>
     </div>
 
-    <!-- Onboarding Modal -->
     <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/98 z-50 flex items-center justify-center p-6 hidden backdrop-blur-xl">
         <div class="bg-slate-900 rounded-3xl p-10 max-w-sm w-full shadow-2xl text-center border border-slate-800">
             <div class="mb-6 flex justify-center">
@@ -159,7 +156,6 @@
         </div>
     </div>
 
-    <!-- Expansion Detail Panel -->
     <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[100] hidden backdrop-blur-sm transition-opacity">
         <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]">
             <div class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8"></div>
@@ -169,7 +165,6 @@
     </div>
 
     <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl min-h-screen flex flex-col border-x border-slate-800">
-        <!-- Header -->
         <header class="bg-slate-950 text-white p-4 sticky top-0 z-20 border-b border-slate-800 shadow-lg">
             <div class="flex justify-between items-center">
                 <div>
@@ -248,7 +243,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // --- FIREBASE INITIALIZATION ---
         const firebaseConfig = {
             apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
             authDomain: "schedule-debeb.firebaseapp.com",
@@ -263,7 +257,6 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // --- OFFLINE PERSISTENCE ---
         enableIndexedDbPersistence(db).catch((err) => {
             if (err.code == 'failed-precondition') console.warn('Offline persistence failed');
         });
@@ -272,22 +265,6 @@
         const termEndDate = new Date('2026-05-17T00:00:00Z');
         const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
-        // --- SERVICE WORKER & OFFLINE UI ---
-        const offlineNotice = document.getElementById('offline-notice');
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').catch(err => console.log('SW failed', err));
-            });
-        }
-        window.addEventListener('online', () => offlineNotice.classList.add('hidden'));
-        window.addEventListener('offline', () => offlineNotice.classList.remove('hidden'));
-        if (!navigator.onLine) offlineNotice.classList.remove('hidden');
-
-        // --- WEEK CALCULATION (Nth Occurrence Logic) ---
-        /**
-         * Calculates the Nth occurrence of a weekday in the month.
-         * Example: Jan 21st (Wednesday) is the 3rd Wednesday, returns 3.
-         */
         const getAcademicWeek = (date) => {
             const day = date.getUTCDate();
             return Math.ceil(day / 7);
@@ -296,7 +273,7 @@
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
-            if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC")) return "Paediatrics";
+            if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC") || d.includes("PEADS")) return "Paediatrics";
             if (d.includes("INTERNAL MEDICINE") || d.includes("GENERAL MEDICINE") || d === "MEDICINE" || d === "AETCOM (MED)") return "Internal Medicine";
             if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
             if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
@@ -483,21 +460,16 @@
                 const filteredDynamicForMe = dynamicEvents.filter(e => {
                     if (e.date !== ds) return false;
                     if (e.batch.includes("ALL")) return true;
-                    const topic = (e.topic || "").toLowerCase();
-                    const dept = (e.department || "").toLowerCase();
-                    const isClinical = topic.includes("clinic") || dept.includes("clinic") || 
-                                       topic.includes("ward") || topic.includes("opd") ||
-                                       topic.includes("posting");
-                    return isClinical ? e.batch.includes(cBatch) : e.batch.includes(gBatch);
+                    
+                    // --- RESILIENT LOGIC: Accept both plural and singular keys ---
+                    const useClinicalBatch = e.isClinics === true || e.isClinic === true;
+                                               
+                    return useClinicalBatch ? e.batch.includes(cBatch) : e.batch.includes(gBatch);
                 });
                 
-                // Add specific schedule entries first
                 filteredDynamicForMe.forEach(e => {
                     const entry = { ...e, department: normalizeDept(e.department) };
-                    // FORCE LOCATION: If specific event is for the whole batch, set location to NLH Sushruta
-                    if (e.batch && e.batch.includes("ALL")) {
-                        entry.location = "NLH Sushruta";
-                    }
+                    if (e.batch && e.batch.includes("ALL")) { entry.location = "NLH Sushruta"; }
                     data.push(entry);
                 });
 
@@ -509,11 +481,9 @@
                     if (!isElective) {
                         for (const [time, config] of Object.entries(rules.theory || {})) {
                             const topic = typeof config === 'string' ? config : config[week];
-                            // GENERIC: Theory classes are whole-batch, so use NLH Sushruta
                             if (topic && !isSlotOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
                         }
                         if (rules.pandemic && !isSlotOverridden("09:00")) {
-                            // GENERIC: Pandemic modules are whole-batch, so use NLH Sushruta
                             for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
                         }
                         clinicalRotationRules.forEach(rot => {
@@ -525,14 +495,11 @@
                         });
                         for (const [time, config] of Object.entries(rules.tutorials || {})) {
                             if (typeof config === 'string') {
-                                // GENERIC: Whole-batch tutorial (e.g. Paediatrics on Thu), use NLH Sushruta
                                 if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config} Tutorial`, config, "NLH Sushruta");
                             } else {
                                 if (config[week] && !Object.values(config).some(val => val === 'A' || val === 'B' || val === 'C')) {
-                                     // GENERIC: Whole-batch rotating tutorial (e.g. Wed), use NLH Sushruta
                                      if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config[week]} Tutorial`, config[week], "NLH Sushruta");
                                 } else {
-                                    // Batch-specific tutorials
                                     for (const [topic, target] of Object.entries(config)) {
                                         if ((target === gBatch || (typeof target === 'number' && target === week)) && !isSlotOverridden(time)) {
                                             addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
