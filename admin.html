@@ -28,7 +28,7 @@
             </label>
             <div class="mb-3 p-3 bg-gray-800 rounded-md text-sm text-gray-300">
                 <p><strong>Standard Event:</strong> date, startTime, endTime, topic, department, batch</p>
-                <p class="mt-1"><strong>Holiday Entry:</strong> <code class="text-amber-400 font-bold">"date", "isHoliday": true, "batch": ["ALL"], "topic": "Holiday Name"</code></p>
+                <p class="mt-1"><strong>Holiday Entry:</strong> <code class="text-amber-400 font-bold">"date", "isHoliday": true</code> (Batch defaults to ALL)</p>
                 <p class="mt-2 text-[10px] text-gray-400 italic font-medium">
                     * Holidays override the generic recurring schedule for that day.
                 </p>
@@ -40,9 +40,7 @@
                 placeholder='[
   {
     "date": "2026-01-26",
-    "topic": "Republic Day",
-    "isHoliday": true,
-    "batch": ["ALL"]
+    "isHoliday": true
   },
   {
     "date": "2026-01-22",
@@ -126,7 +124,7 @@
                 if (event.isHoliday) {
                     // Minimal requirements for holiday
                     if (!event.date) errors.push(`Event ${index+1}: Holiday missing date`);
-                    if (!event.batch || !Array.isArray(event.batch)) errors.push(`Event ${index+1}: Holiday needs a batch array (e.g. ["ALL"])`);
+                    // Relaxed: Batch/Topic can be defaulted
                 } else {
                     // Standard event requirements
                     const required = ['date', 'startTime', 'endTime', 'topic', 'department', 'batch'];
@@ -168,6 +166,11 @@
                     showStatus("Saving...", "info");
                     const batch = writeBatch(db);
                     data.forEach(event => {
+                        // Default logic for holidays if missing properties
+                        if (event.isHoliday) {
+                            if (!event.batch) event.batch = ["ALL"];
+                            if (!event.topic) event.topic = "Holiday";
+                        }
                         const docRef = doc(scheduleCollectionRef);
                         batch.set(docRef, event);
                     });
