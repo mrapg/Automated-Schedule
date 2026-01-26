@@ -80,6 +80,7 @@
 
         #detail-panel {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform; /* Performance optimization for dragging */
         }
         .panel-hidden { transform: translateY(100%); }
         .panel-visible { transform: translateY(0); }
@@ -159,8 +160,11 @@
 
     <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[100] hidden backdrop-blur-sm transition-opacity">
         <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]">
-            <!-- Updated Handle with ID and interactions -->
-            <div id="detail-drag-handle" class="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-8 cursor-pointer active:bg-slate-500 transition-colors"></div>
+            <!-- Enhanced Drag Handle Zone -->
+            <div id="detail-drag-zone" class="w-full flex justify-center py-6 -mt-8 mb-2 cursor-grab active:cursor-grabbing touch-none">
+                <div class="w-12 h-1.5 bg-slate-700 rounded-full active:bg-slate-500 transition-colors"></div>
+            </div>
+            
             <div id="detail-content"></div>
             <button id="close-detail" class="w-full mt-8 bg-slate-800 text-slate-300 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-slate-700 active:scale-95 transition-transform">Close Details</button>
         </div>
@@ -642,8 +646,10 @@
         };
 
         function closeDetail() {
-            document.getElementById('detail-panel').classList.remove('panel-visible');
-            document.getElementById('detail-panel').classList.add('panel-hidden');
+            const panel = document.getElementById('detail-panel');
+            panel.style.transform = ''; // Clear inline styles
+            panel.classList.remove('panel-visible');
+            panel.classList.add('panel-hidden');
             setTimeout(() => { document.getElementById('detail-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); }, 300);
         }
 
@@ -688,9 +694,42 @@
                 const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); link.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`; link.click();
             };
             document.getElementById('close-detail').onclick = closeDetail;
-            // Added listener for the drag handle
-            document.getElementById('detail-drag-handle').onclick = closeDetail;
             document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
+
+            // Drag to close logic
+            const dragZone = document.getElementById('detail-drag-zone');
+            const panel = document.getElementById('detail-panel');
+            let startY, isDragging = false;
+
+            dragZone.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+                panel.style.transition = 'none'; // Disable transition for 1:1 drag
+            }, { passive: true });
+
+            dragZone.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                const delta = e.touches[0].clientY - startY;
+                if (delta > 0) { // Only drag down
+                    panel.style.transform = `translateY(${delta}px)`;
+                }
+            }, { passive: true });
+
+            dragZone.addEventListener('touchend', (e) => {
+                isDragging = false;
+                panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                const delta = e.changedTouches[0].clientY - startY;
+                
+                if (delta > 100) { // Close threshold
+                    closeDetail();
+                } else {
+                    panel.style.transform = ''; // Snap back
+                    // If it was a quick tap (small movement), treat as close
+                    if (delta < 10 && delta > -10) { 
+                        closeDetail();
+                    }
+                }
+            });
         }
 
         window.onload = initialize;
