@@ -1,57 +1,800 @@
-const CACHE_NAME = 'afmc-schedule-v1';
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-180.png',
-  'https://cdn.tailwindcss.com', 
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap'
-];
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AFMC VII Term Schedule</title>
+    <meta name="theme-color" content="#0f172a"/>
+    <!-- PWA Integration -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-180.png">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        html { scroll-behavior: smooth; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            background-color: #0f172a; 
+            color: #f8fafc;
+            overflow-x: hidden;
+        }
+        
+        /* --- Layout & Scroll --- */
+        .day-view { 
+            scroll-snap-type: x mandatory; 
+            scroll-behavior: smooth; 
+            min-height: 500px;
+            overflow-x: auto;
+            display: flex;
+        }
+        .day-slide { 
+            scroll-snap-align: start; 
+            flex-shrink: 0; 
+            width: 100%; 
+            min-height: 400px; 
+        }
+        .day-view::-webkit-scrollbar { height: 4px; }
+        .day-view::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        /* --- Components --- */
+        .card-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4); }
+        .modal-open { overflow: hidden; }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;  
+            overflow: hidden;
+        }
 
-// Install Event: Cache assets
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('Opened cache');
-      return cache.addAll(ASSETS);
-    })
-  );
-});
+        /* --- Controls --- */
+        input[type="date"]::-webkit-calendar-picker-indicator { 
+            cursor: pointer; 
+            filter: invert(1);
+            opacity: 0; 
+            position: absolute;
+            left: 0; top: 0; width: 100%; height: 100%;
+        }
+        select { color-scheme: dark; outline: none; }
+        select option {
+            background-color: #0f172a !important; 
+            color: #f8fafc !important;
+            padding: 10px;
+        }
 
-// Activate Event: Cleanup old caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    })
-  );
-});
+        /* --- Animations & Transitions --- */
+        .pulse-icon { animation: pulse-blue 2s infinite; }
+        @keyframes pulse-blue {
+            0% { transform: scale(1); opacity: 0.8; }
+            50% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.8; }
+        }
+        .live-dot { animation: blink 1.5s infinite; }
+        @keyframes blink {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .btn-glow-green { box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.2); }
+        .btn-glow-blue { box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.2); }
 
-// Fetch Event: Cache First, then Network
-self.addEventListener('fetch', (event) => {
-  // Handle navigation requests to ensure SPA works offline
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      caches.match('./index.html').then((response) => {
-        return response || fetch(event.request);
-      })
-    );
-    return;
-  }
+        #detail-panel {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform; 
+        }
+        .panel-hidden { transform: translateY(100%); }
+        .panel-visible { transform: translateY(0); }
+        .clickable-card:active { transform: scale(0.96); }
 
-  event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Cache hit - return response
-      if (response) {
-        return response;
-      }
-      return fetch(event.request);
-    })
-  );
-});
+        #install-banner {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            max-height: 0; opacity: 0; overflow: hidden;
+        }
+        #install-banner.visible {
+            max-height: 150px; opacity: 1; padding: 1rem;
+        }
+    </style>
+</head>
+<body class="transition-colors duration-200">
+    <!-- Offline Indicator -->
+    <div id="offline-notice" class="hidden bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest text-center py-1 sticky top-0 z-[110]">
+        Viewing Offline Cache
+    </div>
+
+    <!-- PWA Install Banner -->
+    <div id="install-banner" class="bg-blue-900/40 border-b border-blue-500/30 backdrop-blur-md sticky top-0 z-[100] max-w-lg mx-auto">
+        <div class="flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-[11px] font-black uppercase tracking-widest text-white">AFMC Schedule</p>
+                    <p id="install-text" class="text-[9px] text-blue-300 font-bold uppercase tracking-tighter">Install for offline access</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="install-btn" class="bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg shadow-lg active:scale-95 transition-transform">Install</button>
+                <button id="close-install-banner" class="p-2 text-slate-400 hover:text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onboarding Overlay -->
+    <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/98 z-50 flex items-center justify-center p-6 hidden backdrop-blur-xl">
+        <div class="bg-slate-900 rounded-3xl p-10 max-w-sm w-full shadow-2xl text-center border border-slate-800">
+            <div class="mb-6 flex justify-center">
+                <div class="w-20 h-20 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30 pulse-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2l3 3.5-3 3.5-3-3.5L12 2z M12 9l4 10-4 3-4-3 4-10" />
+                    </svg>
+                </div>
+            </div>
+            <h2 class="text-3xl font-black text-white mb-2 tracking-tight uppercase">Welcome, Cadet</h2>
+            <p class="text-slate-400 mb-2 font-medium leading-relaxed uppercase text-[10px] tracking-widest text-blue-400">VII Term Duration</p>
+            <p class="text-white mb-8 font-black text-lg">12 JAN - 17 MAY 2026</p>
+            <div class="relative mb-8">
+                <input type="number" id="init-roll-input" placeholder="001" min="1" max="150" class="w-full p-5 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-4xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-white transition-all placeholder-slate-600">
+                <label class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 px-3 text-[10px] font-black text-blue-500 uppercase tracking-widest border border-slate-800 rounded-full">AFMC Roll No</label>
+            </div>
+            <div id="onboarding-error" class="hidden mb-4 text-xs font-bold text-red-500 uppercase tracking-tighter">Please enter roll (1-150)</div>
+            <button id="start-btn" class="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-xl hover:bg-blue-700 transition transform active:scale-95 shadow-xl shadow-blue-500/20 uppercase tracking-widest">View My Schedule</button>
+        </div>
+    </div>
+
+    <!-- Detail View Overlay -->
+    <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[100] hidden backdrop-blur-sm transition-opacity">
+        <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]">
+            <div id="detail-drag-zone" class="w-full flex justify-center py-6 -mt-8 mb-2 cursor-grab active:cursor-grabbing touch-none">
+                <div class="w-12 h-1.5 bg-slate-700 rounded-full active:bg-slate-500 transition-colors"></div>
+            </div>
+            <div id="detail-content"></div>
+            <button id="close-detail" class="w-full mt-8 bg-slate-800 text-slate-300 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-slate-700 active:scale-95 transition-transform">Close Details</button>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl min-h-screen flex flex-col border-x border-slate-800">
+        <header class="bg-slate-950 text-white p-4 sticky top-0 z-20 border-b border-slate-800 shadow-lg">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-black tracking-tight flex items-center gap-2">
+                        <span class="text-blue-400">AFMC</span> Schedule
+                    </h1>
+                    <p id="user-info-display" class="text-[9px] text-blue-400/70 uppercase font-black tracking-[0.2em] mt-0.5"></p>
+                </div>
+                <div class="flex items-center">
+                    <button id="change-roll-btn" class="px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 flex items-center gap-2 transition-all border border-slate-700 active:scale-95 group">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-100">Roll No.</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div id="user-view" class="flex-1 flex flex-col">
+            <!-- Controls Bar -->
+            <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg">
+                <div class="flex space-x-2">
+                    <button id="today-btn" class="flex-1 bg-blue-600 btn-glow-blue text-white font-black py-2.5 rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-[10px]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        </svg>
+                        Today
+                    </button>
+                    
+                    <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer overflow-hidden group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400 mr-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span id="date-picker-label" class="text-[10px] font-black text-slate-200 uppercase tracking-tighter">Go to Date</span>
+                        <input type="date" id="date-picker" class="absolute inset-0 opacity-0 cursor-pointer">
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400 mr-1.5 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        <select id="dept-filter" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20 bg-slate-950 text-white outline-none">
+                            <option value="all">ALL DEPTS</option>
+                        </select>
+                        <span id="dept-filter-label" class="text-[9px] font-black text-slate-200 uppercase tracking-tighter truncate max-w-[70px]">All Depts</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-500 ml-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+
+                    <button id="add-to-calendar-btn" class="flex-[1.5] bg-emerald-600 btn-glow-green text-white font-black py-2.5 rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center uppercase tracking-widest text-[9px]">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Add to Calendar
+                    </button>
+                </div>
+            </div>
+            
+            <div id="loading-indicator" class="text-center p-24 hidden">
+                <div class="inline-block w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                <p class="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase">Generating</p>
+            </div>
+
+            <div id="day-view-container" class="day-view flex-1 bg-slate-900"></div>
+        </div>
+        
+        <div class="bg-slate-950/80 backdrop-blur border-t border-slate-800 p-2 text-center sticky bottom-0">
+             <p id="current-week-display" class="text-[9px] font-black text-blue-400 uppercase tracking-widest h-3.5"></p>
+        </div>
+    </div>
+
+    <script type="module">
+        /* ------------------------------------------------------------------
+           1. CONFIGURATION & IMPORTS
+           ------------------------------------------------------------------ */
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getFirestore, collection, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+            authDomain: "schedule-debeb.firebaseapp.com",
+            projectId: "schedule-debeb",
+            storageBucket: "schedule-debeb.firebasestorage.app",
+            messagingSenderId: "139527638715",
+            appId: "1:139527638715:web:cfce01b41f323fd113239e",
+            measurementId: "G-KB7RQN5DD4"
+        };
+        const appId = "schedule-debeb";
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Enable Offline Persistence
+        enableIndexedDbPersistence(db).catch((err) => {
+            if (err.code == 'failed-precondition') console.warn('Offline persistence failed: Multiple tabs open');
+        });
+
+        // Term Constants
+        const termStartDate = new Date('2026-01-12T00:00:00Z');
+        const termEndDate = new Date('2026-05-17T00:00:00Z');
+        const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
+
+        /* ------------------------------------------------------------------
+           2. DATA: SCHEDULE RULES & ROTATIONS
+           ------------------------------------------------------------------ */
+        const scheduleRules = {
+            "Monday": {
+                theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "General Surgery" },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" },
+                    "15:00-16:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" }
+                },
+                sdl: { "16:00-17:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Respiratory Medicine" } }
+            },
+            "Tuesday": {
+                theory: { "08:00-09:00": "General Medicine", "09:00-10:00": { 1: "Paediatrics", 2: "Paediatrics", 3: "SDL Paediatrics", 4: "SDL Paediatrics" } },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" },
+                    "15:00-16:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
+                },
+                sdl: { "16:00-17:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Radiology" } }
+            },
+            "Wednesday": {
+                theory: { "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" }, "09:00-10:00": "General Medicine" },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
+                    "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology" }
+                }
+            },
+            "Thursday": {
+                theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)" } },
+                tutorials: { "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }, "15:00-16:00": "Paediatrics" },
+                sdl: { "16:00-17:00": { 1: "General Surgery", 2: "OBG", 3: "General Surgery", 4: "OBG" } }
+            },
+            "Friday": {
+                theory: { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Anaesthesia" } },
+                tutorials: {
+                    "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 4: "Orthopaedics" },
+                    "15:00-16:00": { 1: "Orthopaedics", 2: "Orthopaedics" },
+                    "16:00-17:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
+                },
+                sdl: { "16:00-17:00": { 3: ["Orthopaedics", "General Medicine"], 4: ["General Medicine"] } }
+            },
+            "Saturday": {
+                theory: { "08:00-09:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Psychiatry" } },
+                pandemic: { "09:00-13:00": "Pandemic Module (Integrated)" },
+                tutorials: {
+                    "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
+                    "15:00-16:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }
+                }
+            }
+        };
+
+        const clinicalRotationRules = [
+            { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" },
+            { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" },
+            { department: "Internal Medicine", batch: "C", startDate: "2026-03-09", endDate: "2026-03-29" },
+            { department: "Internal Medicine", batch: "D", startDate: "2026-03-30", endDate: "2026-04-19" },
+            { department: "Surgery", batch: "A", startDate: "2026-02-02", endDate: "2026-02-22" },
+            { department: "Surgery", batch: "B", startDate: "2026-03-09", endDate: "2026-03-29" },
+            { department: "Surgery", batch: "C", startDate: "2026-03-30", endDate: "2026-04-19" },
+            { department: "Surgery", batch: "D", startDate: "2026-01-12", endDate: "2026-02-01" },
+            { department: "Obs & Gynae", batch: "A", startDate: "2026-03-09", endDate: "2026-03-29" },
+            { department: "Obs & Gynae", batch: "B", startDate: "2026-03-30", endDate: "2026-04-19" },
+            { department: "Obs & Gynae", batch: "C", startDate: "2026-01-12", endDate: "2026-02-01" },
+            { department: "Obs & Gynae", batch: "D", startDate: "2026-02-02", endDate: "2026-02-22" },
+            { department: "Paediatrics", batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" },
+            { department: "Paediatrics", batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" },
+            { department: "Paediatrics", batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" },
+            { department: "Paediatrics", batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
+            { department: "Orthopaedics", batch: "A", startDate: "2026-04-13", endDate: "2026-04-19" },
+            { department: "Orthopaedics", batch: "B", startDate: "2026-01-26", endDate: "2026-02-01" },
+            { department: "Orthopaedics", batch: "C", startDate: "2026-02-16", endDate: "2026-02-22" },
+            { department: "Orthopaedics", batch: "D", startDate: "2026-03-23", endDate: "2026-03-29" },
+            { department: "Psychiatry", batch: "A", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Psychiatry", batch: "B", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Psychiatry", batch: "C", startDate: "2026-05-04", endDate: "2026-05-10" },
+            { department: "Psychiatry", batch: "D", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Dermatology", batch: "A", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Dermatology", batch: "B", startDate: "2026-05-04", endDate: "2026-05-10" },
+            { department: "Dermatology", batch: "C", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Dermatology", batch: "D", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Anaesthesia", batch: "A", startDate: "2026-05-04", endDate: "2026-05-10" },
+            { department: "Anaesthesia", batch: "B", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Anaesthesia", batch: "C", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Anaesthesia", batch: "D", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Emergency Medicine", batch: "A", startDate: "2026-05-11", endDate: "2026-05-17" },
+            { department: "Emergency Medicine", batch: "B", startDate: "2026-04-20", endDate: "2026-04-26" },
+            { department: "Emergency Medicine", batch: "C", startDate: "2026-04-27", endDate: "2026-05-03" },
+            { department: "Emergency Medicine", batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
+        ];
+
+        /* ------------------------------------------------------------------
+           3. HELPER FUNCTIONS
+           ------------------------------------------------------------------ */
+        // UPDATED: Calculates the Nth occurrence of the specific weekday in the month (e.g., 1st Monday, 2nd Monday).
+        // 1-7: 1st, 8-14: 2nd, 15-21: 3rd, 22-28: 4th, 29-31: 5th
+        const getNthWeekdayOfMonth = (date) => Math.ceil(date.getUTCDate() / 7);
+        
+        const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
+        const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
+        
+        const getClinicBatch = (r) => { 
+            if (r >= 1 && r <= 38) return 'A'; 
+            if (r >= 39 && r <= 76) return 'B'; 
+            if (r >= 77 && r <= 114) return 'C'; 
+            if (r >= 115 && r <= 150) return 'D'; 
+            return null; 
+        };
+        const getGeneralBatch = (r) => { 
+            if (r >= 1 && r <= 50) return 'A'; 
+            if (r >= 51 && r <= 100) return 'B'; 
+            if (r >= 101 && r <= 150) return 'C'; 
+            return null; 
+        };
+
+        const normalizeDept = (dept) => {
+            if (!dept) return dept;
+            const d = String(dept).toUpperCase();
+            if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC") || d.includes("PEADS")) return "Paediatrics";
+            if (d.includes("INTERNAL MEDICINE") || d.includes("GENERAL MEDICINE") || d === "MEDICINE" || d === "AETCOM (MED)") return "Internal Medicine";
+            if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
+            if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
+            if (d.includes("ANAESTH") || d.includes("ANESTH")) return "Anaesthesia";
+            if (d.includes("RADIO")) return "Radiology"; // Merge Radiodiagnosis and Radiology
+            return dept;
+        };
+
+        const getDeptStyles = (dept) => {
+            const styles = { 
+                "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
+                "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
+                "Surgery": "border-emerald-500 bg-emerald-900/30 text-emerald-200", 
+                "Paediatrics": "border-pink-400 bg-pink-900/30 text-pink-200", 
+                "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", 
+                "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200", 
+                "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
+                "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
+                "Psychiatry": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
+                "Radiology": "border-gray-500 bg-gray-900/30 text-gray-200", // Unified Grey
+                "Anaesthesia": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
+                "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
+                "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
+                "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200" 
+            };
+            return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
+        };
+
+        /* ------------------------------------------------------------------
+           4. STATE
+           ------------------------------------------------------------------ */
+        let rollNo = localStorage.getItem('afmc_roll_no');
+        let personalizedSchedule = [];
+        let currentFilter = 'all';
+        let currentlyVisibleDate = getTodayStr();
+
+        /* ------------------------------------------------------------------
+           5. APP INITIALIZATION & CORE LOGIC
+           ------------------------------------------------------------------ */
+        async function initialize() {
+            setupOnboardingListeners();
+            if (!rollNo) {
+                document.getElementById('onboarding-overlay').classList.remove('hidden');
+                document.body.classList.add('modal-open');
+                return;
+            }
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            
+            // Core Batches
+            const r = parseInt(rollNo);
+            const gBatch = getGeneralBatch(r);
+            const cBatch = getClinicBatch(r);
+            document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${gBatch} | Clinic: ${cBatch}`;
+
+            let dynamicEvents = [];
+            
+            try {
+                // Try fetching specific data from Firestore
+                const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+                // If offline and not cached, this might throw or hang. 
+                // We'll catch it to ensure generic schedule loads.
+                const querySnapshot = await getDocs(scheduleCollectionRef);
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    data.id = doc.id;
+                    data.isDynamic = true; 
+                    dynamicEvents.push(data);
+                });
+            } catch (e) {
+                console.warn("Could not fetch specific schedule (likely offline or no data). Falling back to generic schedule.", e);
+                const notice = document.getElementById('offline-notice');
+                notice.classList.remove('hidden');
+                notice.textContent = "Offline Mode: Showing Generic Schedule";
+            } finally {
+                // Always generate schedule, using whatever data we have (or empty if fetch failed)
+                generateSchedule(gBatch, cBatch, dynamicEvents);
+                render();
+                setupAppListeners();
+                
+                const today = getTodayStr();
+                document.getElementById('date-picker').value = today;
+                updateDatePickerLabel(today);
+                
+                document.getElementById('loading-indicator').classList.add('hidden');
+            }
+        }
+
+        function generateSchedule(gBatch, cBatch, dynamicEvents = []) {
+            const data = [];
+            let current = new Date(termStartDate);
+            const eStart = new Date(electivePeriod.start + 'T00:00:00Z');
+            const eEnd = new Date(electivePeriod.end + 'T00:00:00Z');
+
+            while (current <= termEndDate) {
+                const dayName = current.toLocaleDateString('en-US', {weekday: 'long', timeZone: 'UTC'});
+                const ds = current.toISOString().split('T')[0];
+                const isElective = current >= eStart && current <= eEnd;
+                
+                // CHANGED: Use getNthWeekdayOfMonth instead of getAcademicWeek/getWeekOfMonth
+                // This ensures "1st Monday" gets key 1, "2nd Monday" gets key 2, etc.
+                const week = getNthWeekdayOfMonth(current);
+                
+                const rules = scheduleRules[dayName];
+
+                // Filter overrides/special events for this specific student
+                const filteredDynamicForMe = dynamicEvents.filter(e => {
+                    if (e.date !== ds) return false;
+                    if (e.batch.includes("ALL")) return true;
+                    const useClinicalBatch = e.isClinics === true || e.isClinic === true;
+                    return useClinicalBatch ? e.batch.includes(cBatch) : e.batch.includes(gBatch);
+                });
+                
+                // Add overrides
+                filteredDynamicForMe.forEach(e => {
+                    const entry = { ...e, department: normalizeDept(e.department) };
+                    if (e.batch && e.batch.includes("ALL")) { entry.location = "NLH Sushruta"; }
+                    data.push(entry);
+                });
+
+                const dynamicTimeSet = new Set(filteredDynamicForMe.map(e => e.startTime));
+                const isGlobalHoliday = dynamicEvents.some(e => e.date === ds && e.isHoliday && e.batch.includes("ALL"));
+                const isSlotOverridden = (timeRange) => dynamicTimeSet.has(timeRange.split('-')[0]);
+
+                // Generate Recurring Schedule
+                if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
+                    if (!isElective) {
+                        // Theory
+                        for (const [time, config] of Object.entries(rules.theory || {})) {
+                            const topic = typeof config === 'string' ? config : config[week];
+                            if (topic && !isSlotOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
+                        }
+                        // Pandemic
+                        if (rules.pandemic && !isSlotOverridden("09:00")) {
+                            for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
+                        }
+                        // Clinics
+                        clinicalRotationRules.forEach(rot => {
+                            const start = new Date(rot.startDate + 'T00:00:00Z');
+                            const end = new Date(rot.endDate + 'T00:00:00Z');
+                            if (current >= start && current <= end && rot.batch === cBatch) {
+                                if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
+                            }
+                        });
+                        // Tutorials
+                        for (const [time, config] of Object.entries(rules.tutorials || {})) {
+                            if (typeof config === 'string') {
+                                if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config} Tutorial`, config, "NLH Sushruta");
+                            } else {
+                                if (config[week] && !Object.values(config).some(val => val === 'A' || val === 'B' || val === 'C')) {
+                                     if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config[week]} Tutorial`, config[week], "NLH Sushruta");
+                                } else {
+                                    for (const [topic, target] of Object.entries(config)) {
+                                        if ((target === gBatch || (typeof target === 'number' && target === week)) && !isSlotOverridden(time)) {
+                                            addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // SDL
+                        for (const [time, config] of Object.entries(rules.sdl || {})) {
+                            let topic = config[week];
+                            if (topic && !isSlotOverridden(time)) {
+                                (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
+                            }
+                        }
+                    } else {
+                        // Electives Logic
+                        if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
+                        if (!isSlotOverridden("17:00")) addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
+                    }
+                }
+                current.setUTCDate(current.getUTCDate() + 1);
+            }
+            personalizedSchedule = data;
+
+            // Update Dept Filter
+            const select = document.getElementById('dept-filter');
+            const depts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
+            select.innerHTML = '<option value="all">ALL DEPTS</option>';
+            depts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d; opt.textContent = d.toUpperCase();
+                select.appendChild(opt);
+            });
+        }
+
+        function addEntry(data, date, timeRange, topic, dept, loc) {
+            const [start, end] = timeRange.split('-');
+            data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
+        }
+
+        /* ------------------------------------------------------------------
+           6. UI RENDERING
+           ------------------------------------------------------------------ */
+        function render() {
+            const container = document.getElementById('day-view-container');
+            container.innerHTML = '';
+            const todayStr = getTodayStr();
+            
+            let cur = new Date(termStartDate);
+            while (cur <= termEndDate) {
+                const ds = cur.toISOString().split('T')[0];
+                const dayEvents = personalizedSchedule.filter(e => e.date === ds);
+                const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
+                
+                if (currentFilter === 'all' || filteredEvents.length > 0) {
+                    const slide = document.createElement('div');
+                    slide.className = 'day-slide p-5';
+                    slide.dataset.date = ds;
+                    const isToday = ds === todayStr;
+                    
+                    // Date Header
+                    slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
+                        ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
+                        ${cur.toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC'}).toUpperCase()} 
+                    </h2>`;
+                    
+                    // Events
+                    const sortedEvents = filteredEvents.sort((a,b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00'));
+                    
+                    if (sortedEvents.length) {
+                        const holidayEvent = sortedEvents.find(e => e.isHoliday);
+
+                        if (holidayEvent) {
+                            // Holiday View
+                            slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${holidayEvent.topic || 'HOLIDAY'}</div>`;
+                        } else {
+                            // Standard List
+                            slide.innerHTML += sortedEvents.map((e) => {
+                                const eventIdx = personalizedSchedule.indexOf(e);
+                                const instructor = e.instructor || e.faculty;
+                                return `
+                                <div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform ${e.isDynamic ? 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95' : ''}"
+                                    ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${eventIdx})"` : ''}>
+                                    <div class="flex justify-between items-start gap-3 flex-nowrap">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                                <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${e.topic}</p>
+                                                ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
+                                            </div>
+                                            <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${e.department}</p>
+                                        </div>
+                                        <div class="text-right flex flex-col items-end shrink-0 ml-1">
+                                            <div class="bg-blue-700 text-white px-4 py-2 rounded-2xl text-lg sm:text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none whitespace-nowrap">${e.startTime}</div>
+                                            <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest">
+                                        <span class="flex items-center">📍 ${e.location}</span>
+                                    </div>
+                                </div>`
+                            }).join('');
+                        }
+                    } else {
+                        // Rest Day / Empty
+                        const message = cur.getUTCDay() === 0 ? '🛌 SUNDAY' : 'REST DAY';
+                        slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
+                    }
+                    container.appendChild(slide);
+                }
+                cur.setUTCDate(cur.getUTCDate() + 1);
+            }
+
+            // Scroll Observer for Date Header
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(e => {
+                    if (e.isIntersecting) {
+                        const ds = e.target.dataset.date;
+                        currentlyVisibleDate = ds; 
+                        const date = new Date(ds + 'T00:00:00Z');
+                        const start = getStartOfWeek(date);
+                        const end = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
+                        document.getElementById('current-week-display').textContent = `${start.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})} - ${end.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})}, 2026`.toUpperCase();
+                    }
+                });
+            }, { threshold: 0.5, root: container });
+            document.querySelectorAll('.day-slide').forEach(s => observer.observe(s));
+            
+            // Jump to Today on first load
+            const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
+            if (todaySlide) scrollToSlide(todaySlide, false);
+        }
+
+        /* ------------------------------------------------------------------
+           7. INTERACTION HANDLERS
+           ------------------------------------------------------------------ */
+        window.showDetails = (date, index) => {
+            const event = personalizedSchedule[index];
+            if (!event || !event.isDynamic) return;
+            const content = document.getElementById('detail-content');
+            const instructorName = event.instructor || event.faculty || 'Staff';
+            content.innerHTML = `
+                <div class="space-y-6">
+                    <div><p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p><h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3></div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${instructorName}</p></div>
+                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p><p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p></div>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${event.location}</p></div>
+                </div>
+            `;
+            document.getElementById('detail-overlay').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('detail-panel').classList.remove('panel-hidden'); document.getElementById('detail-panel').classList.add('panel-visible'); }, 10);
+            document.body.classList.add('modal-open');
+        };
+
+        function closeDetail() {
+            const panel = document.getElementById('detail-panel');
+            panel.style.transform = ''; 
+            panel.classList.remove('panel-visible');
+            panel.classList.add('panel-hidden');
+            setTimeout(() => { document.getElementById('detail-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); }, 300);
+        }
+
+        function scrollToSlide(slideElement, smooth = true) {
+            if (!slideElement) return;
+            const container = document.getElementById('day-view-container');
+            window.scrollTo({ top: 0, behavior: smooth ? 'smooth' : 'auto' });
+            container.scrollTo({ left: slideElement.offsetLeft, behavior: smooth ? 'smooth' : 'auto' });
+        }
+
+        function updateDatePickerLabel(dateStr) {
+            const date = new Date(dateStr);
+            document.getElementById('date-picker-label').textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+        }
+
+        /* ------------------------------------------------------------------
+           8. LISTENERS
+           ------------------------------------------------------------------ */
+        function setupOnboardingListeners() {
+            document.getElementById('start-btn').onclick = () => {
+                const val = parseInt(document.getElementById('init-roll-input').value);
+                if (val >= 1 && val <= 150) { 
+                    localStorage.setItem('afmc_roll_no', val); rollNo = val; document.getElementById('onboarding-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); initialize(); 
+                }
+                else { document.getElementById('onboarding-error').classList.remove('hidden'); }
+            };
+        }
+
+        function setupAppListeners() {
+            document.getElementById('change-roll-btn').onclick = () => { localStorage.removeItem('afmc_roll_no'); location.reload(); };
+            document.getElementById('today-btn').onclick = () => { const todayStr = getTodayStr(); const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`); if (todaySlide) { scrollToSlide(todaySlide); updateDatePickerLabel(todayStr); } };
+            document.getElementById('date-picker').onchange = (e) => { const targetSlide = document.querySelector(`.day-slide[data-date="${e.target.value}"]`); if (targetSlide) { scrollToSlide(targetSlide); updateDatePickerLabel(e.target.value); } };
+            document.getElementById('dept-filter').onchange = (e) => { currentFilter = e.target.value; document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text; render(); };
+            
+            document.getElementById('add-to-calendar-btn').onclick = () => {
+                const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
+                const visibleDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
+                const weekStart = getStartOfWeek(visibleDate);
+                const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+                const weekEvents = personalizedSchedule.filter(e => { const eDate = new Date(e.date + 'T00:00:00Z'); return eDate >= weekStart && eDate <= weekEnd; });
+                if (weekEvents.length === 0) return;
+                let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+                weekEvents.forEach(e => { ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT'); });
+                ics.push('END:VCALENDAR');
+                const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); link.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`; link.click();
+            };
+            document.getElementById('close-detail').onclick = closeDetail;
+            document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
+
+            // Logic: Pull-Down to Close
+            const dragZone = document.getElementById('detail-drag-zone');
+            const panel = document.getElementById('detail-panel');
+            let startY, isDragging = false;
+
+            dragZone.addEventListener('touchstart', (e) => {
+                startY = e.touches[0].clientY;
+                isDragging = true;
+                panel.style.transition = 'none'; 
+            }, { passive: true });
+
+            dragZone.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                const delta = e.touches[0].clientY - startY;
+                if (delta > 0) { // Only drag down
+                    panel.style.transform = `translateY(${delta}px)`;
+                }
+            }, { passive: true });
+
+            dragZone.addEventListener('touchend', (e) => {
+                isDragging = false;
+                panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                const delta = e.changedTouches[0].clientY - startY;
+                
+                if (delta > 100) { // Close threshold
+                    closeDetail();
+                } else {
+                    panel.style.transform = ''; // Snap back
+                    if (delta < 10 && delta > -10) { // Tap detection
+                        closeDetail();
+                    }
+                }
+            });
+        }
+
+        window.onload = initialize;
+
+        // --- Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
