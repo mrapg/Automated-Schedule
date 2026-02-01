@@ -1,42 +1,22 @@
-# This is the name of your GitHub Action. You'll see this in the "Actions" tab.
 name: Deploy to GitHub Pages
 
-# This section defines when the action should run.
 on:
-  # We want it to run every time you push new code... 
   push:
-    # ...but only when the push is to your "main" branch.
     branches:
       - main
 
-# This section defines the actual steps the action will take.
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
-    # It will run on a standard virtual machine provided by GitHub.
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Check out your code
-      # This downloads your repository's code onto the virtual machine.
       - name: Checkout 🛎️
-        uses: actions/checkout@v3 
+        uses: actions/checkout@v3
 
-      # Step 2: Replace the Firebase Config placeholder with your secret
-      # This step safely injects the Firebase config from GitHub Secrets.
-      # It uses an environment variable (FIREBASE_CONFIG) to avoid issues
-      # with special characters in the secret breaking the command.
-      # The 'sed' command uses a pipe '|' as a delimiter, which is a robust
-      # way to prevent conflicts with characters inside the JSON config string.
-      - name: Replace Firebase Config 🤫
-        env:
-          FIREBASE_CONFIG: ${{ secrets.FIREBASE_CONFIG }}
-        run: |
-          sed -i "s|'__FIREBASE_CONFIG_PLACEHOLDER__'|'${FIREBASE_CONFIG}'|g" index.html admin.html
-
-      # Step 3: Deploy the modified files to GitHub Pages
-      # This action takes your code (with the real keys now) and pushes it
-      # to a special branch called "gh-pages" which is used for hosting.
       - name: Deploy 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages # The branch the action should deploy to.
-          folder: . # The folder the action should deploy (the root folder).
+          branch: gh-pages
+          folder: .
