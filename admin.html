@@ -8,36 +8,73 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar for the modal and list */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        
+        /* Checkbox transition */
+        input[type="checkbox"] { accent-color: #2563eb; }
+
+        /* Make date and time inputs clickable area obvious */
+        input[type="date"], input[type="time"] {
+            cursor: pointer;
+        }
     </style>
 </head>
-<body class="bg-gray-800 text-white min-h-screen p-4">
+<body class="bg-gray-900 text-white min-h-screen p-4 md:p-8">
 
-    <div class="max-w-4xl mx-auto bg-gray-900 shadow-lg rounded-lg p-8">
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-400 mb-2">📅 Schedule Data Manager</h1>
-            <p class="text-gray-400">Add and manage AFMC training schedule data</p>
-        </div>
-        
-        <!-- Status Message -->
-        <div id="status-message" class="hidden mb-6 p-4 rounded-lg font-bold uppercase tracking-widest text-xs border"></div>
-
-        <!-- Schedule Input Section -->
-        <div class="mb-6">
-            <label for="schedule-input" class="block text-sm font-medium text-gray-400 mb-3">
-                📝 Paste Schedule Data (JSON Format)
-            </label>
-            <div class="mb-3 p-3 bg-gray-800 rounded-md text-sm text-gray-300">
-                <p><strong>Standard Event:</strong> date, startTime, endTime, topic, department, batch</p>
-                <p class="mt-1"><strong>Holiday Entry:</strong> <code class="text-amber-400 font-bold">"date", "isHoliday": true</code> (Batch defaults to ALL)</p>
-                <p class="mt-2 text-[10px] text-gray-400 italic font-medium">
-                    * Holidays override the generic recurring schedule for that day.
-                </p>
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8 border-b border-gray-800 pb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-400 flex items-center gap-2">
+                    <span>🛡️</span> Admin Dashboard
+                </h1>
+                <p class="text-gray-400 text-sm mt-1">Manage AFMC Schedule Data</p>
             </div>
-            <textarea 
-                id="schedule-input" 
-                rows="15" 
-                class="w-full p-4 bg-gray-700 border border-gray-600 rounded-lg text-gray-200 focus:ring-2 focus:ring-blue-500 font-mono text-sm" 
-                placeholder='[
+            <div class="flex gap-2">
+                <a href="./index.html" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm font-medium transition text-gray-300">
+                    ← Back to App
+                </a>
+            </div>
+        </header>
+
+        <!-- Status Message -->
+        <div id="status-message" class="hidden mb-6 p-4 rounded-lg font-bold uppercase tracking-widest text-xs border animate-pulse"></div>
+
+        <!-- Tabs -->
+        <div class="flex gap-1 mb-6 bg-gray-800/50 p-1 rounded-xl w-fit border border-gray-700">
+            <button id="tab-upload" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all bg-blue-600 text-white shadow-lg">
+                📤 Bulk Upload
+            </button>
+            <button id="tab-add" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-gray-400 hover:text-white hover:bg-gray-700">
+                ➕ Add Event
+            </button>
+            <button id="tab-manage" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-gray-400 hover:text-white hover:bg-gray-700">
+                ✏️ Manage Schedule
+            </button>
+        </div>
+
+        <!-- SECTION 1: BULK UPLOAD -->
+        <div id="view-upload" class="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 p-6 md:p-8">
+            <div class="mb-6">
+                <label for="schedule-input" class="block text-sm font-bold text-gray-300 mb-3 uppercase tracking-wider">
+                    Paste JSON Data
+                </label>
+                <div class="mb-4 p-4 bg-gray-900/50 rounded-lg text-xs text-gray-400 border border-gray-700/50">
+                    <p class="mb-2"><strong class="text-blue-400">Format Guide:</strong></p>
+                    <ul class="list-disc pl-4 space-y-1">
+                        <li><strong>Standard:</strong> <code>{"date": "YYYY-MM-DD", "startTime": "09:00", "endTime": "10:00", "topic": "...", "department": "...", "batch": ["A", "B"], "instructor": "Dr. Name"}</code></li>
+                        <li><strong>Holiday:</strong> <code>{"date": "YYYY-MM-DD", "isHoliday": true}</code> (Auto-fills batch:ALL, topic:Holiday)</li>
+                    </ul>
+                </div>
+                <textarea 
+                    id="schedule-input" 
+                    rows="15" 
+                    class="w-full p-4 bg-gray-900 border border-gray-700 rounded-xl text-gray-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm leading-relaxed" 
+                    placeholder='[
   {
     "date": "2026-01-26",
     "isHoliday": true
@@ -48,27 +85,255 @@
     "endTime": "16:00", 
     "topic": "Paediatrics Clinical Case",
     "department": "Paediatrics",
+    "instructor": "Dr. Sharma",
     "batch": ["D"],
     "isClinics": true
   }
 ]'></textarea>
-        </div>
-        
-        <div class="flex gap-4 mb-6">
-            <button id="validate-btn" class="flex-1 bg-yellow-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-yellow-700 transition">🔍 Validate JSON</button>
-            <button id="update-btn" class="flex-1 bg-green-600 text-white font-semibold py-3 px-4 rounded-lg hover:bg-green-700 transition">✅ Save to Firebase</button>
-            <button id="clear-btn" class="px-6 bg-gray-600 text-white font-semibold py-3 rounded-lg hover:bg-gray-700 transition">🗑️ Clear</button>
+            </div>
+            
+            <div class="flex gap-4">
+                <button id="validate-btn" class="flex-1 bg-amber-600/90 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-amber-900/20">🔍 Validate JSON</button>
+                <button id="update-btn" class="flex-1 bg-emerald-600/90 hover:bg-emerald-600 text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-emerald-900/20">✅ Upload to Firebase</button>
+                <button id="clear-btn" class="px-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">🗑️ Clear</button>
+            </div>
         </div>
 
-        <div class="text-center">
-            <a href="./index.html" class="text-blue-400 hover:underline">← Back to Main App</a>
+        <!-- SECTION 2: ADD SINGLE EVENT (New) -->
+        <div id="view-add" class="hidden bg-gray-800 rounded-2xl shadow-xl border border-gray-700 p-6 md:p-8">
+            <h2 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-4">📝 Add New Schedule Event</h2>
+            
+            <form id="add-form" class="space-y-6 max-w-4xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Date</label>
+                        <input type="date" id="add-date" required class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Department</label>
+                        <select id="add-dept" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition appearance-none cursor-pointer">
+                            <option value="">Select Department</option>
+                            <option value="Anaesthesia">Anaesthesia</option>
+                            <option value="Dermatology">Dermatology</option>
+                            <option value="Electives">Electives</option>
+                            <option value="Emergency Medicine">Emergency Medicine</option>
+                            <option value="ENT">ENT</option>
+                            <option value="Internal Medicine">Internal Medicine</option>
+                            <option value="Obs & Gynae">Obs & Gynae</option>
+                            <option value="Ophthalmology">Ophthalmology</option>
+                            <option value="Orthopaedics">Orthopaedics</option>
+                            <option value="Paediatrics">Paediatrics</option>
+                            <option value="Psychiatry">Psychiatry</option>
+                            <option value="Radiology">Radiology</option>
+                            <option value="Respiratory Medicine">Respiratory Medicine</option>
+                            <option value="Surgery">Surgery</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Start Time</label>
+                        <input type="time" id="add-start" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">End Time</label>
+                        <input type="time" id="add-end" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition [color-scheme:dark]">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Topic / Event Name</label>
+                    <input type="text" id="add-topic" placeholder="Enter topic details..." class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition font-medium">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Faculty / Instructor (Optional)</label>
+                    <input type="text" id="add-instructor" placeholder="e.g. Dr. Sharma" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition font-medium">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Batch</label>
+                        <select id="add-batch" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition appearance-none cursor-pointer">
+                            <option value="ALL">ALL</option>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Location (Optional)</label>
+                        <input type="text" id="add-location" placeholder="e.g. NLH Sushruta" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition">
+                    </div>
+                </div>
+
+                <div class="flex gap-8 pt-2">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="add-isHoliday" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
+                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Is Holiday</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="add-isClinics" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
+                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Is Clinics</span>
+                    </label>
+                </div>
+
+                <div class="pt-6">
+                    <button type="submit" id="submit-add-btn" class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2">
+                        <span>➕</span> Add to Schedule
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- SECTION 3: MANAGE SCHEDULE -->
+        <div id="view-manage" class="hidden space-y-6">
+            <!-- Advanced Filters & Search -->
+            <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 shadow-xl space-y-4">
+                <!-- Toolbar Row -->
+                <div class="flex justify-end">
+                    <button id="refresh-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 justify-center transition shadow-lg shadow-blue-900/20">
+                        🔄 Refresh
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-gray-700/50">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Filter by Department</label>
+                        <select id="filter-dept" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm appearance-none cursor-pointer">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Filter by Batch</label>
+                        <select id="filter-batch" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm appearance-none cursor-pointer">
+                            <option value="">All Batches</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Start Date</label>
+                        <input type="date" id="filter-start-date" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">End Date</label>
+                        <input type="date" id="filter-end-date" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm [color-scheme:dark]">
+                    </div>
+                </div>
+                
+                <div class="flex justify-end">
+                    <button id="reset-filters-btn" class="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition">
+                        <span>✖</span> Reset Filters
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bulk Actions Bar -->
+            <div id="bulk-actions-bar" class="flex justify-between items-center bg-gray-800 p-4 rounded-xl border border-gray-700 shadow-md hidden transition-all">
+                <label class="flex items-center gap-3 cursor-pointer select-none">
+                    <input type="checkbox" id="select-all-checkbox" class="w-5 h-5 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 focus:ring-offset-gray-800">
+                    <span class="text-sm font-bold text-gray-300">Select All (<span id="visible-count">0</span>)</span>
+                </label>
+                <button id="delete-selected-btn" class="bg-red-900/30 text-red-400 border border-red-600/50 px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-red-600 hover:text-white transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg" disabled>
+                    🗑️ Delete Selected (<span id="selected-count">0</span>)
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="manage-loading" class="text-center py-20 hidden">
+                <div class="inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="mt-4 text-gray-400 font-medium">Fetching schedule data...</p>
+            </div>
+
+            <!-- Events Grid -->
+            <div id="events-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Event cards injected here via JS -->
+            </div>
+            
+            <!-- Empty State -->
+            <div id="no-results" class="hidden text-center py-20 bg-gray-800/50 rounded-2xl border border-gray-800 border-dashed">
+                <p class="text-gray-500 text-lg">No events found matching your filters.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-white">✏️ Edit Event</h3>
+                <button id="close-modal" class="text-gray-400 hover:text-white text-2xl leading-none">&times;</button>
+            </div>
+            
+            <form id="edit-form" class="p-6 space-y-4">
+                <input type="hidden" id="edit-id">
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                        <input type="date" id="edit-date" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
+                        <input type="text" id="edit-dept" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Time</label>
+                        <input type="time" id="edit-start" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Time</label>
+                        <input type="time" id="edit-end" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Topic / Event Name</label>
+                    <input type="text" id="edit-topic" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none font-medium">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Faculty / Instructor</label>
+                    <input type="text" id="edit-instructor" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Batches (Comma Separated)</label>
+                    <input type="text" id="edit-batch" placeholder="e.g. A, B, C or ALL" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Location (Optional)</label>
+                    <input type="text" id="edit-location" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                </div>
+
+                <div class="flex gap-6 pt-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="edit-isHoliday" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
+                        <span class="text-sm font-medium">Is Holiday</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="edit-isClinics" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
+                        <span class="text-sm font-medium">Is Clinics</span>
+                    </label>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" id="save-edit-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Save Changes</button>
+                    <button type="button" id="cancel-edit-btn" class="px-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, writeBatch, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, writeBatch, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
@@ -84,69 +349,514 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
 
-        const scheduleInput = document.getElementById('schedule-input');
-        const updateBtn = document.getElementById('update-btn');
-        const validateBtn = document.getElementById('validate-btn');
-        const clearBtn = document.getElementById('clear-btn');
-        const statusMessage = document.getElementById('status-message');
+        // Helper: Normalize Department Names (Consistent with App)
+        const normalizeDept = (dept) => {
+            if (!dept) return dept;
+            const d = String(dept).toUpperCase();
+            if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC") || d.includes("PEADS")) return "Paediatrics";
+            if (d.includes("INTERNAL MEDICINE") || d.includes("GENERAL MEDICINE") || d === "MEDICINE" || d === "AETCOM (MED)") return "Internal Medicine";
+            if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
+            if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
+            if (d.includes("ANAESTH") || d.includes("ANESTH")) return "Anaesthesia";
+            if (d.includes("RADIO")) return "Radiology";
+            return dept;
+        };
 
+        // Helper: Get Department Styles (Consistent with App)
+        const getDeptStyles = (dept) => {
+            const styles = { 
+                "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
+                "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
+                "Surgery": "border-emerald-500 bg-emerald-900/30 text-emerald-200", 
+                "Paediatrics": "border-pink-400 bg-pink-900/30 text-pink-200", 
+                "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", 
+                "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200", 
+                "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
+                "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
+                "Psychiatry": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
+                "Radiology": "border-gray-500 bg-gray-900/30 text-gray-200",
+                "Anaesthesia": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
+                "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
+                "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
+                "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200" 
+            };
+            return styles[dept] || "border-gray-600 bg-gray-800 text-gray-300";
+        };
+
+        // DOM Elements
+        const views = { upload: document.getElementById('view-upload'), add: document.getElementById('view-add'), manage: document.getElementById('view-manage') };
+        const tabs = { upload: document.getElementById('tab-upload'), add: document.getElementById('tab-add'), manage: document.getElementById('tab-manage') };
+        const statusMessage = document.getElementById('status-message');
+        
+        // State
+        let allEvents = [];
+        let currentFilteredEvents = []; // To track what's currently visible
+        let selectedIds = new Set();    // Track selected IDs
         let isAuthReady = false;
 
+        // Auth Logic
+        const initAuth = async () => {
+            try { await signInAnonymously(auth); } 
+            catch (error) { showStatus(`⚠️ Auth Error: ${error.message}`, "error", true); }
+        };
+        onAuthStateChanged(auth, (user) => { 
+            isAuthReady = !!user; 
+            if(user) showStatus("✅ Connected to Database", "success");
+        });
+        initAuth();
+
+        // UI Helpers
         function showStatus(message, type = 'info', persist = false) {
             statusMessage.className = `mb-6 p-4 rounded-lg font-bold uppercase tracking-widest text-xs border`;
-            if (type === 'success') statusMessage.className += ' bg-green-800/20 text-green-200 border-green-500/50';
-            else if (type === 'error') statusMessage.className += ' bg-red-800/20 text-red-200 border-red-500/50';
-            else statusMessage.className += ' bg-blue-800/20 text-blue-200 border-blue-500/50';
+            if (type === 'success') statusMessage.className += ' bg-green-900/20 text-green-300 border-green-500/30';
+            else if (type === 'error') statusMessage.className += ' bg-red-900/20 text-red-300 border-red-500/30';
+            else statusMessage.className += ' bg-blue-900/20 text-blue-300 border-blue-500/30';
             
             statusMessage.textContent = message;
             statusMessage.classList.remove('hidden');
-            if (!persist) {
-                setTimeout(() => {
-                    if (statusMessage.textContent === message) statusMessage.classList.add('hidden');
-                }, 5000);
+            if (!persist) setTimeout(() => { if (statusMessage.textContent === message) statusMessage.classList.add('hidden'); }, 4000);
+        }
+
+        function switchTab(tabName) {
+            Object.values(views).forEach(el => el.classList.add('hidden'));
+            Object.values(tabs).forEach(el => {
+                el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
+                el.classList.add('text-gray-400', 'hover:text-white');
+            });
+
+            views[tabName].classList.remove('hidden');
+            tabs[tabName].classList.remove('text-gray-400', 'hover:text-white');
+            tabs[tabName].classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+
+            if(tabName === 'manage') loadEvents();
+        }
+
+        // --- MANAGE EVENTS LOGIC ---
+
+        async function loadEvents() {
+            if (!isAuthReady) return showStatus("Wait for connection...", "error");
+            
+            document.getElementById('manage-loading').classList.remove('hidden');
+            document.getElementById('events-grid').innerHTML = '';
+            document.getElementById('no-results').classList.add('hidden');
+            document.getElementById('bulk-actions-bar').classList.add('hidden');
+
+            try {
+                const snapshot = await getDocs(scheduleCollectionRef);
+                // Map and Normalize Departments immediately
+                allEvents = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return { 
+                        id: doc.id, 
+                        ...data,
+                        department: normalizeDept(data.department) 
+                    };
+                });
+                
+                // Sort by Date Descending
+                allEvents.sort((a, b) => b.date.localeCompare(a.date));
+                
+                selectedIds.clear(); // Reset selections on reload
+                updateBulkUI();
+                populateFilters(allEvents);
+                applyFilters(); // Render initially
+            } catch (e) {
+                showStatus(`Failed to load events: ${e.message}`, 'error', true);
+            } finally {
+                document.getElementById('manage-loading').classList.add('hidden');
             }
         }
 
-        const initAuth = async () => {
-            try { await signInAnonymously(auth); } catch (error) { showStatus(`⚠️ Auth Error: ${error.message}`, "error", true); }
+        function populateFilters(events) {
+            const deptSelect = document.getElementById('filter-dept');
+            const batchSelect = document.getElementById('filter-batch');
+            
+            const currentDept = deptSelect.value;
+            const currentBatch = batchSelect.value;
+            
+            const depts = new Set();
+            const batches = new Set();
+            
+            events.forEach(ev => {
+                if (ev.isHoliday) depts.add("Holiday");
+                else if (ev.department) depts.add(ev.department);
+                else depts.add("General");
+
+                // Normalize batches to Uppercase for the set (merges 'All', 'all', 'ALL')
+                let eventBatches = [];
+                if (Array.isArray(ev.batch)) eventBatches = ev.batch;
+                else if (ev.batch) eventBatches = [ev.batch];
+
+                eventBatches.forEach(b => {
+                    if(b) batches.add(String(b).toUpperCase().trim());
+                });
+            });
+
+            // Populate Dept Filter
+            const sortedDepts = Array.from(depts).sort();
+            deptSelect.innerHTML = '<option value="">All Departments</option>';
+            sortedDepts.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d; opt.textContent = d;
+                deptSelect.appendChild(opt);
+            });
+            if (sortedDepts.includes(currentDept)) deptSelect.value = currentDept;
+
+            // Populate Batch Filter
+            const sortedBatches = Array.from(batches).sort();
+            batchSelect.innerHTML = '<option value="">All Batches</option>';
+            sortedBatches.forEach(b => {
+                if (b === 'ALL') return; // Consolidated into 'All Batches'
+                const opt = document.createElement('option');
+                opt.value = b; opt.textContent = b;
+                batchSelect.appendChild(opt);
+            });
+            if (sortedBatches.includes(currentBatch)) batchSelect.value = currentBatch;
+        }
+
+        function applyFilters() {
+            const deptFilter = document.getElementById('filter-dept').value;
+            const batchFilter = document.getElementById('filter-batch').value;
+            const startDate = document.getElementById('filter-start-date').value;
+            const endDate = document.getElementById('filter-end-date').value;
+
+            const filtered = allEvents.filter(ev => {
+                // Department
+                const evDept = ev.department || (ev.isHoliday ? "Holiday" : "General");
+                const matchesDept = !deptFilter || evDept === deptFilter || (deptFilter === 'Holiday' && ev.isHoliday);
+
+                // Batch (Case insensitive check)
+                let matchesBatch = true;
+                if (batchFilter) {
+                    let eventBatches = [];
+                    if (Array.isArray(ev.batch)) eventBatches = ev.batch;
+                    else if (ev.batch) eventBatches = [ev.batch];
+                    
+                    // Normalize event data to match filter format
+                    const normalizedEventBatches = eventBatches.map(b => String(b).toUpperCase().trim());
+                    matchesBatch = normalizedEventBatches.includes(batchFilter);
+                }
+
+                // Date Range
+                let matchesDate = true;
+                if (startDate) matchesDate = matchesDate && (ev.date >= startDate);
+                if (endDate) matchesDate = matchesDate && (ev.date <= endDate);
+
+                return matchesDept && matchesBatch && matchesDate;
+            });
+
+            renderEvents(filtered);
+        }
+
+        function updateBulkUI() {
+            const deleteBtn = document.getElementById('delete-selected-btn');
+            const selectedCountSpan = document.getElementById('selected-count');
+            const visibleCountSpan = document.getElementById('visible-count');
+            const selectAllCheckbox = document.getElementById('select-all-checkbox');
+            
+            const count = selectedIds.size;
+            selectedCountSpan.textContent = count;
+            visibleCountSpan.textContent = currentFilteredEvents.length;
+            
+            deleteBtn.disabled = count === 0;
+            if (count > 0) {
+                deleteBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            } else {
+                deleteBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+
+            // Check if all visible items are selected
+            const allVisibleSelected = currentFilteredEvents.length > 0 && 
+                                       currentFilteredEvents.every(ev => selectedIds.has(ev.id));
+            selectAllCheckbox.checked = allVisibleSelected;
+        }
+
+        function renderEvents(events) {
+            currentFilteredEvents = events; // Track for select all logic
+            const grid = document.getElementById('events-grid');
+            grid.innerHTML = '';
+            
+            const bulkBar = document.getElementById('bulk-actions-bar');
+
+            if (events.length === 0) {
+                document.getElementById('no-results').classList.remove('hidden');
+                bulkBar.classList.add('hidden');
+                return;
+            }
+            document.getElementById('no-results').classList.add('hidden');
+            bulkBar.classList.remove('hidden');
+            
+            updateBulkUI(); // Ensure counters are correct based on current filter
+
+            events.forEach(ev => {
+                const card = document.createElement('div');
+                const isSelected = selectedIds.has(ev.id);
+                
+                // Determine styles
+                let styleClasses = "bg-gray-800 border-gray-700";
+                let textClass = "text-blue-400";
+                
+                if (ev.isHoliday) {
+                    styleClasses = "bg-gray-800 border-amber-500/30";
+                    textClass = "text-amber-400";
+                } else if (ev.department) {
+                    const deptStyle = getDeptStyles(ev.department);
+                    styleClasses = deptStyle;
+                    const match = deptStyle.match(/text-\S+/);
+                    if (match) textClass = match[0];
+                }
+
+                card.className = `rounded-xl border border-l-[10px] ${styleClasses} p-5 relative group transition-all shadow-lg select-none`;
+                if (isSelected) card.className += " ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900";
+                
+                const batchBadge = Array.isArray(ev.batch) ? ev.batch.join(', ') : ev.batch || 'ALL';
+                
+                // Resolve instructor from either key
+                const instructorName = ev.instructor || ev.faculty;
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" onchange="window.toggleSelection('${ev.id}')" class="w-5 h-5 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-offset-gray-800 focus:ring-blue-500 cursor-pointer" ${isSelected ? 'checked' : ''}>
+                            <div class="bg-black/30 text-white/80 text-xs font-mono px-2 py-1 rounded border border-white/10">
+                                ${ev.date}
+                            </div>
+                        </div>
+                        <div class="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onclick="window.editEvent('${ev.id}')" class="p-1.5 bg-blue-600/20 text-blue-300 rounded hover:bg-blue-600 hover:text-white transition" title="Edit">
+                                ✏️
+                            </button>
+                            <button onclick="window.deleteEvent('${ev.id}')" class="p-1.5 bg-red-600/20 text-red-300 rounded hover:bg-red-600 hover:text-white transition" title="Delete">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <h4 class="font-bold text-white text-lg leading-tight mb-1 line-clamp-2 mix-blend-overlay">${ev.topic || 'Untitled'}</h4>
+                    ${instructorName ? `<p class="text-xs text-gray-300 font-medium mb-1">👨‍🏫 ${instructorName}</p>` : ''}
+                    <p class="text-xs font-bold uppercase tracking-wider ${textClass} mb-4 opacity-90">
+                        ${ev.isHoliday ? 'HOLIDAY' : (ev.department || 'General')}
+                    </p>
+
+                    <div class="flex items-center justify-between text-xs text-white/60 border-t border-white/10 pt-3">
+                        <span>⏰ ${ev.startTime || '--'} - ${ev.endTime || '--'}</span>
+                        <span class="bg-black/30 text-white/80 px-2 py-0.5 rounded">Batch: ${batchBadge}</span>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // --- SELECTION LOGIC ---
+        window.toggleSelection = (id) => {
+            if (selectedIds.has(id)) selectedIds.delete(id);
+            else selectedIds.add(id);
+            renderEvents(currentFilteredEvents); 
         };
 
-        onAuthStateChanged(auth, (user) => { isAuthReady = !!user; });
-        initAuth();
+        const toggleSelectAll = (checked) => {
+            currentFilteredEvents.forEach(ev => {
+                if (checked) selectedIds.add(ev.id);
+                else selectedIds.delete(ev.id);
+            });
+            renderEvents(currentFilteredEvents);
+        };
 
+        const deleteSelectedEvents = async () => {
+            if (selectedIds.size === 0) return;
+            // Removed confirm() as it can be blocked in some environments
+            
+            try {
+                showStatus("Deleting...", "info");
+                const batch = writeBatch(db);
+                selectedIds.forEach(id => {
+                    const ref = doc(db, `artifacts/${appId}/public/data/schedule`, id);
+                    batch.delete(ref);
+                });
+                await batch.commit();
+                
+                showStatus(`Successfully deleted ${selectedIds.size} events`, "success");
+                // Remove deleted from local lists
+                allEvents = allEvents.filter(ev => !selectedIds.has(ev.id));
+                selectedIds.clear();
+                populateFilters(allEvents); // Re-populate filters in case some options are gone
+                applyFilters(); // Re-apply filter to update view
+            } catch (e) {
+                showStatus(`Bulk delete failed: ${e.message}`, "error");
+            }
+        };
+
+        window.deleteEvent = async (id) => {
+            // Removed confirm() as it can be blocked in some environments
+            try {
+                await deleteDoc(doc(db, `artifacts/${appId}/public/data/schedule`, id));
+                showStatus("Event deleted successfully", "success");
+                allEvents = allEvents.filter(e => e.id !== id);
+                if (selectedIds.has(id)) selectedIds.delete(id);
+                applyFilters();
+            } catch (e) {
+                showStatus(`Delete failed: ${e.message}`, "error");
+            }
+        };
+
+        // --- EDIT MODAL LOGIC ---
+        
+        const modal = document.getElementById('edit-modal');
+        
+        window.editEvent = (id) => {
+            const ev = allEvents.find(e => e.id === id);
+            if (!ev) return;
+
+            // Populate Form
+            document.getElementById('edit-id').value = ev.id;
+            document.getElementById('edit-date').value = ev.date || '';
+            document.getElementById('edit-start').value = ev.startTime || '';
+            document.getElementById('edit-end').value = ev.endTime || '';
+            document.getElementById('edit-topic').value = ev.topic || '';
+            document.getElementById('edit-instructor').value = ev.instructor || ev.faculty || '';
+            document.getElementById('edit-dept').value = ev.department || '';
+            document.getElementById('edit-location').value = ev.location || '';
+            document.getElementById('edit-batch').value = Array.isArray(ev.batch) ? ev.batch.join(', ') : (ev.batch || '');
+            document.getElementById('edit-isHoliday').checked = !!ev.isHoliday;
+            document.getElementById('edit-isClinics').checked = !!ev.isClinics;
+
+            modal.classList.remove('hidden');
+        };
+
+        const closeModal = () => modal.classList.add('hidden');
+        document.getElementById('close-modal').onclick = closeModal;
+        document.getElementById('cancel-edit-btn').onclick = closeModal;
+
+        document.getElementById('save-edit-btn').onclick = async () => {
+            const id = document.getElementById('edit-id').value;
+            const batchStr = document.getElementById('edit-batch').value;
+            
+            const updates = {
+                date: document.getElementById('edit-date').value,
+                startTime: document.getElementById('edit-start').value,
+                endTime: document.getElementById('edit-end').value,
+                topic: document.getElementById('edit-topic').value,
+                instructor: document.getElementById('edit-instructor').value,
+                department: normalizeDept(document.getElementById('edit-dept').value),
+                location: document.getElementById('edit-location').value,
+                batch: batchStr.split(',').map(s => s.trim()).filter(s => s),
+                isHoliday: document.getElementById('edit-isHoliday').checked,
+                isClinics: document.getElementById('edit-isClinics').checked
+            };
+
+            // Cleanup empty fields
+            Object.keys(updates).forEach(key => {
+                if (updates[key] === '' || updates[key] === undefined) delete updates[key];
+            });
+
+            try {
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/schedule`, id), updates);
+                showStatus("Event updated successfully!", "success");
+                closeModal();
+                loadEvents(); // Reload to ensure sync
+            } catch (e) {
+                showStatus(`Update failed: ${e.message}`, "error");
+            }
+        };
+
+        // --- FILTER & UPLOAD LOGIC ---
+        
         function validateScheduleData(data) {
             if (!Array.isArray(data)) return ["Data must be an array"];
             const errors = [];
             data.forEach((event, index) => {
                 if (event.isHoliday) {
-                    // Minimal requirements for holiday
                     if (!event.date) errors.push(`Event ${index+1}: Holiday missing date`);
-                    // Relaxed: Batch/Topic can be defaulted
                 } else {
-                    // Standard event requirements
                     const required = ['date', 'startTime', 'endTime', 'topic', 'department', 'batch'];
                     required.forEach(f => { if (!event[f]) errors.push(`Event ${index+1}: Missing ${f}`); });
                 }
-                
                 if (event.date && !/^\d{4}-\d{2}-\d{2}$/.test(event.date)) errors.push(`Event ${index+1}: Date format YYYY-MM-DD`);
             });
             return errors;
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            const password = "afmc";
-            let authenticated = sessionStorage.getItem('isAdminAuthenticated');
+            // Tabs Listeners
+            tabs.upload.onclick = () => switchTab('upload');
+            tabs.add.onclick = () => switchTab('add');
+            tabs.manage.onclick = () => switchTab('manage');
+            
+            // Refresh
+            document.getElementById('refresh-btn').onclick = loadEvents;
 
-            if (!authenticated) {
-                const input = prompt("Enter admin password:");
-                if (input === password) { sessionStorage.setItem('isAdminAuthenticated', 'true'); }
-                else { document.body.innerHTML = '<div class="text-red-500 p-8">Access Denied</div>'; return; }
-            }
+            // Bulk Actions
+            document.getElementById('select-all-checkbox').onchange = (e) => toggleSelectAll(e.target.checked);
+            document.getElementById('delete-selected-btn').onclick = deleteSelectedEvents;
 
-            validateBtn.onclick = () => {
+            // Filter Listeners
+            ['filter-dept', 'filter-batch', 'filter-start-date', 'filter-end-date'].forEach(id => {
+                document.getElementById(id).addEventListener('input', applyFilters);
+            });
+
+            document.getElementById('reset-filters-btn').onclick = () => {
+                document.getElementById('filter-dept').value = '';
+                document.getElementById('filter-batch').value = '';
+                document.getElementById('filter-start-date').value = '';
+                document.getElementById('filter-end-date').value = '';
+                applyFilters();
+            };
+
+            // Handle Add Form
+            document.getElementById('add-form').onsubmit = async (e) => {
+                e.preventDefault();
+                if (!isAuthReady) return showStatus("❌ Not authenticated.", "error");
+
+                const date = document.getElementById('add-date').value;
+                const isHoliday = document.getElementById('add-isHoliday').checked;
+                const batchStr = document.getElementById('add-batch').value;
+                
+                const newEvent = {
+                    date: date,
+                    startTime: document.getElementById('add-start').value,
+                    endTime: document.getElementById('add-end').value,
+                    topic: document.getElementById('add-topic').value,
+                    instructor: document.getElementById('add-instructor').value,
+                    department: normalizeDept(document.getElementById('add-dept').value),
+                    location: document.getElementById('add-location').value,
+                    batch: batchStr.split(',').map(s => s.trim()).filter(s => s),
+                    isHoliday: isHoliday,
+                    isClinics: document.getElementById('add-isClinics').checked
+                };
+
+                // Basic Validation
+                if (!date) return showStatus("❌ Date is required.", "error");
+                
+                if (isHoliday) {
+                    if (!newEvent.batch || newEvent.batch.length === 0) newEvent.batch = ["ALL"];
+                    if (!newEvent.topic) newEvent.topic = "Holiday";
+                } else {
+                    if (!newEvent.startTime || !newEvent.endTime) return showStatus("❌ Start & End times required.", "error");
+                    if (!newEvent.department) return showStatus("❌ Department is required.", "error");
+                    if (!newEvent.topic) return showStatus("❌ Topic is required.", "error");
+                    if (!newEvent.batch || newEvent.batch.length === 0) return showStatus("❌ Batch is required.", "error");
+                }
+
+                // Cleanup empty optional fields
+                if (!newEvent.location) delete newEvent.location;
+                if (!newEvent.instructor) delete newEvent.instructor;
+
+                try {
+                    showStatus("Adding event...", "info");
+                    await addDoc(scheduleCollectionRef, newEvent);
+                    showStatus("✅ Event added successfully!", "success");
+                    document.getElementById('add-form').reset();
+                } catch (e) {
+                    showStatus(`❌ Error adding event: ${e.message}`, "error");
+                }
+            };
+
+            // Upload Logic
+            const scheduleInput = document.getElementById('schedule-input');
+            
+            document.getElementById('validate-btn').onclick = () => {
                 try {
                     const data = JSON.parse(scheduleInput.value);
                     const errors = validateScheduleData(data);
@@ -155,9 +865,8 @@
                 } catch (e) { showStatus("❌ Invalid JSON format", "error"); }
             };
 
-            updateBtn.onclick = async () => {
-                if (!isAuthReady) return showStatus("❌ Cannot save: Not authenticated.", "error");
-
+            document.getElementById('update-btn').onclick = async () => {
+                if (!isAuthReady) return showStatus("❌ Not authenticated.", "error");
                 try {
                     const data = JSON.parse(scheduleInput.value);
                     const errors = validateScheduleData(data);
@@ -166,7 +875,9 @@
                     showStatus("Saving...", "info");
                     const batch = writeBatch(db);
                     data.forEach(event => {
-                        // Default logic for holidays if missing properties
+                        if (event.department) {
+                            event.department = normalizeDept(event.department);
+                        }
                         if (event.isHoliday) {
                             if (!event.batch) event.batch = ["ALL"];
                             if (!event.topic) event.topic = "Holiday";
@@ -175,12 +886,27 @@
                         batch.set(docRef, event);
                     });
                     await batch.commit();
-                    showStatus(`🎉 Successfully saved ${data.length} entries!`, "success");
+                    showStatus(`🎉 Saved ${data.length} entries!`, "success");
                     scheduleInput.value = '';
-                } catch (e) { showStatus(`❌ Error saving data: ${e.message}`, "error"); }
+                } catch (e) { showStatus(`❌ Error: ${e.message}`, "error"); }
             };
 
-            clearBtn.onclick = () => { scheduleInput.value = ''; showStatus("Cleared."); };
+            document.getElementById('clear-btn').onclick = () => { scheduleInput.value = ''; showStatus("Cleared."); };
+
+            // NEW: Make date/time inputs open picker on click anywhere
+            const dateTimeInputs = document.querySelectorAll('input[type="date"], input[type="time"]');
+            dateTimeInputs.forEach(input => {
+                input.addEventListener('click', (e) => {
+                    // Check if showPicker is supported (modern browsers)
+                    if (typeof input.showPicker === 'function') {
+                        try {
+                            input.showPicker();
+                        } catch (error) {
+                            // Ignore errors (e.g. if already open or security context issues)
+                        }
+                    }
+                });
+            });
         });
     </script>
 </body>
