@@ -433,22 +433,33 @@
             }
             document.getElementById('loading-indicator').classList.remove('hidden');
             
+            // Core Batches
+            const r = parseInt(rollNo);
+            const gBatch = getGeneralBatch(r);
+            const cBatch = getClinicBatch(r);
+            document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${gBatch} | Clinic: ${cBatch}`;
+
+            let dynamicEvents = [];
+            
             try {
-                const r = parseInt(rollNo);
-                const gBatch = getGeneralBatch(r);
-                const cBatch = getClinicBatch(r);
-                document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${gBatch} | Clinic: ${cBatch}`;
-                
+                // Try fetching specific data from Firestore
                 const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+                // If offline and not cached, this might throw or hang. 
+                // We'll catch it to ensure generic schedule loads.
                 const querySnapshot = await getDocs(scheduleCollectionRef);
-                const dynamicEvents = [];
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     data.id = doc.id;
                     data.isDynamic = true; 
                     dynamicEvents.push(data);
                 });
-
+            } catch (e) {
+                console.warn("Could not fetch specific schedule (likely offline or no data). Falling back to generic schedule.", e);
+                const notice = document.getElementById('offline-notice');
+                notice.classList.remove('hidden');
+                notice.textContent = "Offline Mode: Showing Generic Schedule";
+            } finally {
+                // Always generate schedule, using whatever data we have (or empty if fetch failed)
                 generateSchedule(gBatch, cBatch, dynamicEvents);
                 render();
                 setupAppListeners();
@@ -456,10 +467,8 @@
                 const today = getTodayStr();
                 document.getElementById('date-picker').value = today;
                 updateDatePickerLabel(today);
-            } catch (e) { 
-                console.error("Init Error:", e);
-            } finally { 
-                document.getElementById('loading-indicator').classList.add('hidden'); 
+                
+                document.getElementById('loading-indicator').classList.add('hidden');
             }
         }
 
@@ -773,6 +782,19 @@
         }
 
         window.onload = initialize;
+
+        // --- Service Worker Registration ---
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    })
+                    .catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+            });
+        }
     </script>
 </body>
 </html>
