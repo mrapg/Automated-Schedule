@@ -360,7 +360,10 @@
         /* ------------------------------------------------------------------
            3. HELPER FUNCTIONS
            ------------------------------------------------------------------ */
-        const getAcademicWeek = (date) => Math.ceil(date.getUTCDate() / 7);
+        // UPDATED: Calculates the Nth occurrence of the specific weekday in the month (e.g., 1st Monday, 2nd Monday).
+        // 1-7: 1st, 8-14: 2nd, 15-21: 3rd, 22-28: 4th, 29-31: 5th
+        const getNthWeekdayOfMonth = (date) => Math.ceil(date.getUTCDate() / 7);
+        
         const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
         const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
         
@@ -470,7 +473,11 @@
                 const dayName = current.toLocaleDateString('en-US', {weekday: 'long', timeZone: 'UTC'});
                 const ds = current.toISOString().split('T')[0];
                 const isElective = current >= eStart && current <= eEnd;
-                const week = getAcademicWeek(current);
+                
+                // CHANGED: Use getNthWeekdayOfMonth instead of getAcademicWeek/getWeekOfMonth
+                // This ensures "1st Monday" gets key 1, "2nd Monday" gets key 2, etc.
+                const week = getNthWeekdayOfMonth(current);
+                
                 const rules = scheduleRules[dayName];
 
                 // Filter overrides/special events for this specific student
