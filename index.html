@@ -111,7 +111,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
                 </div>
-                <div>
+                <div class="pr-2">
                     <p class="text-[11px] font-black uppercase tracking-widest text-white">AFMC Schedule</p>
                     <p id="install-text" class="text-[9px] text-blue-300 font-bold uppercase tracking-tighter">Install for offline access</p>
                 </div>
@@ -193,7 +193,7 @@
                     </button>
                     
                     <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer overflow-hidden group">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400 mr-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400 mr-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span id="date-picker-label" class="text-[10px] font-black text-slate-200 uppercase tracking-tighter">Go to Date</span>
@@ -360,10 +360,7 @@
         /* ------------------------------------------------------------------
            3. HELPER FUNCTIONS
            ------------------------------------------------------------------ */
-        // UPDATED: Calculates the Nth occurrence of the specific weekday in the month (e.g., 1st Monday, 2nd Monday).
-        // 1-7: 1st, 8-14: 2nd, 15-21: 3rd, 22-28: 4th, 29-31: 5th
         const getNthWeekdayOfMonth = (date) => Math.ceil(date.getUTCDate() / 7);
-        
         const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
         const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
         
@@ -389,7 +386,7 @@
             if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
             if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
             if (d.includes("ANAESTH") || d.includes("ANESTH")) return "Anaesthesia";
-            if (d.includes("RADIO")) return "Radiology"; // Merge Radiodiagnosis and Radiology
+            if (d.includes("RADIO")) return "Radiology";
             return dept;
         };
 
@@ -404,7 +401,7 @@
                 "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
                 "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
                 "Psychiatry": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
-                "Radiology": "border-gray-500 bg-gray-900/30 text-gray-200", // Unified Grey
+                "Radiology": "border-gray-500 bg-gray-900/30 text-gray-200",
                 "Anaesthesia": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
                 "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
                 "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
@@ -420,12 +417,15 @@
         let personalizedSchedule = [];
         let currentFilter = 'all';
         let currentlyVisibleDate = getTodayStr();
+        let deferredPrompt; 
 
         /* ------------------------------------------------------------------
            5. APP INITIALIZATION & CORE LOGIC
            ------------------------------------------------------------------ */
         async function initialize() {
             setupOnboardingListeners();
+            setupPWAInstallLogic(); 
+
             if (!rollNo) {
                 document.getElementById('onboarding-overlay').classList.remove('hidden');
                 document.body.classList.add('modal-open');
@@ -433,7 +433,6 @@
             }
             document.getElementById('loading-indicator').classList.remove('hidden');
             
-            // Core Batches
             const r = parseInt(rollNo);
             const gBatch = getGeneralBatch(r);
             const cBatch = getClinicBatch(r);
@@ -442,10 +441,7 @@
             let dynamicEvents = [];
             
             try {
-                // Try fetching specific data from Firestore
                 const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
-                // If offline and not cached, this might throw or hang. 
-                // We'll catch it to ensure generic schedule loads.
                 const querySnapshot = await getDocs(scheduleCollectionRef);
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
@@ -454,12 +450,10 @@
                     dynamicEvents.push(data);
                 });
             } catch (e) {
-                console.warn("Could not fetch specific schedule (likely offline or no data). Falling back to generic schedule.", e);
                 const notice = document.getElementById('offline-notice');
                 notice.classList.remove('hidden');
                 notice.textContent = "Offline Mode: Showing Generic Schedule";
             } finally {
-                // Always generate schedule, using whatever data we have (or empty if fetch failed)
                 generateSchedule(gBatch, cBatch, dynamicEvents);
                 render();
                 setupAppListeners();
@@ -467,9 +461,54 @@
                 const today = getTodayStr();
                 document.getElementById('date-picker').value = today;
                 updateDatePickerLabel(today);
-                
                 document.getElementById('loading-indicator').classList.add('hidden');
             }
+        }
+
+        // --- UPDATED: PWA Install Logic for iOS & Android ---
+        function setupPWAInstallLogic() {
+            const banner = document.getElementById('install-banner');
+            const installBtn = document.getElementById('install-btn');
+            const closeBtn = document.getElementById('close-install-banner');
+            const installText = document.getElementById('install-text');
+
+            // Check if already in standalone mode
+            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+            if (isStandalone) return;
+
+            // iOS Detection
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+            if (isIOS) {
+                // Modify banner for iOS
+                installText.innerHTML = "To install, tap <span class='text-white'>Share</span> and <span class='text-white'>'Add to Home Screen'</span>";
+                installBtn.classList.add('hidden'); // No automatic install on iOS
+                banner.classList.add('visible');
+            }
+
+            // Android/Chrome Logic
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                banner.classList.add('visible');
+            });
+
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                banner.classList.remove('visible');
+            });
+
+            closeBtn.addEventListener('click', () => {
+                banner.classList.remove('visible');
+            });
+
+            window.addEventListener('appinstalled', () => {
+                banner.classList.remove('visible');
+                deferredPrompt = null;
+            });
         }
 
         function generateSchedule(gBatch, cBatch, dynamicEvents = []) {
@@ -482,14 +521,9 @@
                 const dayName = current.toLocaleDateString('en-US', {weekday: 'long', timeZone: 'UTC'});
                 const ds = current.toISOString().split('T')[0];
                 const isElective = current >= eStart && current <= eEnd;
-                
-                // CHANGED: Use getNthWeekdayOfMonth instead of getAcademicWeek/getWeekOfMonth
-                // This ensures "1st Monday" gets key 1, "2nd Monday" gets key 2, etc.
                 const week = getNthWeekdayOfMonth(current);
-                
                 const rules = scheduleRules[dayName];
 
-                // Filter overrides/special events for this specific student
                 const filteredDynamicForMe = dynamicEvents.filter(e => {
                     if (e.date !== ds) return false;
                     if (e.batch.includes("ALL")) return true;
@@ -497,7 +531,6 @@
                     return useClinicalBatch ? e.batch.includes(cBatch) : e.batch.includes(gBatch);
                 });
                 
-                // Add overrides
                 filteredDynamicForMe.forEach(e => {
                     const entry = { ...e, department: normalizeDept(e.department) };
                     if (e.batch && e.batch.includes("ALL")) { entry.location = "NLH Sushruta"; }
@@ -508,19 +541,15 @@
                 const isGlobalHoliday = dynamicEvents.some(e => e.date === ds && e.isHoliday && e.batch.includes("ALL"));
                 const isSlotOverridden = (timeRange) => dynamicTimeSet.has(timeRange.split('-')[0]);
 
-                // Generate Recurring Schedule
                 if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
                     if (!isElective) {
-                        // Theory
                         for (const [time, config] of Object.entries(rules.theory || {})) {
                             const topic = typeof config === 'string' ? config : config[week];
                             if (topic && !isSlotOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
                         }
-                        // Pandemic
                         if (rules.pandemic && !isSlotOverridden("09:00")) {
                             for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
                         }
-                        // Clinics
                         clinicalRotationRules.forEach(rot => {
                             const start = new Date(rot.startDate + 'T00:00:00Z');
                             const end = new Date(rot.endDate + 'T00:00:00Z');
@@ -528,7 +557,6 @@
                                 if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
                             }
                         });
-                        // Tutorials
                         for (const [time, config] of Object.entries(rules.tutorials || {})) {
                             if (typeof config === 'string') {
                                 if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config} Tutorial`, config, "NLH Sushruta");
@@ -544,7 +572,6 @@
                                 }
                             }
                         }
-                        // SDL
                         for (const [time, config] of Object.entries(rules.sdl || {})) {
                             let topic = config[week];
                             if (topic && !isSlotOverridden(time)) {
@@ -552,7 +579,6 @@
                             }
                         }
                     } else {
-                        // Electives Logic
                         if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
                         if (!isSlotOverridden("17:00")) addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
                     }
@@ -561,7 +587,6 @@
             }
             personalizedSchedule = data;
 
-            // Update Dept Filter
             const select = document.getElementById('dept-filter');
             const depts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
             select.innerHTML = '<option value="all">ALL DEPTS</option>';
@@ -577,9 +602,6 @@
             data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
         }
 
-        /* ------------------------------------------------------------------
-           6. UI RENDERING
-           ------------------------------------------------------------------ */
         function render() {
             const container = document.getElementById('day-view-container');
             container.innerHTML = '';
@@ -597,26 +619,21 @@
                     slide.dataset.date = ds;
                     const isToday = ds === todayStr;
                     
-                    // Date Header
                     slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
                         ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
                         ${cur.toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC'}).toUpperCase()} 
                     </h2>`;
                     
-                    // Events
                     const sortedEvents = filteredEvents.sort((a,b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00'));
                     
                     if (sortedEvents.length) {
                         const holidayEvent = sortedEvents.find(e => e.isHoliday);
 
                         if (holidayEvent) {
-                            // Holiday View
                             slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${holidayEvent.topic || 'HOLIDAY'}</div>`;
                         } else {
-                            // Standard List
                             slide.innerHTML += sortedEvents.map((e) => {
                                 const eventIdx = personalizedSchedule.indexOf(e);
-                                const instructor = e.instructor || e.faculty;
                                 return `
                                 <div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform ${e.isDynamic ? 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95' : ''}"
                                     ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${eventIdx})"` : ''}>
@@ -640,7 +657,6 @@
                             }).join('');
                         }
                     } else {
-                        // Rest Day / Empty
                         const message = cur.getUTCDay() === 0 ? '🛌 SUNDAY' : 'REST DAY';
                         slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
                     }
@@ -649,7 +665,6 @@
                 cur.setUTCDate(cur.getUTCDate() + 1);
             }
 
-            // Scroll Observer for Date Header
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(e => {
                     if (e.isIntersecting) {
@@ -664,14 +679,10 @@
             }, { threshold: 0.5, root: container });
             document.querySelectorAll('.day-slide').forEach(s => observer.observe(s));
             
-            // Jump to Today on first load
             const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
             if (todaySlide) scrollToSlide(todaySlide, false);
         }
 
-        /* ------------------------------------------------------------------
-           7. INTERACTION HANDLERS
-           ------------------------------------------------------------------ */
         window.showDetails = (date, index) => {
             const event = personalizedSchedule[index];
             if (!event || !event.isDynamic) return;
@@ -712,9 +723,6 @@
             document.getElementById('date-picker-label').textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
         }
 
-        /* ------------------------------------------------------------------
-           8. LISTENERS
-           ------------------------------------------------------------------ */
         function setupOnboardingListeners() {
             document.getElementById('start-btn').onclick = () => {
                 const val = parseInt(document.getElementById('init-roll-input').value);
@@ -746,76 +754,20 @@
             document.getElementById('close-detail').onclick = closeDetail;
             document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
 
-            // Logic: Pull-Down to Close
             const dragZone = document.getElementById('detail-drag-zone');
             const panel = document.getElementById('detail-panel');
             let startY, isDragging = false;
-
-            dragZone.addEventListener('touchstart', (e) => {
-                startY = e.touches[0].clientY;
-                isDragging = true;
-                panel.style.transition = 'none'; 
-            }, { passive: true });
-
-            dragZone.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                const delta = e.touches[0].clientY - startY;
-                if (delta > 0) { // Only drag down
-                    panel.style.transform = `translateY(${delta}px)`;
-                }
-            }, { passive: true });
-
-            dragZone.addEventListener('touchend', (e) => {
-                isDragging = false;
-                panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-                const delta = e.changedTouches[0].clientY - startY;
-                
-                if (delta > 100) { // Close threshold
-                    closeDetail();
-                } else {
-                    panel.style.transform = ''; // Snap back
-                    if (delta < 10 && delta > -10) { // Tap detection
-                        closeDetail();
-                    }
-                }
-            });
+            dragZone.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
+            dragZone.addEventListener('touchmove', (e) => { if (!isDragging) return; const delta = e.touches[0].clientY - startY; if (delta > 0) { panel.style.transform = `translateY(${delta}px)`; } }, { passive: true });
+            dragZone.addEventListener('touchend', (e) => { isDragging = false; panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'; const delta = e.changedTouches[0].clientY - startY; if (delta > 100) { closeDetail(); } else { panel.style.transform = ''; if (delta < 10 && delta > -10) { closeDetail(); } } });
         }
 
         window.onload = initialize;
 
-        // --- Robust Service Worker Registration ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                // Check if the protocol is supported (http or https)
-                // This prevents errors in preview environments like Canvas which might use blob: URLs
-                if (!window.location.protocol.startsWith('http')) {
-                    console.log('Service Workers are not supported in this environment (protocol: ' + window.location.protocol + '). Skipping registration.');
-                    return;
-                }
-
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker registered with scope:', registration.scope);
-                        
-                        // Check for updates
-                        registration.onupdatefound = () => {
-                            const installingWorker = registration.installing;
-                            installingWorker.onstatechange = () => {
-                                if (installingWorker.state === 'installed') {
-                                    if (navigator.serviceWorker.controller) {
-                                        // New update available
-                                        console.log('New content is available; please refresh.');
-                                    } else {
-                                        // Content is cached for offline use
-                                        console.log('Content is cached for offline use.');
-                                    }
-                                }
-                            };
-                        };
-                    })
-                    .catch(err => {
-                        console.error('ServiceWorker registration failed:', err);
-                    });
+                if (!window.location.protocol.startsWith('http')) return;
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW Registered')).catch(err => console.log('SW Failed', err));
             });
         }
     </script>
