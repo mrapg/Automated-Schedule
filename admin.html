@@ -16,6 +16,8 @@
         
         /* Checkbox transition */
         input[type="checkbox"] { accent-color: #2563eb; }
+        /* Cancel checkbox specific color */
+        input.cancel-checkbox { accent-color: #ef4444; }
 
         /* Make date and time inputs clickable area obvious */
         input[type="date"], input[type="time"] {
@@ -67,6 +69,7 @@
                     <p class="mb-2"><strong class="text-blue-400">Format Guide:</strong></p>
                     <ul class="list-disc pl-4 space-y-1">
                         <li><strong>Standard:</strong> <code>{"date": "YYYY-MM-DD", "startTime": "09:00", "endTime": "10:00", "topic": "...", "department": "...", "batch": ["A", "B"], "instructor": "Dr. Name"}</code></li>
+                        <li><strong>Cancel Slot:</strong> <code>{"date": "...", "startTime": "...", "topic": "Null", "batch": ["A"]}</code> (Overrides generic schedule)</li>
                         <li><strong>Holiday:</strong> <code>{"date": "YYYY-MM-DD", "isHoliday": true}</code> (Auto-fills batch:ALL, topic:Holiday)</li>
                     </ul>
                 </div>
@@ -83,11 +86,9 @@
     "date": "2026-01-22",
     "startTime": "15:00",
     "endTime": "16:00", 
-    "topic": "Paediatrics Clinical Case",
-    "department": "Paediatrics",
-    "instructor": "Dr. Sharma",
-    "batch": ["D"],
-    "isClinics": true
+    "topic": "Null",
+    "department": "Internal Medicine",
+    "batch": ["A"]
   }
 ]'></textarea>
             </div>
@@ -161,6 +162,12 @@
                             <option value="B">B</option>
                             <option value="C">C</option>
                             <option value="D">D</option>
+                            <option value="A1">A1</option>
+                            <option value="A2">A2</option>
+                            <option value="B1">B1</option>
+                            <option value="B2">B2</option>
+                            <option value="C1">C1</option>
+                            <option value="C2">C2</option>
                         </select>
                     </div>
                     <div>
@@ -169,7 +176,7 @@
                     </div>
                 </div>
 
-                <div class="flex gap-8 pt-2">
+                <div class="flex flex-wrap gap-8 pt-2">
                     <label class="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" id="add-isHoliday" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
                         <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Is Holiday</span>
@@ -177,6 +184,11 @@
                     <label class="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" id="add-isClinics" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
                         <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Is Clinics</span>
+                    </label>
+                    <!-- NEW CANCEL SLOT -->
+                    <label class="flex items-center gap-3 cursor-pointer group bg-red-900/20 px-3 py-1 rounded-lg border border-red-900/30 hover:bg-red-900/30 transition">
+                        <input type="checkbox" id="add-isNull" class="w-6 h-6 rounded bg-gray-900 border-red-600 text-red-600 focus:ring-red-500 transition cancel-checkbox">
+                        <span class="text-sm font-bold text-red-300 group-hover:text-red-200 transition">🚫 Cancel Slot</span>
                     </label>
                 </div>
 
@@ -311,7 +323,7 @@
                     <input type="text" id="edit-location" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
                 </div>
 
-                <div class="flex gap-6 pt-2">
+                <div class="flex flex-wrap gap-6 pt-2">
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="edit-isHoliday" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
                         <span class="text-sm font-medium">Is Holiday</span>
@@ -319,6 +331,11 @@
                     <label class="flex items-center gap-2 cursor-pointer">
                         <input type="checkbox" id="edit-isClinics" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
                         <span class="text-sm font-medium">Is Clinics</span>
+                    </label>
+                    <!-- NEW CANCEL SLOT -->
+                    <label class="flex items-center gap-2 cursor-pointer bg-red-900/20 px-2 py-1 rounded border border-red-900/30">
+                        <input type="checkbox" id="edit-isNull" class="w-5 h-5 rounded bg-gray-800 border-red-600 text-red-600 cancel-checkbox">
+                        <span class="text-sm font-bold text-red-300">🚫 Cancel Slot</span>
                     </label>
                 </div>
 
@@ -598,7 +615,13 @@
                 let styleClasses = "bg-gray-800 border-gray-700";
                 let textClass = "text-blue-400";
                 
-                if (ev.isHoliday) {
+                // Check for Null/Cancelled
+                const isNull = ev.topic && ev.topic.toUpperCase() === "NULL";
+
+                if (isNull) {
+                     styleClasses = "bg-red-900/10 border-red-500/50 opacity-75";
+                     textClass = "text-red-400";
+                } else if (ev.isHoliday) {
                     styleClasses = "bg-gray-800 border-amber-500/30";
                     textClass = "text-amber-400";
                 } else if (ev.department) {
@@ -615,6 +638,8 @@
                 
                 // Resolve instructor from either key
                 const instructorName = ev.instructor || ev.faculty;
+
+                const displayTopic = isNull ? "🚫 CANCELLED SLOT" : (ev.topic || 'Untitled');
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
@@ -634,8 +659,8 @@
                         </div>
                     </div>
                     
-                    <h4 class="font-bold text-white text-lg leading-tight mb-1 line-clamp-2 mix-blend-overlay">${ev.topic || 'Untitled'}</h4>
-                    ${instructorName ? `<p class="text-xs text-gray-300 font-medium mb-1">👨‍🏫 ${instructorName}</p>` : ''}
+                    <h4 class="font-bold text-white text-lg leading-tight mb-1 line-clamp-2 mix-blend-overlay ${isNull ? 'text-red-300' : ''}">${displayTopic}</h4>
+                    ${instructorName && !isNull ? `<p class="text-xs text-gray-300 font-medium mb-1">👨‍🏫 ${instructorName}</p>` : ''}
                     <p class="text-xs font-bold uppercase tracking-wider ${textClass} mb-4 opacity-90">
                         ${ev.isHoliday ? 'HOLIDAY' : (ev.department || 'General')}
                     </p>
@@ -701,6 +726,19 @@
             }
         };
 
+        // --- NULL / CANCEL CHECKBOX LOGIC ---
+        function toggleNullState(isAddMode) {
+            const prefix = isAddMode ? 'add' : 'edit';
+            const isNullCheckbox = document.getElementById(`${prefix}-isNull`);
+            const topicInput = document.getElementById(`${prefix}-topic`);
+            
+            if (isNullCheckbox.checked) {
+                topicInput.value = "Null";
+            } else {
+                if (topicInput.value === "Null") topicInput.value = "";
+            }
+        }
+
         // --- EDIT MODAL LOGIC ---
         
         const modal = document.getElementById('edit-modal');
@@ -721,6 +759,10 @@
             document.getElementById('edit-batch').value = Array.isArray(ev.batch) ? ev.batch.join(', ') : (ev.batch || '');
             document.getElementById('edit-isHoliday').checked = !!ev.isHoliday;
             document.getElementById('edit-isClinics').checked = !!ev.isClinics;
+            
+            // Handle Null/Cancel
+            const isNull = ev.topic === "Null";
+            document.getElementById('edit-isNull').checked = isNull;
 
             modal.classList.remove('hidden');
         };
@@ -769,6 +811,9 @@
             data.forEach((event, index) => {
                 if (event.isHoliday) {
                     if (!event.date) errors.push(`Event ${index+1}: Holiday missing date`);
+                } else if (event.topic === "Null") {
+                     // minimal validation for cancel events
+                     if (!event.date) errors.push(`Event ${index+1}: Cancel/Null missing date`);
                 } else {
                     const required = ['date', 'startTime', 'endTime', 'topic', 'department', 'batch'];
                     required.forEach(f => { if (!event[f]) errors.push(`Event ${index+1}: Missing ${f}`); });
@@ -803,6 +848,10 @@
                 document.getElementById('filter-end-date').value = '';
                 applyFilters();
             };
+            
+            // Null Checkbox Listeners
+            document.getElementById('add-isNull').addEventListener('change', () => toggleNullState(true));
+            document.getElementById('edit-isNull').addEventListener('change', () => toggleNullState(false));
 
             // Handle Add Form
             document.getElementById('add-form').onsubmit = async (e) => {
@@ -832,6 +881,9 @@
                 if (isHoliday) {
                     if (!newEvent.batch || newEvent.batch.length === 0) newEvent.batch = ["ALL"];
                     if (!newEvent.topic) newEvent.topic = "Holiday";
+                } else if (newEvent.topic === "Null") {
+                    // minimal checking for null events
+                    if (!newEvent.batch || newEvent.batch.length === 0) return showStatus("❌ Batch is required for cancellation.", "error");
                 } else {
                     if (!newEvent.startTime || !newEvent.endTime) return showStatus("❌ Start & End times required.", "error");
                     if (!newEvent.department) return showStatus("❌ Department is required.", "error");
