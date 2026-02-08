@@ -378,6 +378,16 @@
             return null; 
         };
 
+        const getSubBatch = (r) => {
+            if (r >= 1 && r <= 25) return 'A1';
+            if (r >= 26 && r <= 50) return 'A2';
+            if (r >= 51 && r <= 75) return 'B1';
+            if (r >= 76 && r <= 100) return 'B2';
+            if (r >= 101 && r <= 125) return 'C1';
+            if (r >= 126 && r <= 150) return 'C2';
+            return null;
+        };
+
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
@@ -436,7 +446,8 @@
             const r = parseInt(rollNo);
             const gBatch = getGeneralBatch(r);
             const cBatch = getClinicBatch(r);
-            document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${gBatch} | Clinic: ${cBatch}`;
+            const sBatch = getSubBatch(r);
+            document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${sBatch} | Clinic: ${cBatch}`;
 
             let dynamicEvents = [];
             
@@ -454,7 +465,7 @@
                 notice.classList.remove('hidden');
                 notice.textContent = "Offline Mode: Showing Generic Schedule";
             } finally {
-                generateSchedule(gBatch, cBatch, dynamicEvents);
+                generateSchedule(gBatch, cBatch, sBatch, dynamicEvents);
                 render();
                 setupAppListeners();
                 
@@ -511,7 +522,7 @@
             });
         }
 
-        function generateSchedule(gBatch, cBatch, dynamicEvents = []) {
+        function generateSchedule(gBatch, cBatch, sBatch, dynamicEvents = []) {
             const data = [];
             let current = new Date(termStartDate);
             const eStart = new Date(electivePeriod.start + 'T00:00:00Z');
@@ -526,19 +537,28 @@
 
                 const filteredDynamicForMe = dynamicEvents.filter(e => {
                     if (e.date !== ds) return false;
-                    if (e.batch.includes("ALL")) return true;
+                    const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
+                    if (batches.includes("ALL")) return true;
+                    
                     const useClinicalBatch = e.isClinics === true || e.isClinic === true;
-                    return useClinicalBatch ? e.batch.includes(cBatch) : e.batch.includes(gBatch);
+                    if (useClinicalBatch) return batches.includes(cBatch);
+                    
+                    // Match generic batch (A) OR specific sub-batch (A1)
+                    return batches.includes(gBatch) || batches.includes(sBatch);
                 });
                 
                 filteredDynamicForMe.forEach(e => {
                     const entry = { ...e, department: normalizeDept(e.department) };
-                    if (e.batch && e.batch.includes("ALL")) { entry.location = "NLH Sushruta"; }
-                    data.push(entry);
+                    if (e.batch && (e.batch.includes("ALL") || (Array.isArray(e.batch) && e.batch.includes("ALL")))) { entry.location = "NLH Sushruta"; }
+                    
+                    // Filter out "Null" events from display, but they still contribute to dynamicTimeSet (overrides)
+                    if (!entry.topic || entry.topic.trim().toUpperCase() !== "NULL") {
+                        data.push(entry);
+                    }
                 });
 
                 const dynamicTimeSet = new Set(filteredDynamicForMe.map(e => e.startTime));
-                const isGlobalHoliday = dynamicEvents.some(e => e.date === ds && e.isHoliday && e.batch.includes("ALL"));
+                const isGlobalHoliday = dynamicEvents.some(e => e.date === ds && e.isHoliday && (Array.isArray(e.batch) ? e.batch.includes("ALL") : e.batch == "ALL"));
                 const isSlotOverridden = (timeRange) => dynamicTimeSet.has(timeRange.split('-')[0]);
 
                 if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
@@ -657,7 +677,7 @@
                             }).join('');
                         }
                     } else {
-                        const message = cur.getUTCDay() === 0 ? '🛌 SUNDAY' : 'REST DAY';
+                        const message = cur.getUTCDay() === 0 ? '🏖️ SUNDAY' : 'REST DAY';
                         slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
                     }
                     container.appendChild(slide);
