@@ -699,8 +699,18 @@
             }, { threshold: 0.5, root: container });
             document.querySelectorAll('.day-slide').forEach(s => observer.observe(s));
             
-            const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
-            if (todaySlide) scrollToSlide(todaySlide, false);
+            // --- FIX START ---
+            // Find the closest slide that is >= today
+            const allSlides = Array.from(document.querySelectorAll('.day-slide'));
+            const targetSlide = allSlides.find(slide => slide.dataset.date >= todayStr);
+            
+            if (targetSlide) {
+                scrollToSlide(targetSlide, false);
+            } else if (allSlides.length > 0) {
+                // If all classes are in the past, scroll to the last one
+                scrollToSlide(allSlides[allSlides.length - 1], false);
+            }
+            // --- FIX END ---
         }
 
         window.showDetails = (date, index) => {
