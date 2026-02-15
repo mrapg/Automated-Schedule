@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afmc-schedule-v8'; // Incremented version to force update
+const CACHE_NAME = 'afmc-schedule-v9'; // Bumped to v9 to force immediate update
 const ASSETS = [
   './',
   './index.html',
@@ -56,7 +56,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle Assets - Cache First, Fallback to Network
+  // Handle Assets (Images, JS, CSS) - Cache First, Fallback to Network
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request);
