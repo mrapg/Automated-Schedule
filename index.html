@@ -549,7 +549,12 @@
                 
                 filteredDynamicForMe.forEach(e => {
                     const entry = { ...e, department: normalizeDept(e.department) };
-                    if (e.batch && (e.batch.includes("ALL") || (Array.isArray(e.batch) && e.batch.includes("ALL")))) { entry.location = "NLH Sushruta"; }
+                    
+                    // Override location to NLH Sushruta only for non-tutorial sessions with batch "ALL"
+                    const isAllBatch = e.batch && (e.batch.includes("ALL") || (Array.isArray(e.batch) && e.batch.includes("ALL")));
+                    if (!e.isTutorial && isAllBatch) { 
+                        entry.location = "NLH Sushruta"; 
+                    }
                     
                     // Filter out "Null" events from display, but they still contribute to dynamicTimeSet (overrides)
                     if (!entry.topic || entry.topic.trim().toUpperCase() !== "NULL") {
