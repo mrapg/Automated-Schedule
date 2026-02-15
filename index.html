@@ -432,9 +432,19 @@
         /* ------------------------------------------------------------------
            5. APP INITIALIZATION & CORE LOGIC
            ------------------------------------------------------------------ */
+        
+        // Helper to update the offline banner text
+        function updateOfflineNotice(msg) {
+            const notice = document.getElementById('offline-notice');
+            if (notice) {
+                notice.textContent = msg;
+                notice.classList.remove('hidden');
+            }
+        }
+
         async function initialize() {
             setupOnboardingListeners();
-            setupPWAInstallLogic(); 
+            setupPWAInstallLogic();
 
             if (!rollNo) {
                 document.getElementById('onboarding-overlay').classList.remove('hidden');
@@ -442,7 +452,7 @@
                 return;
             }
             document.getElementById('loading-indicator').classList.remove('hidden');
-            
+
             const r = parseInt(rollNo);
             const gBatch = getGeneralBatch(r);
             const cBatch = getClinicBatch(r);
@@ -450,25 +460,46 @@
             document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${sBatch} | Clinic: ${cBatch}`;
 
             let dynamicEvents = [];
-            
+
             try {
+                // 1. Try to fetch from Firebase
                 const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
                 const querySnapshot = await getDocs(scheduleCollectionRef);
+
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
                     data.id = doc.id;
-                    data.isDynamic = true; 
+                    data.isDynamic = true;
                     dynamicEvents.push(data);
                 });
+
+                // 2. SUCCESS: Save to LocalStorage
+                if (dynamicEvents.length > 0) {
+                     localStorage.setItem('afmc_schedule_cache', JSON.stringify(dynamicEvents));
+                     console.log('Schedule synced and cached.');
+                }
+
             } catch (e) {
-                const notice = document.getElementById('offline-notice');
-                notice.classList.remove('hidden');
-                notice.textContent = "Offline Mode: Showing Generic Schedule";
+                console.warn('Firebase fetch failed, checking cache:', e);
+
+                // 3. FAIL: Try to load from LocalStorage
+                const cachedData = localStorage.getItem('afmc_schedule_cache');
+                if (cachedData) {
+                    try {
+                        dynamicEvents = JSON.parse(cachedData);
+                        updateOfflineNotice("Viewing Offline Cache");
+                    } catch (err) {
+                        console.error('Cache parse error', err);
+                        updateOfflineNotice("Offline: Generic Schedule");
+                    }
+                } else {
+                    updateOfflineNotice("Offline: Generic Schedule");
+                }
             } finally {
                 generateSchedule(gBatch, cBatch, sBatch, dynamicEvents);
                 render();
                 setupAppListeners();
-                
+
                 const today = getTodayStr();
                 document.getElementById('date-picker').value = today;
                 updateDatePickerLabel(today);
@@ -549,12 +580,7 @@
                 
                 filteredDynamicForMe.forEach(e => {
                     const entry = { ...e, department: normalizeDept(e.department) };
-                    
-                    // Override location to NLH Sushruta only for non-tutorial sessions with batch "ALL"
-                    const isAllBatch = e.batch && (e.batch.includes("ALL") || (Array.isArray(e.batch) && e.batch.includes("ALL")));
-                    if (!e.isTutorial && isAllBatch) { 
-                        entry.location = "NLH Sushruta"; 
-                    }
+                    if (e.batch && (e.batch.includes("ALL") || (Array.isArray(e.batch) && e.batch.includes("ALL")))) { entry.location = "NLH Sushruta"; }
                     
                     // Filter out "Null" events from display, but they still contribute to dynamicTimeSet (overrides)
                     if (!entry.topic || entry.topic.trim().toUpperCase() !== "NULL") {
@@ -682,7 +708,7 @@
                             }).join('');
                         }
                     } else {
-                        const message = cur.getUTCDay() === 0 ? '🏖️ SUNDAY' : 'REST DAY';
+                        const message = cur.getUTCDay() === 0 ? '🌞 SUNDAY' : 'REST DAY';
                         slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
                     }
                     container.appendChild(slide);
