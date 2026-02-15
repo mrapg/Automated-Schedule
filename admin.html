@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Custom scrollbar for the modal and list */
+        /* Custom scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
@@ -20,9 +20,7 @@
         input.cancel-checkbox { accent-color: #ef4444; }
 
         /* Make date and time inputs clickable area obvious */
-        input[type="date"], input[type="time"] {
-            cursor: pointer;
-        }
+        input[type="date"], input[type="time"] { cursor: pointer; }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen p-4 md:p-8">
@@ -69,8 +67,8 @@
                     <p class="mb-2"><strong class="text-blue-400">Format Guide:</strong></p>
                     <ul class="list-disc pl-4 space-y-1">
                         <li><strong>Standard:</strong> <code>{"date": "YYYY-MM-DD", "startTime": "09:00", "endTime": "10:00", "topic": "...", "department": "...", "batch": ["A", "B"], "instructor": "Dr. Name"}</code></li>
-                        <li><strong>Cancel Slot:</strong> <code>{"date": "...", "startTime": "...", "topic": "Null", "batch": ["A"]}</code> (Overrides generic schedule)</li>
-                        <li><strong>Holiday:</strong> <code>{"date": "YYYY-MM-DD", "isHoliday": true}</code> (Auto-fills batch:ALL, topic:Holiday)</li>
+                        <li><strong>Cancel Slot:</strong> <code>{"date": "...", "startTime": "...", "topic": "Null", "batch": ["A"]}</code></li>
+                        <li><strong>Tutorial:</strong> <code>{"date": "...", "isTutorial": true, ...}</code></li>
                     </ul>
                 </div>
                 <textarea 
@@ -84,11 +82,12 @@
   },
   {
     "date": "2026-01-22",
-    "startTime": "15:00",
-    "endTime": "16:00", 
-    "topic": "Null",
-    "department": "Internal Medicine",
-    "batch": ["A"]
+    "startTime": "14:00",
+    "endTime": "15:00", 
+    "topic": "OBG Case Discussion",
+    "department": "Obs & Gynae",
+    "batch": ["A1"],
+    "isTutorial": true
   }
 ]'></textarea>
             </div>
@@ -100,7 +99,7 @@
             </div>
         </div>
 
-        <!-- SECTION 2: ADD SINGLE EVENT (New) -->
+        <!-- SECTION 2: ADD SINGLE EVENT -->
         <div id="view-add" class="hidden bg-gray-800 rounded-2xl shadow-xl border border-gray-700 p-6 md:p-8">
             <h2 class="text-xl font-bold text-white mb-6 border-b border-gray-700 pb-4">📝 Add New Schedule Event</h2>
             
@@ -179,16 +178,19 @@
                 <div class="flex flex-wrap gap-8 pt-2">
                     <label class="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" id="add-isHoliday" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
-                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Is Holiday</span>
+                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Holiday</span>
                     </label>
                     <label class="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" id="add-isClinics" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
-                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Is Clinics</span>
+                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Clinics</span>
                     </label>
-                    <!-- NEW CANCEL SLOT -->
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" id="add-isTutorial" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
+                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Tutorial</span>
+                    </label>
                     <label class="flex items-center gap-3 cursor-pointer group bg-red-900/20 px-3 py-1 rounded-lg border border-red-900/30 hover:bg-red-900/30 transition">
                         <input type="checkbox" id="add-isNull" class="w-6 h-6 rounded bg-gray-900 border-red-600 text-red-600 focus:ring-red-500 transition cancel-checkbox">
-                        <span class="text-sm font-bold text-red-300 group-hover:text-red-200 transition">🚫 Cancel Slot</span>
+                        <span class="text-sm font-bold text-red-300 group-hover:text-red-200 transition">Null & Void</span>
                     </label>
                 </div>
 
@@ -324,18 +326,21 @@
                 </div>
 
                 <div class="flex flex-wrap gap-6 pt-2">
-                    <label class="flex items-center gap-2 cursor-pointer">
+                    <label class="flex items-center gap-2 cursor-pointer group">
                         <input type="checkbox" id="edit-isHoliday" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
-                        <span class="text-sm font-medium">Is Holiday</span>
+                        <span class="text-sm font-medium text-gray-300 group-hover:text-white">Holiday</span>
                     </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
+                    <label class="flex items-center gap-2 cursor-pointer group">
                         <input type="checkbox" id="edit-isClinics" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
-                        <span class="text-sm font-medium">Is Clinics</span>
+                        <span class="text-sm font-medium text-gray-300 group-hover:text-white">Clinics</span>
                     </label>
-                    <!-- NEW CANCEL SLOT -->
-                    <label class="flex items-center gap-2 cursor-pointer bg-red-900/20 px-2 py-1 rounded border border-red-900/30">
-                        <input type="checkbox" id="edit-isNull" class="w-5 h-5 rounded bg-gray-800 border-red-600 text-red-600 cancel-checkbox">
-                        <span class="text-sm font-bold text-red-300">🚫 Cancel Slot</span>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" id="edit-isTutorial" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
+                        <span class="text-sm font-medium text-gray-300 group-hover:text-white">Tutorial</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group bg-red-900/20 px-2 py-1 rounded border border-red-900/30 hover:bg-red-900/30 transition">
+                        <input type="checkbox" id="edit-isNull" class="w-5 h-5 rounded bg-gray-800 border-red-600 text-red-600 focus:ring-red-500 cancel-checkbox">
+                        <span class="text-sm font-bold text-red-300 group-hover:text-red-200">Null & Void</span>
                     </label>
                 </div>
 
@@ -640,6 +645,7 @@
                 const instructorName = ev.instructor || ev.faculty;
 
                 const displayTopic = isNull ? "🚫 CANCELLED SLOT" : (ev.topic || 'Untitled');
+                const isTutorial = ev.isTutorial;
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
@@ -648,6 +654,7 @@
                             <div class="bg-black/30 text-white/80 text-xs font-mono px-2 py-1 rounded border border-white/10">
                                 ${ev.date}
                             </div>
+                            ${isTutorial ? '<span class="bg-purple-600/30 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-500/30">TUTORIAL</span>' : ''}
                         </div>
                         <div class="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="window.editEvent('${ev.id}')" class="p-1.5 bg-blue-600/20 text-blue-300 rounded hover:bg-blue-600 hover:text-white transition" title="Edit">
@@ -759,6 +766,7 @@
             document.getElementById('edit-batch').value = Array.isArray(ev.batch) ? ev.batch.join(', ') : (ev.batch || '');
             document.getElementById('edit-isHoliday').checked = !!ev.isHoliday;
             document.getElementById('edit-isClinics').checked = !!ev.isClinics;
+            document.getElementById('edit-isTutorial').checked = !!ev.isTutorial;
             
             // Handle Null/Cancel
             const isNull = ev.topic === "Null";
@@ -785,7 +793,8 @@
                 location: document.getElementById('edit-location').value,
                 batch: batchStr.split(',').map(s => s.trim()).filter(s => s),
                 isHoliday: document.getElementById('edit-isHoliday').checked,
-                isClinics: document.getElementById('edit-isClinics').checked
+                isClinics: document.getElementById('edit-isClinics').checked,
+                isTutorial: document.getElementById('edit-isTutorial').checked
             };
 
             // Cleanup empty fields
@@ -872,7 +881,8 @@
                     location: document.getElementById('add-location').value,
                     batch: batchStr.split(',').map(s => s.trim()).filter(s => s),
                     isHoliday: isHoliday,
-                    isClinics: document.getElementById('add-isClinics').checked
+                    isClinics: document.getElementById('add-isClinics').checked,
+                    isTutorial: document.getElementById('add-isTutorial').checked
                 };
 
                 // Basic Validation
