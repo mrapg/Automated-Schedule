@@ -767,7 +767,7 @@
                 <div class="space-y-6">
                     <div><p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p><h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3></div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${event.instructor || 'Staff'}</p></div>
+                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${event.instructor || event.faculty || 'Staff'}</p></div>
                         <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p><p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p></div>
                     </div>
                     <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${event.location}</p></div>
@@ -852,3 +852,4 @@
     </script>
 </body>
 </html>
+
