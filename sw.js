@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afmc-schedule-v7'; // Version bumped to force update
+const CACHE_NAME = 'afmc-schedule-v8'; // Incremented version to force update
 const ASSETS = [
   './',
   './index.html',
@@ -6,10 +6,10 @@ const ASSETS = [
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',
-  './utils.js', // Ensure this exists if imported
+  './utils.js',
   'https://cdn.tailwindcss.com', 
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
-  // Cache Firebase SDKs to ensure the app shell loads even if auth fails later
+  // Cache Firebase SDKs
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js',
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
@@ -33,7 +33,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('[SW] removing old cache', key);
+            console.log('[SW] Removing old cache', key);
             return caches.delete(key);
           }
         })
@@ -46,7 +46,6 @@ self.addEventListener('activate', (event) => {
 // 3. Fetch: The Offline Logic
 self.addEventListener('fetch', (event) => {
   // Handle Navigation (HTML) - Network First, Fallback to Cache
-  // This ensures you get the latest schedule if online, but the cached app if offline.
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -57,7 +56,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle Assets (Images, JS, CSS) - Cache First, Fallback to Network
+  // Handle Assets - Cache First, Fallback to Network
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       return cachedResponse || fetch(event.request);
