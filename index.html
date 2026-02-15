@@ -15,33 +15,62 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     
     <style>
-        html { scroll-behavior: smooth; }
+        /* --- Layout & Scroll Locking --- */
+        html, body { 
+            height: 100%; 
+            overflow: hidden; /* Freezes the background */
+            overscroll-behavior: none; /* Prevents bounce effects */
+        }
         body { 
             font-family: 'Inter', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
             background-color: #0f172a; 
             color: #f8fafc;
-            overflow-x: hidden;
-            /* Bottom padding for fixed nav + safe area */
-            padding-bottom: calc(80px + env(safe-area-inset-bottom));
+        }
+
+        /* --- App Container --- */
+        #app-container {
+            height: 100dvh; /* Exact viewport height */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Clips anything extending beyond screen */
         }
         
-        /* --- Layout & Scroll --- */
+        /* --- Independent Slide Scrolling --- */
         .day-view { 
             scroll-snap-type: x mandatory; 
             scroll-behavior: smooth; 
-            min-height: 500px;
-            overflow-x: auto;
+            flex: 1; /* Takes all remaining height */
+            height: 100%;
+            overflow-x: auto; /* Horizontal swipe enabled */
+            overflow-y: hidden; /* Vertical scroll disabled on wrapper */
             display: flex;
+            /* Hide scrollbar for the wrapper */
+            scrollbar-width: none; 
         }
+        .day-view::-webkit-scrollbar { display: none; }
+
         .day-slide { 
             scroll-snap-align: start; 
             flex-shrink: 0; 
             width: 100%; 
-            min-height: 400px; 
+            height: 100%; /* Matches wrapper height */
+            overflow-y: auto; /* Enables vertical scroll per slide */
+            overscroll-behavior-y: contain; /* Prevents scroll chaining */
         }
-        .day-view::-webkit-scrollbar { height: 4px; }
-        .day-view::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        
+        /* --- Custom Scrollbar Styling (Shared) --- */
+        /* Applied to both .day-slide and .custom-scrollbar */
+        .day-slide::-webkit-scrollbar, 
+        .custom-scrollbar::-webkit-scrollbar { 
+            width: 4px; 
+        }
+        
+        .day-slide::-webkit-scrollbar-thumb, 
+        .custom-scrollbar::-webkit-scrollbar-thumb { 
+            background: #334155; 
+            border-radius: 10px; 
+        }
         
         /* --- Components --- */
         .card-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4); }
@@ -78,7 +107,9 @@
 
         /* --- Transitions --- */
         .tab-content { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
-        .tab-content.active { display: flex; opacity: 1; }
+        
+        /* REMOVED overflow: hidden from here to prevent locking the Log tab */
+        .tab-content.active { display: flex; opacity: 1; height: 100%; } 
         
         #detail-panel {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -96,7 +127,7 @@
         }
     </style>
 </head>
-<body class="transition-colors duration-200">
+<body class="transition-colors duration-200 fixed inset-0 overflow-hidden">
     <!-- Offline Indicator -->
     <div id="offline-notice" class="hidden bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest text-center py-1 sticky top-0 z-[110]">
         Viewing Offline Cache
@@ -161,9 +192,9 @@
     </div>
 
     <!-- Main App Container -->
-    <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl min-h-screen flex flex-col border-x border-slate-800">
+    <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl h-screen flex flex-col border-x border-slate-800 overflow-hidden relative">
         <!-- Main Header remains fixed at top -->
-        <header class="bg-slate-950 text-white p-4 sticky top-0 z-[50] border-b border-slate-800 shadow-lg">
+        <header class="bg-slate-950 text-white p-4 sticky top-0 z-[50] border-b border-slate-800 shadow-lg shrink-0">
             <div class="flex justify-between items-center">
                 <div>
                     <h1 class="text-xl font-black tracking-tight flex items-center gap-2">
@@ -183,9 +214,9 @@
         </header>
 
         <!-- VIEW 1: SCHEDULE -->
-        <div id="schedule-tab-content" class="tab-content active flex-col flex-1">
-            <!-- REVERTED: Removed sticky behavior from controls. Now scrolls UNDER the header. -->
-            <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg">
+        <div id="schedule-tab-content" class="tab-content active flex-col flex-1 h-full overflow-hidden relative">
+            <!-- Controls Section -->
+            <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg shrink-0">
                 <div class="flex space-x-2">
                     <button id="today-btn" class="flex-1 bg-blue-600 btn-glow-blue text-white font-black py-2.5 rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-[10px]">
                         Today
@@ -217,22 +248,22 @@
                 </div>
             </div>
             
-            <div id="loading-indicator" class="text-center p-24 hidden">
-                <div class="inline-block w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+            <div id="loading-indicator" class="text-center p-24 hidden absolute inset-0 z-50 bg-slate-900">
+                <div class="inline-block w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4 mt-20"></div>
                 <p class="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase">Generating</p>
             </div>
 
-            <div id="day-view-container" class="day-view flex-1 bg-slate-900"></div>
+            <div id="day-view-container" class="day-view flex-1 bg-slate-900 w-full relative"></div>
             
-            <div class="bg-slate-950/80 backdrop-blur border-t border-slate-800 p-2 text-center sticky bottom-0">
+            <div class="bg-slate-950/80 backdrop-blur border-t border-slate-800 p-2 text-center shrink-0 z-20 absolute bottom-0 w-full pointer-events-none">
                  <p id="current-week-display" class="text-[9px] font-black text-blue-400 uppercase tracking-widest h-3.5"></p>
             </div>
         </div>
 
         <!-- VIEW 2: TOPICS LOG -->
-        <div id="log-tab-content" class="tab-content flex-col flex-1 bg-slate-900 p-4 min-h-[500px]">
-            <!-- REVERTED: Removed sticky behavior from search bar. Now scrolls UNDER the header. -->
-            <div class="mb-6 bg-slate-900 pt-2 pb-4 border-b border-slate-800">
+        <div id="log-tab-content" class="tab-content flex-col flex-1 bg-slate-900 h-full overflow-hidden">
+            <!-- Fixed Search Header -->
+            <div class="bg-slate-900 px-4 pt-4 pb-4 border-b border-slate-800 shrink-0 z-30">
                 <h2 class="text-2xl font-black text-white uppercase tracking-tighter mb-4">Topics Log</h2>
                 <div class="relative">
                     <input type="text" id="log-search" placeholder="Search topics (e.g. 'Hernia')" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none placeholder-slate-500 font-bold uppercase tracking-wider text-xs">
@@ -242,8 +273,13 @@
                 </div>
             </div>
             
-            <div id="log-container" class="space-y-3 pb-24">
-                <!-- Dynamic Content Here -->
+            <!-- Scrollable Content Area -->
+            <!-- ADDED: custom-scrollbar and overscroll-contain classes -->
+            <!-- MODIFIED: Reduced pb-24 to pb-20 to match smaller footer -->
+            <div class="flex-1 overflow-y-auto pb-20 px-4 space-y-3 custom-scrollbar overscroll-contain" id="log-scroll-area">
+                 <div id="log-container">
+                     <!-- Dynamic Content Here -->
+                 </div>
             </div>
         </div>
 
@@ -252,14 +288,17 @@
     <!-- Bottom Navigation Bar -->
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 z-50 bottom-nav-safe">
         <div class="flex justify-around items-center max-w-lg mx-auto">
-            <button id="nav-schedule" class="flex-1 py-3 flex flex-col items-center gap-1 group transition-colors text-blue-500">
+            <!-- MODIFIED: Changed py-3 to py-1.5 to reduce height -->
+            <button id="nav-schedule" class="flex-1 py-1.5 flex flex-col items-center gap-1 group transition-colors text-blue-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-active:scale-95 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span class="text-[9px] font-black uppercase tracking-widest">Schedule</span>
             </button>
-            <div class="w-px h-8 bg-slate-800"></div>
-            <button id="nav-log" class="flex-1 py-3 flex flex-col items-center gap-1 group transition-colors text-slate-500 hover:text-slate-300">
+            <!-- MODIFIED: Changed h-8 to h-5 to match new height -->
+            <div class="w-px h-5 bg-slate-800"></div>
+            <!-- MODIFIED: Changed py-3 to py-1.5 to reduce height -->
+            <button id="nav-log" class="flex-1 py-1.5 flex flex-col items-center gap-1 group transition-colors text-slate-500 hover:text-slate-300">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-active:scale-95 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                 </svg>
@@ -677,7 +716,8 @@
                 const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
                 if (currentFilter === 'all' || filteredEvents.length > 0) {
                     const slide = document.createElement('div');
-                    slide.className = 'day-slide p-5';
+                    // MODIFIED: Changed pb-32 to pb-24 to match smaller footer
+                    slide.className = 'day-slide p-5 pb-24 overflow-y-auto'; 
                     slide.dataset.date = ds;
                     const isToday = ds === todayStr;
                     slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
@@ -763,11 +803,13 @@
             const event = personalizedSchedule[index];
             if (!event || !event.isDynamic) return;
             const content = document.getElementById('detail-content');
+            // MODIFIED: Added check for BOTH instructor and faculty keys
+            const facultyName = event.instructor || event.faculty || 'Staff';
             content.innerHTML = `
                 <div class="space-y-6">
                     <div><p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p><h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3></div>
                     <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${event.instructor || event.faculty || 'Staff'}</p></div>
+                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${facultyName}</p></div>
                         <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p><p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p></div>
                     </div>
                     <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${event.location}</p></div>
@@ -852,4 +894,3 @@
     </script>
 </body>
 </html>
-
