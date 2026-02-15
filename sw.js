@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afmc-schedule-v9'; // Bumped to v9 to force immediate update
+const CACHE_NAME = 'afmc-schedule-v10'; // Bumped version
 const ASSETS = [
   './',
   './index.html',
@@ -43,9 +43,12 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// 3. Fetch: The Offline Logic
+// 3. Fetch: The Offline Logic with Dynamic Caching
 self.addEventListener('fetch', (event) => {
-  // Handle Navigation (HTML) - Network First, Fallback to Cache
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return;
+
+  // Strategy for HTML: Network First, Fallback to Cache
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request)
@@ -56,10 +59,29 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Handle Assets (Images, JS, CSS) - Cache First, Fallback to Network
+  // Strategy for Assets: Cache First, Fallback to Network + Cache
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+      // 1. Return cache if we have it
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      // 2. If not, fetch from network
+      return fetch(event.request).then((response) => {
+        // Check for valid response
+        if (!response || response.status !== 200 || response.type !== 'basic' && response.type !== 'cors') {
+          return response;
+        }
+
+        // 3. Clone and Cache the new file for next time (Dynamic Caching)
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+
+        return response;
+      });
     })
   );
 });
