@@ -68,7 +68,6 @@
                     <ul class="list-disc pl-4 space-y-1">
                         <li><strong>Standard:</strong> <code>{"date": "YYYY-MM-DD", "startTime": "09:00", "endTime": "10:00", "topic": "...", "department": "...", "batch": ["A", "B"], "instructor": "Dr. Name"}</code></li>
                         <li><strong>Cancel Slot:</strong> <code>{"date": "...", "startTime": "...", "topic": "Null", "batch": ["A"]}</code></li>
-                        <li><strong>Tutorial:</strong> <code>{"date": "...", "isTutorial": true, ...}</code></li>
                     </ul>
                 </div>
                 <textarea 
@@ -86,8 +85,7 @@
     "endTime": "15:00", 
     "topic": "OBG Case Discussion",
     "department": "Obs & Gynae",
-    "batch": ["A1"],
-    "isTutorial": true
+    "batch": ["A1"]
   }
 ]'></textarea>
             </div>
@@ -183,10 +181,6 @@
                     <label class="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" id="add-isClinics" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
                         <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Clinics</span>
-                    </label>
-                    <label class="flex items-center gap-3 cursor-pointer group">
-                        <input type="checkbox" id="add-isTutorial" class="w-6 h-6 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-blue-500 transition">
-                        <span class="text-sm font-bold text-gray-300 group-hover:text-white transition">Tutorial</span>
                     </label>
                     <label class="flex items-center gap-3 cursor-pointer group bg-red-900/20 px-3 py-1 rounded-lg border border-red-900/30 hover:bg-red-900/30 transition">
                         <input type="checkbox" id="add-isNull" class="w-6 h-6 rounded bg-gray-900 border-red-600 text-red-600 focus:ring-red-500 transition cancel-checkbox">
@@ -333,10 +327,6 @@
                     <label class="flex items-center gap-2 cursor-pointer group">
                         <input type="checkbox" id="edit-isClinics" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
                         <span class="text-sm font-medium text-gray-300 group-hover:text-white">Clinics</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer group">
-                        <input type="checkbox" id="edit-isTutorial" class="w-5 h-5 rounded bg-gray-800 border-gray-600 text-blue-600">
-                        <span class="text-sm font-medium text-gray-300 group-hover:text-white">Tutorial</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer group bg-red-900/20 px-2 py-1 rounded border border-red-900/30 hover:bg-red-900/30 transition">
                         <input type="checkbox" id="edit-isNull" class="w-5 h-5 rounded bg-gray-800 border-red-600 text-red-600 focus:ring-red-500 cancel-checkbox">
@@ -645,7 +635,6 @@
                 const instructorName = ev.instructor || ev.faculty;
 
                 const displayTopic = isNull ? "🚫 CANCELLED SLOT" : (ev.topic || 'Untitled');
-                const isTutorial = ev.isTutorial;
 
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
@@ -654,7 +643,6 @@
                             <div class="bg-black/30 text-white/80 text-xs font-mono px-2 py-1 rounded border border-white/10">
                                 ${ev.date}
                             </div>
-                            ${isTutorial ? '<span class="bg-purple-600/30 text-purple-300 text-[10px] font-bold px-2 py-0.5 rounded border border-purple-500/30">TUTORIAL</span>' : ''}
                         </div>
                         <div class="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onclick="window.editEvent('${ev.id}')" class="p-1.5 bg-blue-600/20 text-blue-300 rounded hover:bg-blue-600 hover:text-white transition" title="Edit">
@@ -766,7 +754,6 @@
             document.getElementById('edit-batch').value = Array.isArray(ev.batch) ? ev.batch.join(', ') : (ev.batch || '');
             document.getElementById('edit-isHoliday').checked = !!ev.isHoliday;
             document.getElementById('edit-isClinics').checked = !!ev.isClinics;
-            document.getElementById('edit-isTutorial').checked = !!ev.isTutorial;
             
             // Handle Null/Cancel
             const isNull = ev.topic === "Null";
@@ -793,8 +780,7 @@
                 location: document.getElementById('edit-location').value,
                 batch: batchStr.split(',').map(s => s.trim()).filter(s => s),
                 isHoliday: document.getElementById('edit-isHoliday').checked,
-                isClinics: document.getElementById('edit-isClinics').checked,
-                isTutorial: document.getElementById('edit-isTutorial').checked
+                isClinics: document.getElementById('edit-isClinics').checked
             };
 
             // Cleanup empty fields
@@ -881,8 +867,7 @@
                     location: document.getElementById('add-location').value,
                     batch: batchStr.split(',').map(s => s.trim()).filter(s => s),
                     isHoliday: isHoliday,
-                    isClinics: document.getElementById('add-isClinics').checked,
-                    isTutorial: document.getElementById('add-isTutorial').checked
+                    isClinics: document.getElementById('add-isClinics').checked
                 };
 
                 // Basic Validation
