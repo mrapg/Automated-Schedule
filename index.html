@@ -181,7 +181,8 @@
     </div>
 
     <!-- Detail View Overlay -->
-    <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[130] hidden backdrop-blur-sm transition-opacity">
+    <!-- Removed 'backdrop-blur-sm' to prevent iOS crash -->
+    <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[130] hidden transition-opacity">
         <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]">
             <div id="detail-drag-zone" class="w-full flex justify-center py-6 -mt-8 mb-2 cursor-grab active:cursor-grabbing touch-none">
                 <div class="w-12 h-1.5 bg-slate-700 rounded-full active:bg-slate-500 transition-colors"></div>
