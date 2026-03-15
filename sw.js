@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afmc-schedule-v11'; // Bumped version for new UI fixes
+const CACHE_NAME = 'afmc-schedule-v12';
 const ASSETS = [
   './',
   './index.html',
