@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afmc-schedule-v13'; // Bumped — forces old cache purge on update
+const CACHE_NAME = 'afmc-schedule-v14'; // Bumped for push notification support
 const ASSETS = [
   './',
   './index.html',
@@ -14,19 +14,18 @@ const ASSETS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 ];
 
-// 1. Install: Cache the Application Shell
+// 1. Install
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching app shell v13');
+      console.log('[SW] Caching app shell v14');
       return cache.addAll(ASSETS);
     })
   );
-  // Take over immediately without waiting for old SW to idle
   self.skipWaiting();
 });
 
-// 2. Activate: Purge ALL old caches, then claim all clients immediately
+// 2. Activate: purge old caches, claim clients, notify for reload
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -38,65 +37,117 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => {
-      // Claim all open tabs/windows immediately so they use the new SW
-      // This is what makes installed PWA users get the update without manual refresh
-      return self.clients.claim();
-    }).then(() => {
-      // Tell all clients to reload so they pick up the new index.html
-      return self.clients.matchAll({ type: 'window' }).then(clients => {
-        clients.forEach(client => {
-          client.postMessage({ type: 'SW_UPDATED' });
+    }).then(() => self.clients.claim())
+      .then(() => {
+        return self.clients.matchAll({ type: 'window' }).then(clients => {
+          clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
         });
-      });
-    })
+      })
   );
 });
 
-// 3. Fetch: Network-first for HTML, Cache-first for everything else
+// 3. Fetch: Network-first for HTML, Cache-first for assets
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // Network-first for HTML navigation requests
-  // This ensures installed PWA users always get fresh HTML when online
-  if (event.request.mode === 'navigate' || 
-      event.request.url.endsWith('index.html') || 
+  if (event.request.mode === 'navigate' ||
+      event.request.url.endsWith('index.html') ||
       event.request.url.endsWith('/')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
-          // Cache the fresh HTML for offline use
           if (response && response.status === 200) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
           }
           return response;
         })
-        .catch(() => {
-          // Offline fallback — serve cached HTML
-          return caches.match('./index.html');
-        })
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
 
-  // Cache-first for all other assets (JS, CSS, fonts, images)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;
-
       return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || 
-            (response.type !== 'basic' && response.type !== 'cors')) {
-          return response;
-        }
-        // Dynamically cache new assets
+        if (!response || response.status !== 200 ||
+            (response.type !== 'basic' && response.type !== 'cors')) return response;
         const responseToCache = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         return response;
       });
+    })
+  );
+});
+
+// ─── PUSH NOTIFICATIONS ──────────────────────────────────────────────────────
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch (e) {
+    payload = { title: 'AFMC Schedule', body: event.data.text(), type: 'general' };
+  }
+
+  const { title, body, type, eventDate, eventId } = payload;
+
+  // Build the URL to open when notification is clicked
+  let targetUrl = './index.html';
+  if (type === 'venue_change' || type === 'faculty_change') {
+    // Deep link to specific date — index.html will scroll to it on load
+    targetUrl = `./index.html?date=${eventDate || ''}&eventId=${eventId || ''}`;
+  }
+
+  const options = {
+    body: body || 'Your schedule has been updated.',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: type || 'schedule-update',   // tag collapses duplicate notifications
+    renotify: true,
+    vibrate: [200, 100, 200],
+    data: { targetUrl, type, eventDate, eventId },
+    actions: [
+      { action: 'open', title: 'View Schedule' },
+      { action: 'dismiss', title: 'Dismiss' }
+    ]
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title || 'AFMC Schedule', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'dismiss') return;
+
+  const targetUrl = (event.notification.data && event.notification.data.targetUrl)
+    ? event.notification.data.targetUrl
+    : './index.html';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If app is already open, focus it and post a message to navigate
+      for (const client of clientList) {
+        if (client.url.includes('index.html') || client.url.endsWith('/')) {
+          client.focus();
+          client.postMessage({
+            type: 'NOTIFICATION_CLICK',
+            targetUrl,
+            notifType: event.notification.data.type,
+            eventDate: event.notification.data.eventDate,
+            eventId: event.notification.data.eventId,
+          });
+          return;
+        }
+      }
+      // Otherwise open a new window
+      return self.clients.openWindow(targetUrl);
     })
   );
 });
