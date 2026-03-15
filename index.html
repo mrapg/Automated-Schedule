@@ -251,7 +251,7 @@
     </div>
 
     <!-- Onboarding Overlay -->
-    <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/99 z-[120] flex items-center justify-center p-6 hidden">
+    <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[120] flex items-center justify-center p-6 hidden">
         <div class="bg-slate-900 rounded-3xl p-10 max-w-sm w-full shadow-2xl text-center border border-slate-800">
             <div class="mb-6 flex justify-center">
                 <div class="w-20 h-20 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30 pulse-icon">
@@ -288,19 +288,22 @@
     <!-- ============================================================ -->
     <div id="calendar-overlay" class="cal-hidden fixed inset-0 bg-slate-950/98 z-[115] flex flex-col max-w-lg mx-auto">
 
-        <!-- Cal Header -->
-        <div class="bg-slate-950 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
-            <button id="cal-close-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- Cal Header — month + year in one row, prev/next flanking, close + today on sides -->
+        <div class="bg-slate-950 border-b border-slate-800 px-3 py-2.5 flex items-center justify-between shrink-0">
+            <button id="cal-close-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
-            <div class="flex items-center gap-4">
-                <button id="cal-prev-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform font-black text-lg leading-none">‹</button>
-                <h2 id="cal-month-label" class="text-base font-black text-white uppercase tracking-widest w-32 text-center"></h2>
-                <button id="cal-next-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform font-black text-lg leading-none">›</button>
+
+            <!-- Month + Year with prev/next arrows inline -->
+            <div class="flex items-center gap-2 flex-1 justify-center">
+                <button id="cal-prev-btn" class="p-1.5 rounded-lg text-slate-400 active:text-white active:scale-95 transition-all font-black text-xl leading-none select-none">‹</button>
+                <h2 id="cal-month-label" class="text-sm font-black text-white uppercase tracking-widest text-center min-w-[130px]"></h2>
+                <button id="cal-next-btn" class="p-1.5 rounded-lg text-slate-400 active:text-white active:scale-95 transition-all font-black text-xl leading-none select-none">›</button>
             </div>
-            <button id="cal-today-btn" class="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-transform">Today</button>
+
+            <button id="cal-today-btn" class="px-2.5 py-1.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-transform shrink-0">Today</button>
         </div>
 
         <!-- Day-of-week header -->
@@ -311,7 +314,7 @@
             <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">T</div>
             <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">F</div>
             <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">S</div>
-            <div class="text-[9px] font-black text-red-500/70 uppercase tracking-widest text-center py-2">S</div>
+            <div class="text-[9px] font-black text-red-400/80 uppercase tracking-widest text-center py-2">S</div>
         </div>
 
         <!-- Cal Grid — swipeable carousel -->
@@ -327,6 +330,30 @@
                 <div class="cal-month-slide flex-shrink-0 w-full h-full overflow-y-auto bg-slate-900" id="cal-slide-2">
                     <div class="cal-grid-inner grid grid-cols-7 gap-px bg-slate-800/60 p-px"></div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Backdrop for day detail panel -->
+        <div id="cal-day-backdrop" class="absolute inset-0 bg-slate-950/60 z-[9] opacity-0 pointer-events-none transition-opacity duration-300"></div>
+
+        <!-- Day Detail Panel — slides up from bottom inside the calendar overlay -->
+        <div id="cal-day-panel" class="absolute inset-x-0 bottom-0 bg-slate-900 rounded-t-[40px] border-t border-slate-700 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] panel-hidden z-10" style="max-height: 62%;">
+            <!-- Drag handle -->
+            <div id="cal-day-panel-handle" class="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none shrink-0">
+                <div class="w-10 h-1 bg-slate-700 rounded-full"></div>
+            </div>
+            <!-- Header row -->
+            <div class="flex items-center justify-between px-5 py-2 border-b border-slate-800 shrink-0">
+                <div>
+                    <p id="cal-day-panel-date" class="text-xs font-black text-blue-400 uppercase tracking-widest"></p>
+                    <p id="cal-day-panel-count" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5"></p>
+                </div>
+                <button id="cal-day-panel-goto" class="px-3 py-1.5 bg-slate-800 text-slate-300 text-[9px] font-black uppercase tracking-widest rounded-lg border border-slate-700 active:scale-95 transition-transform">
+                    Go to Day →
+                </button>
+            </div>
+            <!-- Events list -->
+            <div id="cal-day-panel-events" class="overflow-y-auto px-4 py-3 space-y-2" style="max-height: calc(62vh - 90px); -webkit-overflow-scrolling: touch;">
             </div>
         </div>
 
@@ -450,7 +477,10 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, getDocs, initializeFirestore, persistentLocalCache, CACHE_SIZE_UNLIMITED } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // VAPID public key — set this once you configure Firebase Cloud Messaging
+        const VAPID_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE';
 
         // --- Configuration & Data ---
         const firebaseConfig = {
@@ -464,16 +494,22 @@
         };
         const appId = "schedule-debeb";
         const app = initializeApp(firebaseConfig);
-        // Use modern persistent cache API (replaces deprecated enableIndexedDbPersistence)
-        // Falls back gracefully on iOS private browsing where IndexedDB is restricted
-        let db;
-        try {
-            db = initializeFirestore(app, {
-                localCache: persistentLocalCache({ cacheSizeBytes: CACHE_SIZE_UNLIMITED })
-            });
-        } catch (e) {
-            // Fallback for iOS private mode or environments that block IndexedDB
-            db = getFirestore(app);
+        const db = getFirestore(app);
+
+        // Offline persistence — non-blocking, ignore all errors
+        enableIndexedDbPersistence(db).catch(() => {});
+
+        // Messaging loaded separately — never blocks main app
+        let messaging = null;
+        if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+            import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js")
+                .then(({ getMessaging, getToken, onMessage }) => {
+                    try {
+                        messaging = getMessaging(app);
+                        window._fcm = { getToken, onMessage, messaging };
+                    } catch (e) { console.warn('FCM init failed:', e); }
+                })
+                .catch(e => console.warn('FCM module load failed:', e));
         }
 
         const termStartDate = new Date('2026-01-12T00:00:00Z');
@@ -677,6 +713,8 @@
                 // Init calendar to current month
                 calCurrentMonth = new Date().getMonth();
                 calCurrentYear = new Date().getFullYear();
+                // Handle cold-start deep link from notification tap
+                checkUrlDeepLink();
             }
         }
 
@@ -786,6 +824,7 @@
         }
 
         function closeCalendar() {
+            closeCalDayPanel();
             const overlay = document.getElementById('calendar-overlay');
             overlay.classList.remove('cal-visible');
             overlay.classList.add('cal-hidden');
@@ -860,9 +899,9 @@
         }
 
         function commitMonthShift(direction) {
-            // direction: -1 = go to prev, +1 = go to next
             if (calIsAnimating) return;
             calIsAnimating = true;
+            closeCalDayPanel();
             const carousel = document.getElementById('cal-carousel');
             const targetX = direction === 1 ? '-200%' : '0%';
 
@@ -1043,26 +1082,172 @@
                 }
             }
 
-            // Click: go to this date in schedule view
+            // Click: open day detail panel inside calendar
             cell.addEventListener('click', () => {
-                closeCalendar();
-                switchView('schedule');
-                setTimeout(() => {
-                    // Find nearest date in schedule if exact not found (filtered view)
-                    let targetSlide = document.querySelector(`.day-slide[data-date="${dateStr}"]`);
-                    if (!targetSlide) {
-                        // find nearest future slide
-                        const allSlides = Array.from(document.querySelectorAll('.day-slide'));
-                        targetSlide = allSlides.find(s => s.dataset.date >= dateStr);
-                    }
-                    if (targetSlide) {
-                        scrollToSlide(targetSlide, true);
-                        updateDatePickerLabel(dateStr);
-                    }
-                }, 50);
+                openCalDayPanel(dateStr, events);
             });
 
             return cell;
+        }
+
+        // --- Day Detail Panel ---
+        let calDayPanelDateStr = null;
+
+        function openCalDayPanel(dateStr, events) {
+            calDayPanelDateStr = dateStr;
+            const panel = document.getElementById('cal-day-panel');
+            const dateLabel = document.getElementById('cal-day-panel-date');
+            const countLabel = document.getElementById('cal-day-panel-count');
+            const eventsList = document.getElementById('cal-day-panel-events');
+
+            // Date heading
+            const d = new Date(dateStr + 'T00:00:00Z');
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+            const dateFormatted = d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+            dateLabel.textContent = `${dayName}, ${dateFormatted}`;
+
+            // Get all events for this date from personalizedSchedule (more complete than cell events)
+            const allDayEvents = personalizedSchedule
+                .filter(e => e.date === dateStr)
+                .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+            const holidayEvent = allDayEvents.find(e => e.isHoliday);
+            const isSunday = d.getUTCDay() === 0;
+
+            // Count label
+            if (holidayEvent) {
+                countLabel.textContent = holidayEvent.topic || 'Holiday';
+            } else if (isSunday) {
+                countLabel.textContent = 'Sunday — Rest Day';
+            } else if (allDayEvents.length === 0) {
+                countLabel.textContent = 'No scheduled events';
+            } else {
+                countLabel.textContent = `${allDayEvents.length} event${allDayEvents.length > 1 ? 's' : ''}`;
+            }
+
+            // Build event rows
+            eventsList.innerHTML = '';
+            if (holidayEvent) {
+                eventsList.innerHTML = `<div class="text-center py-8">
+                    <div class="text-4xl mb-3">🎉</div>
+                    <p class="text-amber-300 font-black text-sm uppercase tracking-wide">${holidayEvent.topic || 'Holiday'}</p>
+                </div>`;
+            } else if (isSunday && allDayEvents.length === 0) {
+                eventsList.innerHTML = `<div class="text-center py-8">
+                    <div class="text-4xl mb-3">☀️</div>
+                    <p class="text-slate-500 font-black text-sm uppercase tracking-wide">Sunday — Rest Day</p>
+                </div>`;
+            } else if (allDayEvents.length === 0) {
+                eventsList.innerHTML = `<div class="text-center py-8">
+                    <p class="text-slate-600 font-bold text-sm uppercase tracking-wide">No events scheduled</p>
+                </div>`;
+            } else {
+                // Direct hex color map — avoids fragile Tailwind class string-replacement
+                const deptColorMap = {
+                    "Internal Medicine":  "#2563eb",
+                    "Surgery":            "#059669",
+                    "Obs & Gynae":        "#e11d48",
+                    "Paediatrics":        "#ec4899",
+                    "ENT":                "#f59e0b",
+                    "Orthopaedics":       "#f97316",
+                    "Ophthalmology":      "#7c3aed",
+                    "Dermatology":        "#eab308",
+                    "Psychiatry":         "#4f46e5",
+                    "Anaesthesia":        "#06b6d4",
+                    "Emergency Medicine": "#dc2626",
+                    "Electives":          "#7c3aed",
+                    "Radiology":          "#64748b",
+                };
+                allDayEvents.forEach(e => {
+                    const dept = e.department || 'Other';
+                    const barColor = deptColorMap[dept] || '#475569';
+                    const row = document.createElement('div');
+                    row.className = 'flex items-start gap-3 py-2.5 border-b border-slate-800 last:border-0';
+                    row.innerHTML = `
+                        <div class="text-right shrink-0 w-12">
+                            <p class="text-white font-black text-sm leading-none">${e.startTime || '--'}</p>
+                            <p class="text-slate-600 text-[9px] font-bold mt-0.5">${e.endTime || ''}</p>
+                        </div>
+                        <div class="w-0.5 self-stretch rounded-full shrink-0 mt-0.5" style="background-color:${barColor};"></div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-white font-black text-sm leading-snug">${e.topic || 'Untitled'}</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${dept}</p>
+                            ${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${e.location}</p>` : ''}
+                        </div>
+                    `;
+                    eventsList.appendChild(row);
+                });
+            }
+
+            // Fade in backdrop
+            const backdrop = document.getElementById('cal-day-backdrop');
+            backdrop.style.pointerEvents = 'auto';
+            setTimeout(() => { backdrop.style.opacity = '1'; }, 10);
+
+            // Slide up — same pattern as showDetails()
+            panel.style.transform = '';
+            panel.classList.remove('panel-visible');
+            panel.classList.add('panel-hidden');
+            // Force a frame so the browser registers the hidden state before animating
+            setTimeout(() => {
+                panel.classList.remove('panel-hidden');
+                panel.classList.add('panel-visible');
+            }, 10);
+        }
+
+        function closeCalDayPanel() {
+            const panel = document.getElementById('cal-day-panel');
+            if (!panel) return;
+            panel.style.transform = '';
+            panel.classList.remove('panel-visible');
+            panel.classList.add('panel-hidden');
+            // Fade out backdrop
+            const backdrop = document.getElementById('cal-day-backdrop');
+            if (backdrop) { backdrop.style.opacity = '0'; backdrop.style.pointerEvents = 'none'; }
+            calDayPanelDateStr = null;
+        }
+
+        function setupCalDayPanelListeners() {
+            // Go to Day button
+            document.getElementById('cal-day-panel-goto').addEventListener('click', () => {
+                if (!calDayPanelDateStr) return;
+                const dateStr = calDayPanelDateStr;
+                closeCalDayPanel();
+                closeCalendar();
+                switchView('schedule');
+                setTimeout(() => {
+                    let targetSlide = document.querySelector(`.day-slide[data-date="${dateStr}"]`);
+                    if (!targetSlide) {
+                        const allSlides = Array.from(document.querySelectorAll('.day-slide'));
+                        targetSlide = allSlides.find(s => s.dataset.date >= dateStr);
+                    }
+                    if (targetSlide) { scrollToSlide(targetSlide, true); updateDatePickerLabel(dateStr); }
+                }, 50);
+            });
+
+            // Drag to dismiss
+            const handle = document.getElementById('cal-day-panel-handle');
+            const panel = document.getElementById('cal-day-panel');
+            let startY = 0, isDragging = false;
+            handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
+            handle.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                const delta = e.touches[0].clientY - startY;
+                if (delta > 0) panel.style.transform = `translateY(${delta}px)`;
+            }, { passive: true });
+            handle.addEventListener('touchend', (e) => {
+                isDragging = false;
+                panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+                const delta = e.changedTouches[0].clientY - startY;
+                if (delta > 80) {
+                    closeCalDayPanel();
+                } else {
+                    panel.style.transform = '';
+                }
+            }, { passive: true });
+
+            // Tap backdrop to dismiss
+            document.getElementById('cal-day-backdrop').addEventListener('click', closeCalDayPanel);
         }
 
         function renderCalLegend(deptSet) {
@@ -1394,6 +1579,7 @@
             document.getElementById('open-calendar-btn').onclick = openCalendar;
             document.getElementById('cal-close-btn').onclick = closeCalendar;
             document.getElementById('cal-today-btn').onclick = () => {
+                closeCalDayPanel();
                 closeCalendar();
                 switchView('schedule');
                 const todayStr = getTodayStr();
@@ -1405,6 +1591,7 @@
             document.getElementById('cal-prev-btn').onclick = () => commitMonthShift(-1);
             document.getElementById('cal-next-btn').onclick = () => commitMonthShift(+1);
             setupCalSwipe();
+            setupCalDayPanelListeners();
 
             // Add to Calendar (ICS export)
             document.getElementById('add-to-calendar-btn').onclick = () => {
@@ -1431,7 +1618,138 @@
         }
 
         window.onload = initialize;
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { if (!window.location.protocol.startsWith('http')) return; navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW Registered')).catch(err => console.log('SW Failed', err)); }); }
+        if ('serviceWorker' in navigator) { 
+            window.addEventListener('load', () => { 
+                if (!window.location.protocol.startsWith('http')) return; 
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => {
+                        console.log('SW Registered');
+                        // Setup push subscription once SW is ready
+                        setupPushSubscription(reg);
+                    })
+                    .catch(err => console.log('SW Failed', err)); 
+            });
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (!event.data) return;
+                if (event.data.type === 'SW_UPDATED') {
+                    console.log('[App] New SW activated — reloading for update');
+                    window.location.reload();
+                }
+                // Handle notification click deep-link
+                if (event.data.type === 'NOTIFICATION_CLICK') {
+                    handleNotificationDeepLink(event.data);
+                }
+            });
+        }
+
+        // ── Push Subscription ────────────────────────────────────────────────
+        async function setupPushSubscription(swReg) {
+            try {
+                if (!window._fcm || !('Notification' in window)) return;
+                if (VAPID_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') return;
+
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') return;
+
+                const { getToken, onMessage, messaging } = window._fcm;
+                const token = await getToken(messaging, {
+                    vapidKey: VAPID_KEY,
+                    serviceWorkerRegistration: swReg
+                });
+                if (!token) return;
+
+                const r = parseInt(localStorage.getItem('afmc_roll_no') || '0');
+                await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), {
+                    token,
+                    roll: r || null,
+                    updatedAt: new Date().toISOString(),
+                    userAgent: navigator.userAgent.substring(0, 100)
+                });
+                console.log('[Push] Subscribed:', token.substring(0, 20) + '...');
+
+                onMessage(messaging, (payload) => {
+                    const { title, body } = payload.notification || {};
+                    showInAppToast(title || 'Schedule Update', body || '');
+                });
+            } catch (e) {
+                console.warn('[Push] Subscription failed:', e);
+            }
+        }
+
+        // ── In-App Toast ─────────────────────────────────────────────────────
+        function showInAppToast(title, body) {
+            const existing = document.getElementById('push-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'push-toast';
+            toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-[90%] bg-slate-800 border border-blue-500/40 rounded-2xl shadow-2xl px-4 py-3 flex items-start gap-3 transition-all';
+            toast.style.cssText = 'opacity:0; transform: translateX(-50%) translateY(-12px);';
+            toast.innerHTML = `
+                <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-white font-black text-xs uppercase tracking-wide">${title}</p>
+                    <p class="text-slate-400 text-[11px] mt-0.5 leading-snug">${body}</p>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white shrink-0 p-1">✕</button>
+            `;
+            document.body.appendChild(toast);
+            requestAnimationFrame(() => {
+                toast.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(-50%) translateY(0)';
+            });
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(-50%) translateY(-12px)';
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 6000);
+        }
+
+        // ── Notification Deep-Link Handler ───────────────────────────────────
+        function handleNotificationDeepLink(data) {
+            const { notifType, eventDate, eventId } = data;
+            switchView('schedule');
+            if (eventDate) {
+                setTimeout(() => {
+                    let targetSlide = document.querySelector(`.day-slide[data-date="${eventDate}"]`);
+                    if (!targetSlide) {
+                        const allSlides = Array.from(document.querySelectorAll('.day-slide'));
+                        targetSlide = allSlides.find(s => s.dataset.date >= eventDate);
+                    }
+                    if (targetSlide) {
+                        scrollToSlide(targetSlide, true);
+                        updateDatePickerLabel(eventDate);
+                        // For venue/faculty changes, open the detail panel of that specific event
+                        if ((notifType === 'venue_change' || notifType === 'faculty_change') && eventId) {
+                            setTimeout(() => {
+                                const idx = personalizedSchedule.findIndex(e => e.id === eventId);
+                                if (idx !== -1 && personalizedSchedule[idx].isDynamic) {
+                                    window.showDetails(eventDate, idx);
+                                }
+                            }, 400);
+                        }
+                    }
+                }, 100);
+            }
+        }
+
+        // Also handle deep-link from URL params (when app is opened cold from notification)
+        function checkUrlDeepLink() {
+            const params = new URLSearchParams(window.location.search);
+            const eventDate = params.get('date');
+            const eventId = params.get('eventId');
+            if (eventDate) {
+                handleNotificationDeepLink({ notifType: 'venue_change', eventDate, eventId });
+                // Clean up URL
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }
     </script>
 </body>
 </html>
