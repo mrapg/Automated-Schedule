@@ -20,17 +20,24 @@
             height: 100%; 
             overflow: hidden;
             overscroll-behavior: none;
+            /* iOS Safari: prevent elastic bounce on body */
+            position: fixed;
+            width: 100%;
         }
         body { 
             font-family: 'Inter', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
             background-color: #0f172a; 
             color: #f8fafc;
+            /* Prevent iOS text size adjustment on rotation */
+            -webkit-text-size-adjust: 100%;
         }
 
         /* --- App Container --- */
         #app-container {
+            /* Use -webkit-fill-available as fallback for older iOS that doesn't support dvh */
             height: 100dvh;
+            height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -45,7 +52,9 @@
             overflow-x: auto;
             overflow-y: hidden;
             display: flex;
-            scrollbar-width: none; 
+            scrollbar-width: none;
+            /* iOS momentum scrolling */
+            -webkit-overflow-scrolling: touch;
         }
         .day-view::-webkit-scrollbar { display: none; }
 
@@ -56,6 +65,8 @@
             height: 100%;
             overflow-y: auto;
             overscroll-behavior-y: contain;
+            /* iOS momentum scrolling */
+            -webkit-overflow-scrolling: touch;
         }
         
         .day-slide::-webkit-scrollbar, 
@@ -107,7 +118,9 @@
         
         #detail-panel {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            will-change: transform; 
+            will-change: transform;
+            /* Prevent iOS from treating panel as scrollable */
+            -webkit-overflow-scrolling: auto;
         }
         .panel-hidden { transform: translateY(100%); }
         .panel-visible { transform: translateY(0); }
@@ -123,15 +136,18 @@
         /* --- Calendar Month View --- */
         #calendar-overlay {
             transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            /* iOS Safari: backdrop-blur on a fixed overlay can crash older devices.
+               We already don't use backdrop-blur here (bg-slate-950/98 is solid enough) — safe. */
         }
         #calendar-overlay.cal-hidden {
             opacity: 0;
+            /* Use pointer-events:none not 'visibility:hidden' so transition still plays */
             pointer-events: none;
             transform: translateY(-8px);
         }
         #calendar-overlay.cal-visible {
             opacity: 1;
-            pointer-events: all;
+            pointer-events: auto; /* 'all' is not a valid value per spec — fix for strict Safari */
             transform: translateY(0);
         }
 
@@ -192,12 +208,18 @@
 
         #cal-scroll-area::-webkit-scrollbar { display: none; }
 
-        /* Carousel slides — hide scrollbar */
-        .cal-month-slide { scrollbar-width: none; }
+        /* Carousel slides — hide scrollbar, enable iOS momentum scroll */
+        .cal-month-slide { 
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
         .cal-month-slide::-webkit-scrollbar { display: none; }
+
+        /* Tell iOS the swipe wrapper handles horizontal panning itself */
+        #cal-swipe-wrapper { touch-action: pan-y; }
     </style>
 </head>
-<body class="transition-colors duration-200 fixed inset-0 overflow-hidden">
+<body class="transition-colors duration-200">
     <!-- Offline Indicator -->
     <div id="offline-notice" class="hidden bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest text-center py-1 sticky top-0 z-[110]">
         Viewing Offline Cache
@@ -229,7 +251,7 @@
     </div>
 
     <!-- Onboarding Overlay -->
-    <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/98 z-[120] flex items-center justify-center p-6 hidden backdrop-blur-xl">
+    <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/99 z-[120] flex items-center justify-center p-6 hidden">
         <div class="bg-slate-900 rounded-3xl p-10 max-w-sm w-full shadow-2xl text-center border border-slate-800">
             <div class="mb-6 flex justify-center">
                 <div class="w-20 h-20 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30 pulse-icon">
@@ -428,7 +450,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, initializeFirestore, persistentLocalCache, CACHE_SIZE_UNLIMITED } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         // --- Configuration & Data ---
         const firebaseConfig = {
@@ -442,11 +464,17 @@
         };
         const appId = "schedule-debeb";
         const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-
-        enableIndexedDbPersistence(db).catch(err => {
-            if (err.code == 'failed-precondition') console.warn('Persistence failed: Tabs open');
-        });
+        // Use modern persistent cache API (replaces deprecated enableIndexedDbPersistence)
+        // Falls back gracefully on iOS private browsing where IndexedDB is restricted
+        let db;
+        try {
+            db = initializeFirestore(app, {
+                localCache: persistentLocalCache({ cacheSizeBytes: CACHE_SIZE_UNLIMITED })
+            });
+        } catch (e) {
+            // Fallback for iOS private mode or environments that block IndexedDB
+            db = getFirestore(app);
+        }
 
         const termStartDate = new Date('2026-01-12T00:00:00Z');
         const termEndDate = new Date('2026-05-17T00:00:00Z');
@@ -1304,7 +1332,26 @@
         function scrollToSlide(slideElement, smooth = true) {
             if (!slideElement) return;
             const container = document.getElementById('day-view-container');
-            container.scrollTo({ left: slideElement.offsetLeft, behavior: smooth ? 'smooth' : 'auto' });
+            const targetLeft = slideElement.offsetLeft;
+            if (!smooth) {
+                container.scrollLeft = targetLeft;
+                return;
+            }
+            // iOS Safari < 15 ignores behavior:'smooth' on scrollTo — use manual RAF animation
+            const startLeft = container.scrollLeft;
+            const delta = targetLeft - startLeft;
+            if (Math.abs(delta) < 2) return;
+            const duration = 320;
+            const startTime = performance.now();
+            function step(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                // Ease out cubic
+                const ease = 1 - Math.pow(1 - progress, 3);
+                container.scrollLeft = startLeft + delta * ease;
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
         }
 
         function updateDatePickerLabel(dateStr) {
