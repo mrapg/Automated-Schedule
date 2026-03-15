@@ -4,174 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>AFMC VII Term Schedule</title>
-    <meta name="theme-color" content="#0f172a"/>
-    <!-- PWA Integration -->
+    <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-180.png">
-    
-    <!-- Dependencies -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    
+
     <style>
-        /* --- Layout & Scroll Locking --- */
-        html, body { 
-            height: 100%; 
+        /* ── Base Layout ─────────────────────────────────────────────────── */
+        html, body {
+            height: 100%;
             overflow: hidden;
             overscroll-behavior: none;
-            /* iOS Safari: prevent elastic bounce on body */
-            position: fixed;
+            position: fixed;          /* iOS: prevent elastic bounce */
             width: 100%;
         }
-        body { 
-            font-family: 'Inter', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            background-color: #0f172a; 
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-text-size-adjust: 100%;  /* iOS: prevent font inflation on rotate */
+            background-color: #0f172a;
             color: #f8fafc;
-            /* Prevent iOS text size adjustment on rotation */
-            -webkit-text-size-adjust: 100%;
         }
 
-        /* --- App Container --- */
+        /* ── App Shell ───────────────────────────────────────────────────── */
         #app-container {
-            /* Use -webkit-fill-available as fallback for older iOS that doesn't support dvh */
             height: 100dvh;
-            height: -webkit-fill-available;
+            height: -webkit-fill-available; /* iOS < 15 fallback */
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
-        
-        /* --- Independent Slide Scrolling --- */
-        .day-view { 
-            scroll-snap-type: x mandatory; 
-            scroll-behavior: smooth; 
+
+        /* ── Day Slide Carousel (horizontal swipe) ───────────────────────── */
+        .day-view {
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
             flex: 1;
             height: 100%;
             overflow-x: auto;
             overflow-y: hidden;
             display: flex;
             scrollbar-width: none;
-            /* iOS momentum scrolling */
             -webkit-overflow-scrolling: touch;
         }
         .day-view::-webkit-scrollbar { display: none; }
 
-        .day-slide { 
-            scroll-snap-align: start; 
-            flex-shrink: 0; 
-            width: 100%; 
+        .day-slide {
+            scroll-snap-align: start;
+            flex-shrink: 0;
+            width: 100%;
             height: 100%;
             overflow-y: auto;
             overscroll-behavior-y: contain;
-            /* iOS momentum scrolling */
             -webkit-overflow-scrolling: touch;
         }
-        
-        .day-slide::-webkit-scrollbar, 
-        .custom-scrollbar::-webkit-scrollbar { 
-            width: 4px; 
-        }
-        .day-slide::-webkit-scrollbar-thumb, 
-        .custom-scrollbar::-webkit-scrollbar-thumb { 
-            background: #334155; 
-            border-radius: 10px; 
-        }
-        
-        /* --- Components --- */
-        .card-shadow { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4); }
-        .modal-open { overflow: hidden; }
-        .line-clamp-2 {
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;  
-            overflow: hidden;
-        }
+        .day-slide::-webkit-scrollbar,
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .day-slide::-webkit-scrollbar-thumb,
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-        /* --- Animations --- */
+        /* ── Shared Components ───────────────────────────────────────────── */
+        .card-shadow  { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); }
+        .modal-open   { overflow: hidden; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .bottom-nav-safe { padding-bottom: env(safe-area-inset-bottom); }
+
+        /* ── Animations ──────────────────────────────────────────────────── */
         .pulse-icon { animation: pulse-blue 2s infinite; }
         @keyframes pulse-blue {
-            0% { transform: scale(1); opacity: 0.8; }
-            50% { transform: scale(1.05); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.8; }
+            0%, 100% { transform: scale(1);    opacity: 0.8; }
+            50%       { transform: scale(1.05); opacity: 1;   }
         }
         .live-dot { animation: blink 1.5s infinite; }
         @keyframes blink {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.2); }
-            100% { opacity: 1; transform: scale(1); }
+            0%, 100% { opacity: 1;   transform: scale(1);   }
+            50%       { opacity: 0.4; transform: scale(1.2); }
         }
 
-        /* --- Study Tracker Styles --- */
-        details > summary { list-style: none; cursor: pointer; }
+        /* ── Topics Log (details/summary) ────────────────────────────────── */
+        details > summary                    { list-style: none; cursor: pointer; }
         details > summary::-webkit-details-marker { display: none; }
-        details[open] > summary .arrow { transform: rotate(180deg); }
-        
-        .bottom-nav-safe {
-            padding-bottom: env(safe-area-inset-bottom);
-        }
+        details[open] > summary .arrow       { transform: rotate(180deg); }
 
-        /* --- Transitions --- */
-        .tab-content { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
-        .tab-content.active { display: flex; opacity: 1; height: 100%; } 
-        
+        /* ── Tab Transitions ─────────────────────────────────────────────── */
+        .tab-content        { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
+        .tab-content.active { display: flex; opacity: 1; height: 100%; }
+
+        /* ── Slide-up Panels (detail + cal day) ──────────────────────────── */
         #detail-panel {
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             will-change: transform;
-            /* Prevent iOS from treating panel as scrollable */
             -webkit-overflow-scrolling: auto;
         }
-        .panel-hidden { transform: translateY(100%); }
+        .panel-hidden  { transform: translateY(100%); }
         .panel-visible { transform: translateY(0); }
-        
+
+        /* ── PWA Install Banner ──────────────────────────────────────────── */
         #install-banner {
             transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             max-height: 0; opacity: 0; overflow: hidden;
         }
-        #install-banner.visible {
-            max-height: 150px; opacity: 1; padding: 1rem;
-        }
+        #install-banner.visible { max-height: 150px; opacity: 1; padding: 1rem; }
 
-        /* --- Calendar Month View --- */
+        /* ── Calendar Overlay ────────────────────────────────────────────── */
         #calendar-overlay {
             transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            /* iOS Safari: backdrop-blur on a fixed overlay can crash older devices.
-               We already don't use backdrop-blur here (bg-slate-950/98 is solid enough) — safe. */
         }
         #calendar-overlay.cal-hidden {
             opacity: 0;
-            /* Use pointer-events:none not 'visibility:hidden' so transition still plays */
             pointer-events: none;
             transform: translateY(-8px);
         }
         #calendar-overlay.cal-visible {
             opacity: 1;
-            pointer-events: auto; /* 'all' is not a valid value per spec — fix for strict Safari */
+            pointer-events: auto;
             transform: translateY(0);
         }
 
+        /* ── Calendar Day Cells ──────────────────────────────────────────── */
         .cal-day-cell {
             min-height: 100px;
             cursor: pointer;
             transition: background 0.15s;
-            border-radius: 0;
         }
-        .cal-day-cell:active { background: rgba(255,255,255,0.06); }
-        .cal-day-cell.today-cell .cal-day-num {
-            background: #2563eb;
-            color: #fff;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .cal-day-cell.other-month { opacity: 0.25; }
-        .cal-day-cell.is-sunday .cal-day-num { color: #fbbf24; }
-        .cal-day-cell.is-holiday { background: rgba(251,191,36,0.07); }
+        .cal-day-cell:active                      { background: rgba(255,255,255,0.06); }
+        .cal-day-cell.today-cell .cal-day-num     { background: #2563eb; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .cal-day-cell.other-month                 { opacity: 0.25; }
+        .cal-day-cell.is-sunday .cal-day-num      { color: #fbbf24; }
+        .cal-day-cell.is-holiday                  { background: rgba(251,191,36,0.07); }
 
+        /* ── Calendar Event Chips ────────────────────────────────────────── */
         .event-chip {
             font-size: 7.5px;
             font-weight: 700;
@@ -188,50 +152,43 @@
             cursor: pointer;
             margin-bottom: 1.5px;
         }
+        .chip-medicine  { background: #1d4ed8; color: #bfdbfe; }
+        .chip-surgery   { background: #065f46; color: #a7f3d0; }
+        .chip-obg       { background: #9f1239; color: #fecdd3; }
+        .chip-paeds     { background: #9d174d; color: #fbcfe8; }
+        .chip-ent       { background: #92400e; color: #fde68a; }
+        .chip-ortho     { background: #7c2d12; color: #fed7aa; }
+        .chip-ophthal   { background: #4c1d95; color: #ddd6fe; }
+        .chip-derm      { background: #713f12; color: #fef08a; }
+        .chip-psych     { background: #312e81; color: #c7d2fe; }
+        .chip-anaes     { background: #164e63; color: #a5f3fc; }
+        .chip-em        { background: #7f1d1d; color: #fca5a5; }
+        .chip-elective  { background: #4c1d95; color: #e9d5ff; }
+        .chip-holiday   { background: #14532d; color: #86efac; }
+        .chip-radiology { background: #1f2937; color: #d1d5db; }
+        .chip-default   { background: #1e293b; color: #94a3b8; }
 
-        /* Chip colors by department */
-        .chip-medicine    { background: #1d4ed8; color: #bfdbfe; }
-        .chip-surgery     { background: #065f46; color: #a7f3d0; }
-        .chip-obg         { background: #9f1239; color: #fecdd3; }
-        .chip-paeds       { background: #9d174d; color: #fbcfe8; }
-        .chip-ent         { background: #92400e; color: #fde68a; }
-        .chip-ortho       { background: #7c2d12; color: #fed7aa; }
-        .chip-ophthal     { background: #4c1d95; color: #ddd6fe; }
-        .chip-derm        { background: #713f12; color: #fef08a; }
-        .chip-psych       { background: #312e81; color: #c7d2fe; }
-        .chip-anaes       { background: #164e63; color: #a5f3fc; }
-        .chip-em          { background: #7f1d1d; color: #fca5a5; }
-        .chip-elective    { background: #4c1d95; color: #e9d5ff; }
-        .chip-holiday     { background: #14532d; color: #86efac; }
-        .chip-radiology   { background: #1f2937; color: #d1d5db; }
-        .chip-default     { background: #1e293b; color: #94a3b8; }
-
-        #cal-scroll-area::-webkit-scrollbar { display: none; }
-
-        /* Carousel slides — hide scrollbar, enable iOS momentum scroll */
-        .cal-month-slide { 
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-        }
+        /* ── Calendar Carousel Slides ────────────────────────────────────── */
+        .cal-month-slide { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .cal-month-slide::-webkit-scrollbar { display: none; }
-
-        /* Tell iOS the swipe wrapper handles horizontal panning itself */
         #cal-swipe-wrapper { touch-action: pan-y; }
     </style>
 </head>
+
 <body class="transition-colors duration-200">
-    <!-- Offline Indicator -->
+
+    <!-- ── Offline Banner ──────────────────────────────────────────────── -->
     <div id="offline-notice" class="hidden bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest text-center py-1 sticky top-0 z-[110]">
         Viewing Offline Cache
     </div>
 
-    <!-- PWA Install Banner -->
+    <!-- ── PWA Install Banner ──────────────────────────────────────────── -->
     <div id="install-banner" class="bg-blue-900/40 border-b border-blue-500/30 backdrop-blur-md sticky top-0 z-[100] max-w-lg mx-auto">
         <div class="flex items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-900/50">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                     </svg>
                 </div>
                 <div class="pr-2">
@@ -243,20 +200,20 @@
                 <button id="install-btn" class="bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-lg shadow-lg active:scale-95 transition-transform">Install</button>
                 <button id="close-install-banner" class="p-2 text-slate-400 hover:text-white">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Onboarding Overlay -->
+    <!-- ── Onboarding Overlay ───────────────────────────────────────────── -->
     <div id="onboarding-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[120] flex items-center justify-center p-6 hidden">
         <div class="bg-slate-900 rounded-3xl p-10 max-w-sm w-full shadow-2xl text-center border border-slate-800">
             <div class="mb-6 flex justify-center">
                 <div class="w-20 h-20 bg-blue-500/20 rounded-2xl flex items-center justify-center border border-blue-500/30 pulse-icon">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2l3 3.5-3 3.5-3-3.5L12 2z M12 9l4 10-4 3-4-3 4-10" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 2l3 3.5-3 3.5-3-3.5L12 2z M12 9l4 10-4 3-4-3 4-10"/>
                     </svg>
                 </div>
             </div>
@@ -264,7 +221,8 @@
             <p class="text-slate-400 mb-2 font-medium leading-relaxed uppercase text-[10px] tracking-widest text-blue-400">VII Term Duration</p>
             <p class="text-white mb-8 font-black text-lg">12 JAN - 17 MAY 2026</p>
             <div class="relative mb-8">
-                <input type="number" id="init-roll-input" placeholder="001" min="1" max="150" class="w-full p-5 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-4xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-white transition-all placeholder-slate-600">
+                <input type="number" id="init-roll-input" placeholder="001" min="1" max="150"
+                    class="w-full p-5 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-4xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-white transition-all placeholder-slate-600">
                 <label class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 px-3 text-[10px] font-black text-blue-500 uppercase tracking-widest border border-slate-800 rounded-full">AFMC Roll No</label>
             </div>
             <div id="onboarding-error" class="hidden mb-4 text-xs font-bold text-red-500 uppercase tracking-tighter">Please enter roll (1-150)</div>
@@ -272,41 +230,36 @@
         </div>
     </div>
 
-    <!-- Detail View Overlay -->
+    <!-- ── Event Detail Panel (bottom sheet) ────────────────────────────── -->
     <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[130] hidden transition-opacity">
         <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]">
             <div id="detail-drag-zone" class="w-full flex justify-center py-6 -mt-8 mb-2 cursor-grab active:cursor-grabbing touch-none">
-                <div class="w-12 h-1.5 bg-slate-700 rounded-full active:bg-slate-500 transition-colors"></div>
+                <div class="w-12 h-1.5 bg-slate-700 rounded-full"></div>
             </div>
             <div id="detail-content"></div>
             <button id="close-detail" class="w-full mt-8 bg-slate-800 text-slate-300 py-4 rounded-2xl font-black uppercase tracking-widest text-xs border border-slate-700 active:scale-95 transition-transform">Close Details</button>
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- CALENDAR OVERLAY — full-screen month view                    -->
-    <!-- ============================================================ -->
+    <!-- ── Calendar Month View Overlay ──────────────────────────────────── -->
     <div id="calendar-overlay" class="cal-hidden fixed inset-0 bg-slate-950/98 z-[115] flex flex-col max-w-lg mx-auto">
 
-        <!-- Cal Header — month + year in one row, prev/next flanking, close + today on sides -->
+        <!-- Header: close | ‹ MONTH YEAR › | Today -->
         <div class="bg-slate-950 border-b border-slate-800 px-3 py-2.5 flex items-center justify-between shrink-0">
             <button id="cal-close-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
-
-            <!-- Month + Year with prev/next arrows inline -->
             <div class="flex items-center gap-2 flex-1 justify-center">
                 <button id="cal-prev-btn" class="p-1.5 rounded-lg text-slate-400 active:text-white active:scale-95 transition-all font-black text-xl leading-none select-none">‹</button>
                 <h2 id="cal-month-label" class="text-sm font-black text-white uppercase tracking-widest text-center min-w-[130px]"></h2>
                 <button id="cal-next-btn" class="p-1.5 rounded-lg text-slate-400 active:text-white active:scale-95 transition-all font-black text-xl leading-none select-none">›</button>
             </div>
-
             <button id="cal-today-btn" class="px-2.5 py-1.5 bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-transform shrink-0">Today</button>
         </div>
 
-        <!-- Day-of-week header -->
+        <!-- Day-of-week labels -->
         <div class="grid grid-cols-7 bg-slate-900 border-b border-slate-800 shrink-0">
             <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">M</div>
             <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">T</div>
@@ -317,10 +270,9 @@
             <div class="text-[9px] font-black text-red-400/80 uppercase tracking-widest text-center py-2">S</div>
         </div>
 
-        <!-- Cal Grid — swipeable carousel -->
+        <!-- Swipeable 3-slide month carousel -->
         <div id="cal-swipe-wrapper" class="flex-1 overflow-hidden relative touch-pan-y">
             <div id="cal-carousel" class="flex h-full" style="transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); will-change: transform;">
-                <!-- 3 slides: prev / current / next month -->
                 <div class="cal-month-slide flex-shrink-0 w-full h-full overflow-y-auto bg-slate-900" id="cal-slide-0">
                     <div class="cal-grid-inner grid grid-cols-7 gap-px bg-slate-800/60 p-px"></div>
                 </div>
@@ -333,39 +285,34 @@
             </div>
         </div>
 
-        <!-- Backdrop for day detail panel -->
+        <!-- Day detail panel backdrop -->
         <div id="cal-day-backdrop" class="absolute inset-0 bg-slate-950/60 z-[9] opacity-0 pointer-events-none transition-opacity duration-300"></div>
 
-        <!-- Day Detail Panel — slides up from bottom inside the calendar overlay -->
+        <!-- Day detail panel (slides up on day tap) -->
         <div id="cal-day-panel" class="absolute inset-x-0 bottom-0 bg-slate-900 rounded-t-[40px] border-t border-slate-700 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] panel-hidden z-10" style="max-height: 62%;">
-            <!-- Drag handle -->
             <div id="cal-day-panel-handle" class="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none shrink-0">
                 <div class="w-10 h-1 bg-slate-700 rounded-full"></div>
             </div>
-            <!-- Header row -->
             <div class="flex items-center justify-between px-5 py-2 border-b border-slate-800 shrink-0">
                 <div>
-                    <p id="cal-day-panel-date" class="text-xs font-black text-blue-400 uppercase tracking-widest"></p>
+                    <p id="cal-day-panel-date"  class="text-xs font-black text-blue-400 uppercase tracking-widest"></p>
                     <p id="cal-day-panel-count" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mt-0.5"></p>
                 </div>
                 <button id="cal-day-panel-goto" class="px-3 py-1.5 bg-slate-800 text-slate-300 text-[9px] font-black uppercase tracking-widest rounded-lg border border-slate-700 active:scale-95 transition-transform">
                     Go to Day →
                 </button>
             </div>
-            <!-- Events list -->
-            <div id="cal-day-panel-events" class="overflow-y-auto px-4 py-3 space-y-2" style="max-height: calc(62vh - 90px); -webkit-overflow-scrolling: touch;">
-            </div>
+            <div id="cal-day-panel-events" class="overflow-y-auto px-4 py-3 space-y-2" style="max-height: calc(62vh - 90px); -webkit-overflow-scrolling: touch;"></div>
         </div>
 
         <!-- Legend -->
-        <div id="cal-legend" class="bg-slate-950 border-t border-slate-800 px-4 py-2 flex flex-wrap gap-2 shrink-0">
-            <!-- Injected by JS -->
-        </div>
+        <div id="cal-legend" class="bg-slate-950 border-t border-slate-800 px-4 py-2 flex flex-wrap gap-2 shrink-0"></div>
     </div>
 
-    <!-- Main App Container -->
+    <!-- ── Main App Container ────────────────────────────────────────────── -->
     <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl h-screen flex flex-col border-x border-slate-800 overflow-hidden relative">
-        <!-- Main Header -->
+
+        <!-- App Header -->
         <header class="bg-slate-950 text-white p-4 sticky top-0 z-[50] border-b border-slate-800 shadow-lg shrink-0">
             <div class="flex justify-between items-center">
                 <div>
@@ -374,39 +321,35 @@
                     </h1>
                     <p id="user-info-display" class="text-[9px] text-blue-400/70 uppercase font-black tracking-[0.2em] mt-0.5"></p>
                 </div>
-                <div class="flex items-center">
-                    <button id="change-roll-btn" class="px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 flex items-center gap-2 transition-all border border-slate-700 active:scale-95 group">
-                        <span class="text-[10px] font-black uppercase tracking-wider text-blue-100">Roll No.</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                    </button>
-                </div>
+                <button id="change-roll-btn" class="px-3 py-1.5 bg-slate-800 rounded-lg hover:bg-slate-700 flex items-center gap-2 transition-all border border-slate-700 active:scale-95 group">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-blue-100">Roll No.</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-400 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                </button>
             </div>
         </header>
 
-        <!-- VIEW 1: SCHEDULE -->
+        <!-- ── View 1: Schedule ─────────────────────────────────────────── -->
         <div id="schedule-tab-content" class="tab-content active flex-col flex-1 h-full overflow-hidden relative">
-            <!-- Controls Section -->
+
+            <!-- Controls bar -->
             <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg shrink-0">
+                <!-- Row 1: Today | Calendar View -->
                 <div class="flex space-x-2">
                     <button id="today-btn" class="flex-1 bg-blue-600 btn-glow-blue text-white font-black py-2.5 rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-[10px]">
                         Today
                     </button>
-                    
-                    <!-- Calendar View button — replaces the old date picker pill -->
                     <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-violet-500 hover:bg-violet-900/20 transition-all cursor-pointer overflow-hidden group">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-violet-400 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                         </svg>
                         <span id="date-picker-label" class="text-[10px] font-black text-slate-200 uppercase tracking-tighter">Date</span>
-                        <!-- Hidden date input preserved for JS compatibility -->
                         <input type="date" id="date-picker" class="absolute inset-0 opacity-0 cursor-pointer" style="display:none">
-                        <!-- Invisible full-area click target for calendar open -->
                         <button id="open-calendar-btn" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" aria-label="Open calendar view"></button>
                     </div>
                 </div>
-                
+                <!-- Row 2: Dept filter | Add to Calendar -->
                 <div class="flex space-x-2">
                     <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer group">
                         <select id="dept-filter" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20 bg-slate-950 text-white outline-none">
@@ -414,61 +357,62 @@
                         </select>
                         <span id="dept-filter-label" class="text-[9px] font-black text-slate-200 uppercase tracking-tighter truncate max-w-[70px]">All Depts</span>
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-slate-500 ml-1 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </div>
-
                     <button id="add-to-calendar-btn" class="flex-[1.5] bg-emerald-600 btn-glow-green text-white font-black py-2.5 rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center uppercase tracking-widest text-[9px]">
                         Add to Calendar
                     </button>
                 </div>
             </div>
-            
+
+            <!-- Loading spinner -->
             <div id="loading-indicator" class="text-center p-24 hidden absolute inset-0 z-50 bg-slate-900">
                 <div class="inline-block w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4 mt-20"></div>
                 <p class="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase">Generating</p>
             </div>
 
+            <!-- Slides container -->
             <div id="day-view-container" class="day-view flex-1 bg-slate-900 w-full relative"></div>
-            
+
+            <!-- Week range footer -->
             <div class="bg-slate-950/80 backdrop-blur border-t border-slate-800 p-2 text-center shrink-0 z-20 absolute bottom-0 w-full pointer-events-none">
-                 <p id="current-week-display" class="text-[9px] font-black text-blue-400 uppercase tracking-widest h-3.5"></p>
+                <p id="current-week-display" class="text-[9px] font-black text-blue-400 uppercase tracking-widest h-3.5"></p>
             </div>
         </div>
 
-        <!-- VIEW 2: TOPICS LOG -->
+        <!-- ── View 2: Topics Log ────────────────────────────────────────── -->
         <div id="log-tab-content" class="tab-content flex-col flex-1 bg-slate-900 h-full overflow-hidden">
-            <!-- Fixed Search Header -->
             <div class="bg-slate-900 px-4 pt-4 pb-4 border-b border-slate-800 shrink-0 z-30">
                 <h2 class="text-2xl font-black text-white uppercase tracking-tighter mb-4">Topics Log</h2>
                 <div class="relative">
-                    <input type="text" id="log-search" placeholder="Search topics (e.g. 'Hernia')" class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none placeholder-slate-500 font-bold uppercase tracking-wider text-xs">
+                    <input type="text" id="log-search" placeholder="Search topics (e.g. 'Hernia')"
+                        class="w-full bg-slate-800 border border-slate-700 text-white rounded-xl py-3 pl-10 pr-4 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none placeholder-slate-500 font-bold uppercase tracking-wider text-xs">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
             </div>
-            
             <div class="flex-1 overflow-y-auto pb-20 px-4 space-y-3 custom-scrollbar overscroll-contain" id="log-scroll-area">
-                 <div id="log-container"></div>
+                <div id="log-container"></div>
             </div>
         </div>
 
-    </div>
+    </div><!-- /app-container -->
 
-    <!-- Bottom Navigation Bar -->
+    <!-- ── Bottom Navigation ─────────────────────────────────────────────── -->
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 z-50 bottom-nav-safe">
         <div class="flex justify-around items-center max-w-lg mx-auto">
             <button id="nav-schedule" class="flex-1 py-1.5 flex flex-col items-center gap-1 group transition-colors text-blue-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-active:scale-95 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                 </svg>
                 <span class="text-[9px] font-black uppercase tracking-widest">Schedule</span>
             </button>
             <div class="w-px h-5 bg-slate-800"></div>
             <button id="nav-log" class="flex-1 py-1.5 flex flex-col items-center gap-1 group transition-colors text-slate-500 hover:text-slate-300">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-active:scale-95 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                 </svg>
                 <span class="text-[9px] font-black uppercase tracking-widest">Topics Log</span>
             </button>
@@ -476,1280 +420,1249 @@
     </nav>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    // ═══════════════════════════════════════════════════════════════════════
+    // FIREBASE SETUP
+    // ═══════════════════════════════════════════════════════════════════════
+    import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, getDocs,
+             doc, setDoc, deleteDoc,
+             enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // VAPID public key — set this once you configure Firebase Cloud Messaging
-        const VAPID_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE';
+    // Set this to your VAPID public key from Firebase Console → Project Settings → Cloud Messaging
+    const VAPID_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE';
 
-        // --- Configuration & Data ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
-            authDomain: "schedule-debeb.firebaseapp.com",
-            projectId: "schedule-debeb",
-            storageBucket: "schedule-debeb.firebasestorage.app",
-            messagingSenderId: "139527638715",
-            appId: "1:139527638715:web:cfce01b41f323fd113239e",
-            measurementId: "G-KB7RQN5DD4"
-        };
-        const appId = "schedule-debeb";
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+    const firebaseConfig = {
+        apiKey:            "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+        authDomain:        "schedule-debeb.firebaseapp.com",
+        projectId:         "schedule-debeb",
+        storageBucket:     "schedule-debeb.firebasestorage.app",
+        messagingSenderId: "139527638715",
+        appId:             "1:139527638715:web:cfce01b41f323fd113239e",
+        measurementId:     "G-KB7RQN5DD4"
+    };
+    const appId = "schedule-debeb";
+    const app   = initializeApp(firebaseConfig);
+    const db    = getFirestore(app);
 
-        // Offline persistence — non-blocking, ignore all errors
-        enableIndexedDbPersistence(db).catch(() => {});
+    // Offline cache — non-blocking, silently ignored on private browsing
+    enableIndexedDbPersistence(db).catch(() => {});
 
-        // Messaging loaded separately — never blocks main app
-        let messaging = null;
-        if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE') {
-            import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js")
-                .then(({ getMessaging, getToken, onMessage }) => {
-                    try {
-                        messaging = getMessaging(app);
-                        window._fcm = { getToken, onMessage, messaging };
-                    } catch (e) { console.warn('FCM init failed:', e); }
-                })
-                .catch(e => console.warn('FCM module load failed:', e));
-        }
+    // FCM loaded lazily — never blocks the main app boot
+    if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+        import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js")
+            .then(({ getMessaging, getToken, onMessage }) => {
+                try { window._fcm = { getToken, onMessage, messaging: getMessaging(app) }; }
+                catch (e) { console.warn('FCM init failed:', e); }
+            })
+            .catch(e => console.warn('FCM module load failed:', e));
+    }
 
-        const termStartDate = new Date('2026-01-12T00:00:00Z');
-        const termEndDate = new Date('2026-05-17T00:00:00Z');
-        const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCHEDULE DATA — term dates, timetable rules, clinical rotations
+    // ═══════════════════════════════════════════════════════════════════════
+    const termStartDate  = new Date('2026-01-12T00:00:00Z');
+    const termEndDate    = new Date('2026-05-17T00:00:00Z');
+    const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
 
-        const scheduleRules = {
-            "Monday": {
-                theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "General Surgery" },
-                tutorials: {
-                    "14:00-15:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" },
-                    "15:00-16:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" }
-                },
-                sdl: { "16:00-17:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Respiratory Medicine" } }
+    const scheduleRules = {
+        "Monday": {
+            theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "General Surgery" },
+            tutorials: {
+                "14:00-15:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" },
+                "15:00-16:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" }
             },
-            "Tuesday": {
-                theory: { "08:00-09:00": "General Medicine", "09:00-10:00": { 1: "Paediatrics", 2: "Paediatrics", 3: "SDL Paediatrics", 4: "SDL Paediatrics" } },
-                tutorials: {
-                    "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" },
-                    "15:00-16:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
-                },
-                sdl: { "16:00-17:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Radiology" } }
+            sdl: { "16:00-17:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Respiratory Medicine" } }
+        },
+        "Tuesday": {
+            theory:    { "08:00-09:00": "General Medicine", "09:00-10:00": { 1: "Paediatrics", 2: "Paediatrics", 3: "SDL Paediatrics", 4: "SDL Paediatrics" } },
+            tutorials: {
+                "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" },
+                "15:00-16:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
             },
-            "Wednesday": {
-                theory: { "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" }, "09:00-10:00": "General Medicine" },
-                tutorials: {
-                    "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
-                    "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology" }
-                }
+            sdl: { "16:00-17:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Radiology" } }
+        },
+        "Wednesday": {
+            theory:    { "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" }, "09:00-10:00": "General Medicine" },
+            tutorials: {
+                "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
+                "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology" }
+            }
+        },
+        "Thursday": {
+            theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)" } },
+            tutorials: { "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }, "15:00-16:00": "Paediatrics" },
+            sdl:       { "16:00-17:00": { 1: "General Surgery", 2: "OBG", 3: "General Surgery", 4: "OBG" } }
+        },
+        "Friday": {
+            theory:    { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Anaesthesia" } },
+            tutorials: {
+                "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 4: "Orthopaedics" },
+                "15:00-16:00": { 1: "Orthopaedics", 2: "Orthopaedics" },
+                "16:00-17:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
             },
-            "Thursday": {
-                theory: { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)" } },
-                tutorials: { "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }, "15:00-16:00": "Paediatrics" },
-                sdl: { "16:00-17:00": { 1: "General Surgery", 2: "OBG", 3: "General Surgery", 4: "OBG" } }
-            },
-            "Friday": {
-                theory: { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Anaesthesia" } },
-                tutorials: {
-                    "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 4: "Orthopaedics" },
-                    "15:00-16:00": { 1: "Orthopaedics", 2: "Orthopaedics" },
-                    "16:00-17:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
-                },
-                sdl: { "16:00-17:00": { 3: ["Orthopaedics", "General Medicine"], 4: ["General Medicine"] } }
-            },
-            "Saturday": {
-                theory: { "08:00-09:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Psychiatry" } },
-                pandemic: { "09:00-13:00": "Pandemic Module (Integrated)" },
-                tutorials: {
-                    "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
-                    "15:00-16:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }
-                }
+            sdl: { "16:00-17:00": { 3: ["Orthopaedics", "General Medicine"], 4: ["General Medicine"] } }
+        },
+        "Saturday": {
+            theory:    { "08:00-09:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Psychiatry" } },
+            pandemic:  { "09:00-13:00": "Pandemic Module (Integrated)" },
+            tutorials: {
+                "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
+                "15:00-16:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }
             }
+        }
+    };
+
+    const clinicalRotationRules = [
+        { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" },
+        { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" },
+        { department: "Internal Medicine", batch: "C", startDate: "2026-03-09", endDate: "2026-03-29" },
+        { department: "Internal Medicine", batch: "D", startDate: "2026-03-30", endDate: "2026-04-19" },
+        { department: "Surgery",           batch: "A", startDate: "2026-02-02", endDate: "2026-02-22" },
+        { department: "Surgery",           batch: "B", startDate: "2026-03-09", endDate: "2026-03-29" },
+        { department: "Surgery",           batch: "C", startDate: "2026-03-30", endDate: "2026-04-19" },
+        { department: "Surgery",           batch: "D", startDate: "2026-01-12", endDate: "2026-02-01" },
+        { department: "Obs & Gynae",       batch: "A", startDate: "2026-03-09", endDate: "2026-03-29" },
+        { department: "Obs & Gynae",       batch: "B", startDate: "2026-03-30", endDate: "2026-04-19" },
+        { department: "Obs & Gynae",       batch: "C", startDate: "2026-01-12", endDate: "2026-02-01" },
+        { department: "Obs & Gynae",       batch: "D", startDate: "2026-02-02", endDate: "2026-02-22" },
+        { department: "Paediatrics",       batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" },
+        { department: "Paediatrics",       batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" },
+        { department: "Paediatrics",       batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" },
+        { department: "Paediatrics",       batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
+        { department: "Orthopaedics",      batch: "A", startDate: "2026-04-13", endDate: "2026-04-19" },
+        { department: "Orthopaedics",      batch: "B", startDate: "2026-01-26", endDate: "2026-02-01" },
+        { department: "Orthopaedics",      batch: "C", startDate: "2026-02-16", endDate: "2026-02-22" },
+        { department: "Orthopaedics",      batch: "D", startDate: "2026-03-23", endDate: "2026-03-29" },
+        { department: "Psychiatry",        batch: "A", startDate: "2026-04-20", endDate: "2026-04-26" },
+        { department: "Psychiatry",        batch: "B", startDate: "2026-04-27", endDate: "2026-05-03" },
+        { department: "Psychiatry",        batch: "C", startDate: "2026-05-04", endDate: "2026-05-10" },
+        { department: "Psychiatry",        batch: "D", startDate: "2026-05-11", endDate: "2026-05-17" },
+        { department: "Dermatology",       batch: "A", startDate: "2026-04-27", endDate: "2026-05-03" },
+        { department: "Dermatology",       batch: "B", startDate: "2026-05-04", endDate: "2026-05-10" },
+        { department: "Dermatology",       batch: "C", startDate: "2026-05-11", endDate: "2026-05-17" },
+        { department: "Dermatology",       batch: "D", startDate: "2026-04-20", endDate: "2026-04-26" },
+        { department: "Anaesthesia",       batch: "A", startDate: "2026-05-04", endDate: "2026-05-10" },
+        { department: "Anaesthesia",       batch: "B", startDate: "2026-05-11", endDate: "2026-05-17" },
+        { department: "Anaesthesia",       batch: "C", startDate: "2026-04-20", endDate: "2026-04-26" },
+        { department: "Anaesthesia",       batch: "D", startDate: "2026-04-27", endDate: "2026-05-03" },
+        { department: "Emergency Medicine",batch: "A", startDate: "2026-05-11", endDate: "2026-05-17" },
+        { department: "Emergency Medicine",batch: "B", startDate: "2026-04-20", endDate: "2026-04-26" },
+        { department: "Emergency Medicine",batch: "C", startDate: "2026-04-27", endDate: "2026-05-03" },
+        { department: "Emergency Medicine",batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
+    ];
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // HELPER UTILITIES
+    // ═══════════════════════════════════════════════════════════════════════
+    const getNthWeekdayOfMonth = (date) => Math.ceil(date.getUTCDate() / 7);
+    const getTodayStr = () => {
+        const n = new Date();
+        return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+    };
+    const getStartOfWeek = (date) => {
+        const d = new Date(date);
+        const day = d.getUTCDay();
+        d.setUTCDate(d.getUTCDate() - day + (day === 0 ? -6 : 1));
+        return d;
+    };
+
+    // Batch assignments by roll number
+    const getClinicBatch  = (r) => r<=38?'A': r<=76?'B': r<=114?'C': r<=150?'D': null;
+    const getGeneralBatch = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
+    const getSubBatch     = (r) => r<=25?'A1': r<=50?'A2': r<=75?'B1': r<=100?'B2': r<=125?'C1': r<=150?'C2': null;
+
+    // Normalise department name variants to canonical form
+    const normalizeDept = (dept) => {
+        if (!dept) return dept;
+        const d = String(dept).toUpperCase();
+        if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC") || d.includes("PEADS")) return "Paediatrics";
+        if (d.includes("INTERNAL MEDICINE") || d.includes("GENERAL MEDICINE") || d === "MEDICINE" || d === "AETCOM (MED)") return "Internal Medicine";
+        if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
+        if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
+        if (d.includes("ANAESTH") || d.includes("ANESTH")) return "Anaesthesia";
+        if (d.includes("RADIO")) return "Radiology";
+        return dept;
+    };
+
+    // Tailwind border/bg/text classes for schedule cards
+    const getDeptStyles = (dept) => {
+        const map = {
+            "Internal Medicine":  "border-blue-500 bg-blue-900/30 text-blue-200",
+            "Obs & Gynae":        "border-rose-500 bg-rose-900/30 text-rose-200",
+            "Surgery":            "border-emerald-500 bg-emerald-900/30 text-emerald-200",
+            "Paediatrics":        "border-pink-400 bg-pink-900/30 text-pink-200",
+            "ENT":                "border-amber-500 bg-amber-900/30 text-amber-200",
+            "Ophthalmology":      "border-purple-500 bg-purple-900/30 text-purple-200",
+            "Orthopaedics":       "border-orange-500 bg-orange-900/30 text-orange-200",
+            "Dermatology":        "border-yellow-500 bg-yellow-900/30 text-yellow-200",
+            "Psychiatry":         "border-indigo-500 bg-indigo-900/30 text-indigo-200",
+            "Radiology":          "border-gray-500 bg-gray-900/30 text-gray-200",
+            "Anaesthesia":        "border-cyan-500 bg-cyan-900/30 text-cyan-200",
+            "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100",
+            "Electives":          "border-violet-700 bg-violet-900/40 text-violet-100",
+            "AETCOM":             "border-stone-500 bg-stone-800/40 text-stone-200"
         };
+        return map[dept] || "border-slate-600 bg-slate-800 text-slate-300";
+    };
 
-        const clinicalRotationRules = [
-            { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" },
-            { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" },
-            { department: "Internal Medicine", batch: "C", startDate: "2026-03-09", endDate: "2026-03-29" },
-            { department: "Internal Medicine", batch: "D", startDate: "2026-03-30", endDate: "2026-04-19" },
-            { department: "Surgery", batch: "A", startDate: "2026-02-02", endDate: "2026-02-22" },
-            { department: "Surgery", batch: "B", startDate: "2026-03-09", endDate: "2026-03-29" },
-            { department: "Surgery", batch: "C", startDate: "2026-03-30", endDate: "2026-04-19" },
-            { department: "Surgery", batch: "D", startDate: "2026-01-12", endDate: "2026-02-01" },
-            { department: "Obs & Gynae", batch: "A", startDate: "2026-03-09", endDate: "2026-03-29" },
-            { department: "Obs & Gynae", batch: "B", startDate: "2026-03-30", endDate: "2026-04-19" },
-            { department: "Obs & Gynae", batch: "C", startDate: "2026-01-12", endDate: "2026-02-01" },
-            { department: "Obs & Gynae", batch: "D", startDate: "2026-02-02", endDate: "2026-02-22" },
-            { department: "Paediatrics", batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" },
-            { department: "Paediatrics", batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" },
-            { department: "Paediatrics", batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" },
-            { department: "Paediatrics", batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
-            { department: "Orthopaedics", batch: "A", startDate: "2026-04-13", endDate: "2026-04-19" },
-            { department: "Orthopaedics", batch: "B", startDate: "2026-01-26", endDate: "2026-02-01" },
-            { department: "Orthopaedics", batch: "C", startDate: "2026-02-16", endDate: "2026-02-22" },
-            { department: "Orthopaedics", batch: "D", startDate: "2026-03-23", endDate: "2026-03-29" },
-            { department: "Psychiatry", batch: "A", startDate: "2026-04-20", endDate: "2026-04-26" },
-            { department: "Psychiatry", batch: "B", startDate: "2026-04-27", endDate: "2026-05-03" },
-            { department: "Psychiatry", batch: "C", startDate: "2026-05-04", endDate: "2026-05-10" },
-            { department: "Psychiatry", batch: "D", startDate: "2026-05-11", endDate: "2026-05-17" },
-            { department: "Dermatology", batch: "A", startDate: "2026-04-27", endDate: "2026-05-03" },
-            { department: "Dermatology", batch: "B", startDate: "2026-05-04", endDate: "2026-05-10" },
-            { department: "Dermatology", batch: "C", startDate: "2026-05-11", endDate: "2026-05-17" },
-            { department: "Dermatology", batch: "D", startDate: "2026-04-20", endDate: "2026-04-26" },
-            { department: "Anaesthesia", batch: "A", startDate: "2026-05-04", endDate: "2026-05-10" },
-            { department: "Anaesthesia", batch: "B", startDate: "2026-05-11", endDate: "2026-05-17" },
-            { department: "Anaesthesia", batch: "C", startDate: "2026-04-20", endDate: "2026-04-26" },
-            { department: "Anaesthesia", batch: "D", startDate: "2026-04-27", endDate: "2026-05-03" },
-            { department: "Emergency Medicine", batch: "A", startDate: "2026-05-11", endDate: "2026-05-17" },
-            { department: "Emergency Medicine", batch: "B", startDate: "2026-04-20", endDate: "2026-04-26" },
-            { department: "Emergency Medicine", batch: "C", startDate: "2026-04-27", endDate: "2026-05-03" },
-            { department: "Emergency Medicine", batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
-        ];
-
-        // --- Helper Functions ---
-        const getNthWeekdayOfMonth = (date) => Math.ceil(date.getUTCDate() / 7);
-        const getTodayStr = () => { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; };
-        const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1); return new Date(d.setUTCDate(diff)); };
-        
-        const getClinicBatch = (r) => { if (r >= 1 && r <= 38) return 'A'; if (r >= 39 && r <= 76) return 'B'; if (r >= 77 && r <= 114) return 'C'; if (r >= 115 && r <= 150) return 'D'; return null; };
-        const getGeneralBatch = (r) => { if (r >= 1 && r <= 50) return 'A'; if (r >= 51 && r <= 100) return 'B'; if (r >= 101 && r <= 150) return 'C'; return null; };
-        const getSubBatch = (r) => { if (r >= 1 && r <= 25) return 'A1'; if (r >= 26 && r <= 50) return 'A2'; if (r >= 51 && r <= 75) return 'B1'; if (r >= 76 && r <= 100) return 'B2'; if (r >= 101 && r <= 125) return 'C1'; if (r >= 126 && r <= 150) return 'C2'; return null; };
-
-        const normalizeDept = (dept) => {
-            if (!dept) return dept;
-            const d = String(dept).toUpperCase();
-            if (d.includes("PAEDIATRIC") || d.includes("PEDIATRIC") || d.includes("PEADS")) return "Paediatrics";
-            if (d.includes("INTERNAL MEDICINE") || d.includes("GENERAL MEDICINE") || d === "MEDICINE" || d === "AETCOM (MED)") return "Internal Medicine";
-            if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
-            if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
-            if (d.includes("ANAESTH") || d.includes("ANESTH")) return "Anaesthesia";
-            if (d.includes("RADIO")) return "Radiology";
-            return dept;
+    // CSS class for calendar chip by department
+    const getChipClass = (dept) => {
+        const map = {
+            "Internal Medicine":  "chip-medicine",
+            "Surgery":            "chip-surgery",
+            "Obs & Gynae":        "chip-obg",
+            "Paediatrics":        "chip-paeds",
+            "ENT":                "chip-ent",
+            "Orthopaedics":       "chip-ortho",
+            "Ophthalmology":      "chip-ophthal",
+            "Dermatology":        "chip-derm",
+            "Psychiatry":         "chip-psych",
+            "Anaesthesia":        "chip-anaes",
+            "Emergency Medicine": "chip-em",
+            "Electives":          "chip-elective",
+            "Radiology":          "chip-radiology"
         };
+        return map[dept] || 'chip-default';
+    };
 
-        const getDeptStyles = (dept) => {
-            const styles = { 
-                "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
-                "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200", 
-                "Surgery": "border-emerald-500 bg-emerald-900/30 text-emerald-200", 
-                "Paediatrics": "border-pink-400 bg-pink-900/30 text-pink-200", 
-                "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", 
-                "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200", 
-                "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", 
-                "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200", 
-                "Psychiatry": "border-indigo-500 bg-indigo-900/30 text-indigo-200", 
-                "Radiology": "border-gray-500 bg-gray-900/30 text-gray-200",
-                "Anaesthesia": "border-cyan-500 bg-cyan-900/30 text-cyan-200", 
-                "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100", 
-                "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", 
-                "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200" 
-            };
-            return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
+    // Hex bar colour for cal day panel events (direct style, no Tailwind purge risk)
+    const DEPT_BAR_COLORS = {
+        "Internal Medicine":  "#2563eb",
+        "Surgery":            "#059669",
+        "Obs & Gynae":        "#e11d48",
+        "Paediatrics":        "#ec4899",
+        "ENT":                "#f59e0b",
+        "Orthopaedics":       "#f97316",
+        "Ophthalmology":      "#7c3aed",
+        "Dermatology":        "#eab308",
+        "Psychiatry":         "#4f46e5",
+        "Anaesthesia":        "#06b6d4",
+        "Emergency Medicine": "#dc2626",
+        "Electives":          "#7c3aed",
+        "Radiology":          "#64748b"
+    };
+
+    // Tailwind bg class for topics log dept colour bar
+    const getDeptColorClass = (dept) => {
+        const map = {
+            "Surgery": "bg-emerald-500", "Internal Medicine": "bg-blue-500",
+            "Obs & Gynae": "bg-rose-500", "Paediatrics": "bg-pink-500",
+            "ENT": "bg-amber-500", "Ophthalmology": "bg-purple-500",
+            "Orthopaedics": "bg-orange-500", "Dermatology": "bg-yellow-500",
+            "Psychiatry": "bg-indigo-500", "Anaesthesia": "bg-cyan-500"
         };
-
-        // --- Calendar chip class by department ---
-        const getChipClass = (dept, isHoliday) => {
-            if (isHoliday) return 'chip-holiday';
-            const map = {
-                "Internal Medicine": "chip-medicine",
-                "Surgery": "chip-surgery",
-                "Obs & Gynae": "chip-obg",
-                "Paediatrics": "chip-paeds",
-                "ENT": "chip-ent",
-                "Orthopaedics": "chip-ortho",
-                "Ophthalmology": "chip-ophthal",
-                "Dermatology": "chip-derm",
-                "Psychiatry": "chip-psych",
-                "Anaesthesia": "chip-anaes",
-                "Emergency Medicine": "chip-em",
-                "Electives": "chip-elective",
-                "Radiology": "chip-radiology",
-            };
-            return map[dept] || 'chip-default';
-        };
-
-        let rollNo = localStorage.getItem('afmc_roll_no');
-        let personalizedSchedule = [];
-        let currentFilter = 'all';
-        let currentlyVisibleDate = getTodayStr();
-        let deferredPrompt; 
-        let logFuse = null;
-        let cachedLogData = [];
-
-        // --- Calendar State ---
-        let calCurrentYear = new Date().getFullYear();
-        let calCurrentMonth = new Date().getMonth(); // 0-indexed
-
-        function updateOfflineNotice(msg) {
-            const notice = document.getElementById('offline-notice');
-            if (notice) { notice.textContent = msg; notice.classList.remove('hidden'); }
-        }
-
-        async function initialize() {
-            setupOnboardingListeners();
-            setupPWAInstallLogic();
-            if (!rollNo) { document.getElementById('onboarding-overlay').classList.remove('hidden'); document.body.classList.add('modal-open'); return; }
-            document.getElementById('loading-indicator').classList.remove('hidden');
-            
-            const r = parseInt(rollNo);
-            const gBatch = getGeneralBatch(r); const cBatch = getClinicBatch(r); const sBatch = getSubBatch(r);
-            document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${sBatch} | Clinic: ${cBatch}`;
-
-            let dynamicEvents = [];
-            try {
-                const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
-                const querySnapshot = await getDocs(scheduleCollectionRef);
-                querySnapshot.forEach((doc) => { const data = doc.data(); data.id = doc.id; data.isDynamic = true; dynamicEvents.push(data); });
-                if (dynamicEvents.length > 0) { localStorage.setItem('afmc_schedule_cache', JSON.stringify(dynamicEvents)); }
-            } catch (e) {
-                console.warn('Firebase fetch failed:', e);
-                const cachedData = localStorage.getItem('afmc_schedule_cache');
-                if (cachedData) { try { dynamicEvents = JSON.parse(cachedData); updateOfflineNotice("Viewing Offline Cache"); } catch (err) { updateOfflineNotice("Offline: Generic Schedule"); } } 
-                else { updateOfflineNotice("Offline: Generic Schedule"); }
-            } finally {
-                generateSchedule(gBatch, cBatch, sBatch, dynamicEvents);
-                render();
-                generateTopicsLog(); 
-                setupAppListeners();
-                const today = getTodayStr(); updateDatePickerLabel(today);
-                document.getElementById('loading-indicator').classList.add('hidden');
-                // Init calendar to current month
-                calCurrentMonth = new Date().getMonth();
-                calCurrentYear = new Date().getFullYear();
-                // Handle cold-start deep link from notification tap
-                checkUrlDeepLink();
-            }
-        }
-
-        function generateSchedule(gBatch, cBatch, sBatch, dynamicEvents = []) {
-            const data = [];
-            let current = new Date(termStartDate);
-            const eStart = new Date(electivePeriod.start + 'T00:00:00Z');
-            const eEnd = new Date(electivePeriod.end + 'T00:00:00Z');
-
-            while (current <= termEndDate) {
-                const dayName = current.toLocaleDateString('en-US', {weekday: 'long', timeZone: 'UTC'});
-                const ds = current.toISOString().split('T')[0];
-                const isElective = current >= eStart && current <= eEnd;
-                const week = getNthWeekdayOfMonth(current);
-                const rules = scheduleRules[dayName];
-
-                const filteredDynamicForMe = dynamicEvents.filter(e => {
-                    if (e.date !== ds) return false;
-                    const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
-                    if (batches.includes("ALL")) return true;
-                    const useClinicalBatch = e.isClinics === true || e.isClinic === true;
-                    if (useClinicalBatch) return batches.includes(cBatch);
-                    return batches.includes(gBatch) || batches.includes(sBatch);
-                });
-                
-                filteredDynamicForMe.forEach(e => {
-                    const entry = { ...e, department: normalizeDept(e.department) };
-                    if (!entry.topic || entry.topic.trim().toUpperCase() !== "NULL") { data.push(entry); }
-                });
-
-                const dynamicTimeSet = new Set(filteredDynamicForMe.map(e => e.startTime));
-                const isGlobalHoliday = dynamicEvents.some(e => e.date === ds && e.isHoliday && (Array.isArray(e.batch) ? e.batch.includes("ALL") : e.batch == "ALL"));
-                const isSlotOverridden = (timeRange) => dynamicTimeSet.has(timeRange.split('-')[0]);
-
-                if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
-                    if (!isElective) {
-                        for (const [time, config] of Object.entries(rules.theory || {})) {
-                            const topic = typeof config === 'string' ? config : config[week];
-                            if (topic && !isSlotOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
-                        }
-                        if (rules.pandemic && !isSlotOverridden("09:00")) {
-                            for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
-                        }
-                        clinicalRotationRules.forEach(rot => {
-                            const start = new Date(rot.startDate + 'T00:00:00Z');
-                            const end = new Date(rot.endDate + 'T00:00:00Z');
-                            if (current >= start && current <= end && rot.batch === cBatch) {
-                                if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
-                            }
-                        });
-                        for (const [time, config] of Object.entries(rules.tutorials || {})) {
-                            if (typeof config === 'string') {
-                                if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config} Tutorial`, config, "NLH Sushruta");
-                            } else {
-                                if (config[week] && !Object.values(config).some(val => val === 'A' || val === 'B' || val === 'C')) {
-                                     if (!isSlotOverridden(time)) addEntry(data, ds, time, `${config[week]} Tutorial`, config[week], "NLH Sushruta");
-                                } else {
-                                    for (const [topic, target] of Object.entries(config)) {
-                                        if ((target === gBatch || (typeof target === 'number' && target === week)) && !isSlotOverridden(time)) {
-                                            addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        for (const [time, config] of Object.entries(rules.sdl || {})) {
-                            let topic = config[week];
-                            if (topic && !isSlotOverridden(time)) { (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept")); }
-                        }
-                    } else {
-                        if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
-                    }
-                }
-                current.setUTCDate(current.getUTCDate() + 1);
-            }
-            personalizedSchedule = data;
-            const select = document.getElementById('dept-filter');
-            const depts = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
-            select.innerHTML = '<option value="all">ALL DEPTS</option>';
-            depts.forEach(d => { const opt = document.createElement('option'); opt.value = d; opt.textContent = d.toUpperCase(); select.appendChild(opt); });
-        }
-
-        function addEntry(data, date, timeRange, topic, dept, loc) {
-            const [start, end] = timeRange.split('-');
-            data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
-        }
-
-        // ================================================================
-        // CALENDAR VIEW LOGIC — swipeable month carousel
-        // ================================================================
-
-        // Carousel state: currentSlot is always the "centre" slide (index 1)
-        // Slots: 0=prev, 1=current, 2=next
-        // We render 3 months and translate the strip so slot 1 is visible.
-        // On swipe commit, we shift months and re-render.
-
-        let calIsAnimating = false;
-
-        function openCalendar() {
-            const visDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
-            calCurrentYear = visDate.getUTCFullYear();
-            calCurrentMonth = visDate.getUTCMonth();
-            renderAllCalSlides();
-            const overlay = document.getElementById('calendar-overlay');
-            overlay.classList.remove('cal-hidden');
-            overlay.classList.add('cal-visible');
-        }
-
-        function closeCalendar() {
-            closeCalDayPanel();
-            const overlay = document.getElementById('calendar-overlay');
-            overlay.classList.remove('cal-visible');
-            overlay.classList.add('cal-hidden');
-        }
-
-        // Render a month into a specific slide grid
-        function renderMonthIntoSlide(slideIndex, year, month) {
-            const slide = document.getElementById(`cal-slide-${slideIndex}`);
-            const grid = slide.querySelector('.cal-grid-inner');
-            grid.innerHTML = '';
-            slide.scrollTop = 0;
-
-            const todayStr = getTodayStr();
-            const eventMap = {};
-            personalizedSchedule.forEach(e => {
-                if (!eventMap[e.date]) eventMap[e.date] = [];
-                eventMap[e.date].push(e);
-            });
-
-            const firstDay = new Date(Date.UTC(year, month, 1));
-            const lastDay = new Date(Date.UTC(year, month + 1, 0));
-            const startOffset = (firstDay.getUTCDay() + 6) % 7;
-            const totalDays = lastDay.getUTCDate();
-            const legendDepts = new Set();
-
-            for (let i = 0; i < startOffset; i++) {
-                const prevDate = new Date(Date.UTC(year, month, 1 - startOffset + i));
-                const ds = prevDate.toISOString().split('T')[0];
-                grid.appendChild(buildDayCell(ds, prevDate.getUTCDate(), true, eventMap[ds] || [], todayStr, legendDepts));
-            }
-            for (let d = 1; d <= totalDays; d++) {
-                const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                grid.appendChild(buildDayCell(ds, d, false, eventMap[ds] || [], todayStr, legendDepts));
-            }
-            const totalCells = startOffset + totalDays;
-            const remainder = totalCells % 7;
-            if (remainder !== 0) {
-                const extra = 7 - remainder;
-                for (let i = 1; i <= extra; i++) {
-                    const nextDate = new Date(Date.UTC(year, month + 1, i));
-                    const ds = nextDate.toISOString().split('T')[0];
-                    grid.appendChild(buildDayCell(ds, nextDate.getUTCDate(), true, eventMap[ds] || [], todayStr, legendDepts));
-                }
-            }
-            return legendDepts;
-        }
-
-        function offsetMonth(year, month, delta) {
-            let m = month + delta;
-            let y = year;
-            while (m > 11) { m -= 12; y++; }
-            while (m < 0)  { m += 12; y--; }
-            return { year: y, month: m };
-        }
-
-        function renderAllCalSlides() {
-            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-            document.getElementById('cal-month-label').textContent = `${monthNames[calCurrentMonth]} ${calCurrentYear}`;
-
-            const prev = offsetMonth(calCurrentYear, calCurrentMonth, -1);
-            const next = offsetMonth(calCurrentYear, calCurrentMonth, +1);
-
-            renderMonthIntoSlide(0, prev.year, prev.month);
-            const legendDepts = renderMonthIntoSlide(1, calCurrentYear, calCurrentMonth);
-            renderMonthIntoSlide(2, next.year, next.month);
-
-            // Reset carousel to centre (no animation)
-            const carousel = document.getElementById('cal-carousel');
-            carousel.style.transition = 'none';
-            carousel.style.transform = 'translateX(-100%)';
-            renderCalLegend(legendDepts);
-        }
-
-        function commitMonthShift(direction) {
-            if (calIsAnimating) return;
-            calIsAnimating = true;
-            closeCalDayPanel();
-            const carousel = document.getElementById('cal-carousel');
-            const targetX = direction === 1 ? '-200%' : '0%';
-
-            carousel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
-            carousel.style.transform = `translateX(${targetX})`;
-
-            carousel.addEventListener('transitionend', function handler() {
-                carousel.removeEventListener('transitionend', handler);
-                const shifted = offsetMonth(calCurrentYear, calCurrentMonth, direction);
-                calCurrentYear = shifted.year;
-                calCurrentMonth = shifted.month;
-                renderAllCalSlides();
-                calIsAnimating = false;
-            }, { once: true });
-        }
-
-        // Legacy renderCalendar alias (used by cal-today-btn)
-        function renderCalendar() { renderAllCalSlides(); }
-
-        // Swipe handling on the carousel wrapper
-        function setupCalSwipe() {
-            const wrapper = document.getElementById('cal-swipe-wrapper');
-            const carousel = document.getElementById('cal-carousel');
-
-            // --- Touch (mobile) ---
-            let touchStartX = 0, touchStartY = 0, touchDeltaX = 0;
-            let isSwiping = false, isVertical = false;
-
-            wrapper.addEventListener('touchstart', (e) => {
-                if (calIsAnimating) return;
-                touchStartX = e.touches[0].clientX;
-                touchStartY = e.touches[0].clientY;
-                touchDeltaX = 0;
-                isSwiping = true;
-                isVertical = false;
-                carousel.style.transition = 'none';
-            }, { passive: true });
-
-            wrapper.addEventListener('touchmove', (e) => {
-                if (!isSwiping || calIsAnimating) return;
-                const dx = e.touches[0].clientX - touchStartX;
-                const dy = e.touches[0].clientY - touchStartY;
-
-                if (!isVertical && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
-                    isVertical = true;
-                }
-                if (isVertical) return;
-
-                if (Math.abs(dx) > 5) {
-                    e.preventDefault();
-                    touchDeltaX = dx;
-                    carousel.style.transform = `translateX(calc(-100% + ${dx}px))`;
-                }
-            }, { passive: false });
-
-            wrapper.addEventListener('touchend', () => {
-                if (!isSwiping || calIsAnimating || isVertical) { isSwiping = false; return; }
-                isSwiping = false;
-                const threshold = wrapper.offsetWidth * 0.25;
-                if (touchDeltaX < -threshold) {
-                    commitMonthShift(+1);
-                } else if (touchDeltaX > threshold) {
-                    commitMonthShift(-1);
-                } else {
-                    carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-                    carousel.style.transform = 'translateX(-100%)';
-                }
-            }, { passive: true });
-
-            // --- Trackpad / mouse wheel ---
-            // Accumulate deltaX; commit once a clear horizontal swipe is detected.
-            // Debounce so rapid small deltas don't fire multiple months.
-            let wheelAccumX = 0, wheelAccumY = 0;
-            let wheelTimer = null;
-            const WHEEL_THRESHOLD = 60; // px of horizontal scroll to trigger
-
-            wrapper.addEventListener('wheel', (e) => {
-                if (calIsAnimating) return;
-
-                wheelAccumX += e.deltaX;
-                wheelAccumY += e.deltaY;
-
-                // If scroll is clearly more vertical than horizontal, let it scroll the slide
-                if (Math.abs(wheelAccumY) > Math.abs(wheelAccumX) * 1.5) {
-                    wheelAccumX = 0; wheelAccumY = 0;
-                    return;
-                }
-
-                // Horizontal gesture detected — prevent vertical scroll bleed
-                if (Math.abs(wheelAccumX) > 8) e.preventDefault();
-
-                // Live-drag the carousel to give tactile feedback
-                const liveOffset = Math.max(-120, Math.min(120, -wheelAccumX));
-                carousel.style.transition = 'none';
-                carousel.style.transform = `translateX(calc(-100% + ${liveOffset}px))`;
-
-                // Debounce: commit after gesture settles
-                clearTimeout(wheelTimer);
-                wheelTimer = setTimeout(() => {
-                    if (Math.abs(wheelAccumX) >= WHEEL_THRESHOLD) {
-                        commitMonthShift(wheelAccumX > 0 ? +1 : -1);
-                    } else {
-                        // Snap back
-                        carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-                        carousel.style.transform = 'translateX(-100%)';
-                    }
-                    wheelAccumX = 0; wheelAccumY = 0;
-                }, 80);
-            }, { passive: false });
-        }
-
-        function buildDayCell(dateStr, dayNum, isOtherMonth, events, todayStr, legendDepts) {
-            const cell = document.createElement('div');
-            const isToday = dateStr === todayStr;
-            const dayOfWeek = new Date(dateStr + 'T00:00:00Z').getUTCDay(); // 0=Sun
-            const isSunday = dayOfWeek === 0;
-            const inTerm = dateStr >= '2026-01-12' && dateStr <= '2026-05-17';
-            const holidayEvent = events.find(e => e.isHoliday);
-            const isHoliday = !!holidayEvent;
-
-            cell.className = [
-                'cal-day-cell bg-slate-900 p-1.5 flex flex-col',
-                isOtherMonth ? 'other-month' : '',
-                isToday ? 'today-cell' : '',
-                isSunday ? 'is-sunday' : '',
-                isHoliday ? 'is-holiday' : '',
-            ].join(' ');
-            cell.dataset.date = dateStr;
-
-            // Day number row
-            const numRow = document.createElement('div');
-            numRow.className = 'flex items-center justify-between mb-1';
-
-            const numEl = document.createElement('div');
-            numEl.className = [
-                'cal-day-num text-[11px] font-black',
-                isSunday ? 'text-amber-400' : 'text-slate-300',
-                isOtherMonth ? '!text-slate-600' : '',
-                isToday ? '!text-white' : '',
-            ].join(' ');
-            numEl.textContent = dayNum;
-            numRow.appendChild(numEl);
-            cell.appendChild(numRow);
-
-            // Holiday: bright yellow banner + confetti
-            if (isHoliday && !isOtherMonth) {
-                legendDepts.add('__holiday__');
-                const banner = document.createElement('div');
-                banner.className = 'rounded bg-amber-400/20 border border-amber-400/40 px-1 py-1 text-center mb-1';
-                banner.innerHTML = `<div class="text-base leading-none mb-0.5">🎉</div><span class="text-[8px] font-black text-amber-300 uppercase tracking-wide block leading-tight">${(holidayEvent.topic || 'Holiday').replace(/Holiday/i,'').trim() || 'Holiday'}</span>`;
-                cell.appendChild(banner);
-            }
-            // Sunday (no holiday): just a small sun marker
-            else if (isSunday && !isOtherMonth) {
-                const sunEl = document.createElement('div');
-                sunEl.className = 'text-center text-base leading-none mb-1';
-                sunEl.textContent = '☀️';
-                cell.appendChild(sunEl);
-            }
-            // Regular day: show event chips
-            else if (inTerm && !isOtherMonth) {
-                const sorted = [...events].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
-                const MAX_CHIPS = 4;
-                sorted.slice(0, MAX_CHIPS).forEach(e => {
-                    const dept = e.department || 'Other';
-                    legendDepts.add(dept);
-                    const chip = document.createElement('span');
-                    chip.className = `event-chip ${getChipClass(dept, false)}`;
-                    const label = e.topic ? e.topic.replace(/Tutorial|SDL|Clinics/gi, '').trim() : dept;
-                    chip.textContent = label || dept;
-                    cell.appendChild(chip);
-                });
-                if (sorted.length > MAX_CHIPS) {
-                    const more = document.createElement('span');
-                    more.className = 'text-[8px] font-black text-slate-500 pl-0.5 mt-0.5';
-                    more.textContent = `+${sorted.length - MAX_CHIPS} more`;
-                    cell.appendChild(more);
-                }
-            }
-
-            // Click: open day detail panel inside calendar
-            cell.addEventListener('click', () => {
-                openCalDayPanel(dateStr, events);
-            });
-
-            return cell;
-        }
-
-        // --- Day Detail Panel ---
-        let calDayPanelDateStr = null;
-
-        function openCalDayPanel(dateStr, events) {
-            calDayPanelDateStr = dateStr;
-            const panel = document.getElementById('cal-day-panel');
-            const dateLabel = document.getElementById('cal-day-panel-date');
-            const countLabel = document.getElementById('cal-day-panel-count');
-            const eventsList = document.getElementById('cal-day-panel-events');
-
-            // Date heading
-            const d = new Date(dateStr + 'T00:00:00Z');
-            const dayName = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
-            const dateFormatted = d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-            dateLabel.textContent = `${dayName}, ${dateFormatted}`;
-
-            // Get all events for this date from personalizedSchedule (more complete than cell events)
-            const allDayEvents = personalizedSchedule
-                .filter(e => e.date === dateStr)
-                .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
-
-            const holidayEvent = allDayEvents.find(e => e.isHoliday);
-            const isSunday = d.getUTCDay() === 0;
-
-            // Count label
-            if (holidayEvent) {
-                countLabel.textContent = holidayEvent.topic || 'Holiday';
-            } else if (isSunday) {
-                countLabel.textContent = 'Sunday — Rest Day';
-            } else if (allDayEvents.length === 0) {
-                countLabel.textContent = 'No scheduled events';
-            } else {
-                countLabel.textContent = `${allDayEvents.length} event${allDayEvents.length > 1 ? 's' : ''}`;
-            }
-
-            // Build event rows
-            eventsList.innerHTML = '';
-            if (holidayEvent) {
-                eventsList.innerHTML = `<div class="text-center py-8">
-                    <div class="text-4xl mb-3">🎉</div>
-                    <p class="text-amber-300 font-black text-sm uppercase tracking-wide">${holidayEvent.topic || 'Holiday'}</p>
-                </div>`;
-            } else if (isSunday && allDayEvents.length === 0) {
-                eventsList.innerHTML = `<div class="text-center py-8">
-                    <div class="text-4xl mb-3">☀️</div>
-                    <p class="text-slate-500 font-black text-sm uppercase tracking-wide">Sunday — Rest Day</p>
-                </div>`;
-            } else if (allDayEvents.length === 0) {
-                eventsList.innerHTML = `<div class="text-center py-8">
-                    <p class="text-slate-600 font-bold text-sm uppercase tracking-wide">No events scheduled</p>
-                </div>`;
-            } else {
-                // Direct hex color map — avoids fragile Tailwind class string-replacement
-                const deptColorMap = {
-                    "Internal Medicine":  "#2563eb",
-                    "Surgery":            "#059669",
-                    "Obs & Gynae":        "#e11d48",
-                    "Paediatrics":        "#ec4899",
-                    "ENT":                "#f59e0b",
-                    "Orthopaedics":       "#f97316",
-                    "Ophthalmology":      "#7c3aed",
-                    "Dermatology":        "#eab308",
-                    "Psychiatry":         "#4f46e5",
-                    "Anaesthesia":        "#06b6d4",
-                    "Emergency Medicine": "#dc2626",
-                    "Electives":          "#7c3aed",
-                    "Radiology":          "#64748b",
-                };
-                allDayEvents.forEach(e => {
-                    const dept = e.department || 'Other';
-                    const barColor = deptColorMap[dept] || '#475569';
-                    const row = document.createElement('div');
-                    row.className = 'flex items-start gap-3 py-2.5 border-b border-slate-800 last:border-0';
-                    row.innerHTML = `
-                        <div class="text-right shrink-0 w-12">
-                            <p class="text-white font-black text-sm leading-none">${e.startTime || '--'}</p>
-                            <p class="text-slate-600 text-[9px] font-bold mt-0.5">${e.endTime || ''}</p>
-                        </div>
-                        <div class="w-0.5 self-stretch rounded-full shrink-0 mt-0.5" style="background-color:${barColor};"></div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-white font-black text-sm leading-snug">${e.topic || 'Untitled'}</p>
-                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${dept}</p>
-                            ${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${e.location}</p>` : ''}
-                        </div>
-                    `;
-                    eventsList.appendChild(row);
-                });
-            }
-
-            // Fade in backdrop
-            const backdrop = document.getElementById('cal-day-backdrop');
-            backdrop.style.pointerEvents = 'auto';
-            setTimeout(() => { backdrop.style.opacity = '1'; }, 10);
-
-            // Slide up — same pattern as showDetails()
-            panel.style.transform = '';
-            panel.classList.remove('panel-visible');
-            panel.classList.add('panel-hidden');
-            // Force a frame so the browser registers the hidden state before animating
-            setTimeout(() => {
-                panel.classList.remove('panel-hidden');
-                panel.classList.add('panel-visible');
-            }, 10);
-        }
-
-        function closeCalDayPanel() {
-            const panel = document.getElementById('cal-day-panel');
-            if (!panel) return;
-            panel.style.transform = '';
-            panel.classList.remove('panel-visible');
-            panel.classList.add('panel-hidden');
-            // Fade out backdrop
-            const backdrop = document.getElementById('cal-day-backdrop');
-            if (backdrop) { backdrop.style.opacity = '0'; backdrop.style.pointerEvents = 'none'; }
-            calDayPanelDateStr = null;
-        }
-
-        function setupCalDayPanelListeners() {
-            // Go to Day button
-            document.getElementById('cal-day-panel-goto').addEventListener('click', () => {
-                if (!calDayPanelDateStr) return;
-                const dateStr = calDayPanelDateStr;
-                closeCalDayPanel();
-                closeCalendar();
-                switchView('schedule');
-                setTimeout(() => {
-                    let targetSlide = document.querySelector(`.day-slide[data-date="${dateStr}"]`);
-                    if (!targetSlide) {
-                        const allSlides = Array.from(document.querySelectorAll('.day-slide'));
-                        targetSlide = allSlides.find(s => s.dataset.date >= dateStr);
-                    }
-                    if (targetSlide) { scrollToSlide(targetSlide, true); updateDatePickerLabel(dateStr); }
-                }, 50);
-            });
-
-            // Drag to dismiss
-            const handle = document.getElementById('cal-day-panel-handle');
-            const panel = document.getElementById('cal-day-panel');
-            let startY = 0, isDragging = false;
-            handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
-            handle.addEventListener('touchmove', (e) => {
-                if (!isDragging) return;
-                const delta = e.touches[0].clientY - startY;
-                if (delta > 0) panel.style.transform = `translateY(${delta}px)`;
-            }, { passive: true });
-            handle.addEventListener('touchend', (e) => {
-                isDragging = false;
-                panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-                const delta = e.changedTouches[0].clientY - startY;
-                if (delta > 80) {
-                    closeCalDayPanel();
-                } else {
-                    panel.style.transform = '';
-                }
-            }, { passive: true });
-
-            // Tap backdrop to dismiss
-            document.getElementById('cal-day-backdrop').addEventListener('click', closeCalDayPanel);
-        }
-
-        function renderCalLegend(deptSet) {
-            const legendEl = document.getElementById('cal-legend');
-            legendEl.innerHTML = '';
-
-            const chipMap = {
-                "Internal Medicine": { cls: "chip-medicine", label: "Medicine" },
-                "Surgery": { cls: "chip-surgery", label: "Surgery" },
-                "Obs & Gynae": { cls: "chip-obg", label: "OBG" },
-                "Paediatrics": { cls: "chip-paeds", label: "Paeds" },
-                "ENT": { cls: "chip-ent", label: "ENT" },
-                "Orthopaedics": { cls: "chip-ortho", label: "Ortho" },
-                "Ophthalmology": { cls: "chip-ophthal", label: "Ophtha" },
-                "Dermatology": { cls: "chip-derm", label: "Derm" },
-                "Psychiatry": { cls: "chip-psych", label: "Psych" },
-                "Anaesthesia": { cls: "chip-anaes", label: "Anaes" },
-                "Emergency Medicine": { cls: "chip-em", label: "EM" },
-                "Radiology": { cls: "chip-radiology", label: "Radio" },
-            };
-
-            deptSet.forEach(dept => {
-                const info = chipMap[dept];
-                if (!info) return;
-                const item = document.createElement('div');
-                item.className = 'flex items-center gap-1';
-                item.innerHTML = `<span class="event-chip ${info.cls} text-[8px] px-1.5 py-0.5">${info.label}</span>`;
-                legendEl.appendChild(item);
-            });
-        }
-
-        // ================================================================
-
-        function generateTopicsLog() {
-            const todayStr = getTodayStr();
-            const logContainer = document.getElementById('log-container');
-            logContainer.innerHTML = '';
-            
-            const pastEvents = personalizedSchedule.filter(e => {
-                if (e.date > todayStr) return false;
-                if (!e.topic || e.topic.toUpperCase() === 'NULL' || e.topic.toUpperCase().includes('CANCEL')) return false;
-                if (e.isHoliday) return false;
-                if (e.startTime) {
-                    const hour = parseInt(e.startTime.split(':')[0]);
-                    if (hour >= 10 && hour < 13) return false;
-                }
-                return true;
-            });
-            
-            cachedLogData = pastEvents;
-            if (window.Fuse) { logFuse = new Fuse(pastEvents, { keys: ['topic', 'department'], threshold: 0.3 }); }
-
-            const grouped = pastEvents.reduce((acc, e) => {
-                const dept = e.department || 'Other';
-                if (!acc[dept]) acc[dept] = [];
-                acc[dept].push(e);
-                return acc;
-            }, {});
-
-            const deptStats = Object.keys(grouped).map(dept => {
-                const events = grouped[dept];
-                const uniqueMap = new Map();
-                events.forEach(e => {
-                    const t = e.topic.trim();
-                    if (!uniqueMap.has(t)) uniqueMap.set(t, { topic: t, dates: [] });
-                    uniqueMap.get(t).dates.push(e.date);
-                });
-                const uniqueList = Array.from(uniqueMap.values()).sort((a, b) => {
-                    const maxA = a.dates.reduce((m, d) => d > m ? d : m, '0000-00-00');
-                    const maxB = b.dates.reduce((m, d) => d > m ? d : m, '0000-00-00');
-                    return maxB.localeCompare(maxA);
-                });
-                return { dept, uniqueTopics: uniqueList, count: uniqueList.length };
-            });
-
-            deptStats.sort((a, b) => b.count - a.count);
-
-            if (deptStats.length === 0) {
-                logContainer.innerHTML = `<div class="text-center text-slate-500 font-bold mt-10 uppercase tracking-widest text-xs">No completed classes yet.</div>`;
-                return;
-            }
-
-            deptStats.forEach(stat => {
-                const { dept, uniqueTopics, count } = stat;
-                const deptHtml = `
-                    <details class="group bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-3 open:border-blue-500/50 transition-colors">
-                        <summary class="flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-750 select-none">
-                            <div class="flex items-center gap-3">
-                                <div class="w-2 h-8 rounded-full ${getDeptColorClass(dept)}"></div>
-                                <div>
-                                    <h3 class="font-black text-white text-sm uppercase tracking-wide leading-none">${dept}</h3>
-                                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">${count} Topics Completed</p>
-                                </div>
-                            </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="arrow h-5 w-5 text-slate-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </summary>
-                        <div class="p-2 space-y-2 bg-slate-900/50 border-t border-slate-700/50">
-                            ${uniqueTopics.map(e => {
-                                const sortedDates = e.dates.sort().reverse();
-                                const dateStr = sortedDates.map(d => formatDate(d)).join(' • ');
-                                return `
-                                <div class="p-3 bg-slate-800 rounded-lg flex items-center gap-3 border border-slate-700/50 ml-2">
-                                    <div class="flex-1">
-                                        <p class="text-xs font-bold text-slate-200 leading-snug uppercase tracking-tight">${e.topic}</p>
-                                        <div class="flex items-center gap-1 mt-1 text-slate-500">
-                                            <p class="text-[9px] font-bold uppercase tracking-widest">${dateStr}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            `}).join('')}
-                        </div>
-                    </details>
-                `;
-                logContainer.innerHTML += deptHtml;
-            });
-        }
-
-        function getDeptColorClass(dept) {
-            const map = { "Surgery": "bg-emerald-500", "Internal Medicine": "bg-blue-500", "Obs & Gynae": "bg-rose-500", "Paediatrics": "bg-pink-500", "ENT": "bg-amber-500", "Ophthalmology": "bg-purple-500", "Orthopaedics": "bg-orange-500", "Dermatology": "bg-yellow-500", "Psychiatry": "bg-indigo-500", "Anaesthesia": "bg-cyan-500" };
-            return map[dept] || "bg-slate-500";
-        }
-
-        function formatDate(dateStr) { const d = new Date(dateStr); return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }); }
-
-        function renderSearchResults(query) {
-            const container = document.getElementById('log-container');
-            if (!query || !logFuse) { generateTopicsLog(); return; }
-            const results = logFuse.search(query);
-            container.innerHTML = '';
-            if (results.length === 0) { container.innerHTML = `<div class="text-center text-slate-500 font-bold mt-10 uppercase tracking-widest text-xs">No topics found for "${query}"</div>`; return; }
-            results.forEach(result => {
-                const e = result.item;
-                const html = `
-                    <div class="p-4 bg-slate-800 rounded-xl mb-3 border border-slate-700 flex flex-col gap-1">
-                        <div class="flex justify-between items-start">
-                             <p class="text-sm font-black text-white uppercase tracking-tight leading-snug">${e.topic}</p>
-                             <span class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 whitespace-nowrap">${e.department}</span>
-                        </div>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${formatDate(e.date)} • ${e.startTime}</p>
-                    </div>
-                `;
-                container.innerHTML += html;
-            });
-        }
-
-        function render() {
-            const container = document.getElementById('day-view-container');
-            container.innerHTML = '';
-            const todayStr = getTodayStr();
-            let cur = new Date(termStartDate);
-            while (cur <= termEndDate) {
-                const ds = cur.toISOString().split('T')[0];
-                const dayEvents = personalizedSchedule.filter(e => e.date === ds);
-                const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
-                if (currentFilter === 'all' || filteredEvents.length > 0) {
-                    const slide = document.createElement('div');
-                    slide.className = 'day-slide p-5 pb-24 overflow-y-auto'; 
-                    slide.dataset.date = ds;
-                    const isToday = ds === todayStr;
-                    slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
-                        ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
-                        ${cur.toLocaleDateString('en-US', {weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC'}).toUpperCase()} 
-                    </h2>`;
-                    const sortedEvents = filteredEvents.sort((a,b) => (a.startTime || '00:00').localeCompare(b.startTime || '00:00'));
-                    if (sortedEvents.length) {
-                        const holidayEvent = sortedEvents.find(e => e.isHoliday);
-                        if (holidayEvent) {
-                            slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${holidayEvent.topic || 'HOLIDAY'}</div>`;
-                        } else {
-                            slide.innerHTML += sortedEvents.map((e) => {
-                                const eventIdx = personalizedSchedule.indexOf(e);
-                                return `
-                                <div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform ${e.isDynamic ? 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95' : ''}"
-                                    ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${eventIdx})"` : ''}>
-                                    <div class="flex justify-between items-start gap-3 flex-nowrap">
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                                <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${e.topic}</p>
-                                                ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
-                                            </div>
-                                            <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${e.department}</p>
-                                        </div>
-                                        <div class="text-right flex flex-col items-end shrink-0 ml-1">
-                                            <div class="bg-blue-700 text-white px-4 py-2 rounded-2xl text-lg sm:text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none whitespace-nowrap">${e.startTime}</div>
-                                            <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
-                                        </div>
-                                    </div>
-                                    ${e.location ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest">
-                                        <span class="flex items-center">📍 ${e.location}</span>
-                                    </div>` : ''}
-                                </div>`
-                            }).join('');
-                        }
-                    } else {
-                        const message = cur.getUTCDay() === 0 ? '🌞 SUNDAY' : 'REST DAY';
-                        slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${message}</div>`;
-                    }
-                    container.appendChild(slide);
-                }
-                cur.setUTCDate(cur.getUTCDate() + 1);
-            }
-
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(e => {
-                    if (e.isIntersecting) {
-                        const ds = e.target.dataset.date;
-                        currentlyVisibleDate = ds; 
-                        const date = new Date(ds + 'T00:00:00Z');
-                        const start = getStartOfWeek(date);
-                        const end = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
-                        document.getElementById('current-week-display').textContent = `${start.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})} - ${end.toLocaleDateString('en-US', {month: 'short', day: 'numeric', timeZone: 'UTC'})}, 2026`.toUpperCase();
-                    }
-                });
-            }, { threshold: 0.5, root: container });
-            document.querySelectorAll('.day-slide').forEach(s => observer.observe(s));
-            
-            const allSlides = Array.from(document.querySelectorAll('.day-slide'));
-            const targetSlide = allSlides.find(slide => slide.dataset.date >= todayStr);
-            if (targetSlide) { scrollToSlide(targetSlide, false); } 
-            else if (allSlides.length > 0) { scrollToSlide(allSlides[allSlides.length - 1], false); }
-        }
-
-        function switchView(viewName) {
-            const scheduleView = document.getElementById('schedule-tab-content');
-            const logView = document.getElementById('log-tab-content');
-            const navSchedule = document.getElementById('nav-schedule');
-            const navLog = document.getElementById('nav-log');
-            if (viewName === 'schedule') {
-                scheduleView.classList.add('active'); logView.classList.remove('active');
-                navSchedule.classList.replace('text-slate-500', 'text-blue-500');
-                navLog.classList.replace('text-blue-500', 'text-slate-500');
-            } else {
-                scheduleView.classList.remove('active'); logView.classList.add('active');
-                navLog.classList.replace('text-slate-500', 'text-blue-500');
-                navSchedule.classList.replace('text-blue-500', 'text-slate-500');
-            }
-        }
-
-        window.showDetails = (date, index) => {
-            const event = personalizedSchedule[index];
-            if (!event || !event.isDynamic) return;
-            const content = document.getElementById('detail-content');
-            const facultyName = event.instructor || event.faculty || 'Staff';
-            content.innerHTML = `
-                <div class="space-y-6">
-                    <div><p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p><h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3></div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${facultyName}</p></div>
-                        <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p><p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p></div>
-                    </div>
-                    ${event.location ? `<div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${event.location}</p></div>` : ''}
-                </div>
-            `;
-            document.getElementById('detail-overlay').classList.remove('hidden');
-            setTimeout(() => { document.getElementById('detail-panel').classList.remove('panel-hidden'); document.getElementById('detail-panel').classList.add('panel-visible'); }, 10);
+        return map[dept] || "bg-slate-500";
+    };
+
+    const formatDate = (dateStr) =>
+        new Date(dateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // APP STATE
+    // ═══════════════════════════════════════════════════════════════════════
+    let rollNo               = localStorage.getItem('afmc_roll_no');
+    let personalizedSchedule = [];
+    let currentFilter        = 'all';
+    let currentlyVisibleDate = getTodayStr();
+    let deferredPrompt;
+    let logFuse              = null;
+    let cachedLogData        = [];
+
+    // Calendar state
+    let calCurrentYear    = new Date().getFullYear();
+    let calCurrentMonth   = new Date().getMonth();
+    let calIsAnimating    = false;
+    let calDayPanelDateStr = null;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════════════════════════════
+    function updateOfflineNotice(msg) {
+        const el = document.getElementById('offline-notice');
+        if (el) { el.textContent = msg; el.classList.remove('hidden'); }
+    }
+
+    async function initialize() {
+        setupOnboardingListeners();
+        setupPWAInstallLogic();
+
+        if (!rollNo) {
+            document.getElementById('onboarding-overlay').classList.remove('hidden');
             document.body.classList.add('modal-open');
-        };
-
-        function closeDetail() {
-            const panel = document.getElementById('detail-panel');
-            panel.style.transform = ''; panel.classList.remove('panel-visible'); panel.classList.add('panel-hidden');
-            setTimeout(() => { document.getElementById('detail-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); }, 300);
+            return;
         }
 
-        function scrollToSlide(slideElement, smooth = true) {
-            if (!slideElement) return;
-            const container = document.getElementById('day-view-container');
-            const targetLeft = slideElement.offsetLeft;
-            if (!smooth) {
-                container.scrollLeft = targetLeft;
-                return;
+        document.getElementById('loading-indicator').classList.remove('hidden');
+
+        const r      = parseInt(rollNo);
+        const gBatch = getGeneralBatch(r);
+        const cBatch = getClinicBatch(r);
+        const sBatch = getSubBatch(r);
+        document.getElementById('user-info-display').textContent =
+            `Roll: ${rollNo} | Batch: ${sBatch} | Clinic: ${cBatch}`;
+
+        let dynamicEvents = [];
+        try {
+            const snap = await getDocs(collection(db, `artifacts/${appId}/public/data/schedule`));
+            snap.forEach(d => { const ev = d.data(); ev.id = d.id; ev.isDynamic = true; dynamicEvents.push(ev); });
+            if (dynamicEvents.length > 0) localStorage.setItem('afmc_schedule_cache', JSON.stringify(dynamicEvents));
+        } catch (e) {
+            console.warn('Firebase fetch failed:', e);
+            const cache = localStorage.getItem('afmc_schedule_cache');
+            if (cache) {
+                try { dynamicEvents = JSON.parse(cache); updateOfflineNotice("Viewing Offline Cache"); }
+                catch { updateOfflineNotice("Offline: Generic Schedule"); }
+            } else {
+                updateOfflineNotice("Offline: Generic Schedule");
             }
-            // iOS Safari < 15 ignores behavior:'smooth' on scrollTo — use manual RAF animation
-            const startLeft = container.scrollLeft;
-            const delta = targetLeft - startLeft;
-            if (Math.abs(delta) < 2) return;
-            const duration = 320;
-            const startTime = performance.now();
-            function step(now) {
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                // Ease out cubic
-                const ease = 1 - Math.pow(1 - progress, 3);
-                container.scrollLeft = startLeft + delta * ease;
-                if (progress < 1) requestAnimationFrame(step);
-            }
-            requestAnimationFrame(step);
+        } finally {
+            generateSchedule(gBatch, cBatch, sBatch, dynamicEvents);
+            render();
+            generateTopicsLog();
+            setupAppListeners();
+            updateDatePickerLabel(getTodayStr());
+            document.getElementById('loading-indicator').classList.add('hidden');
+            calCurrentMonth = new Date().getMonth();
+            calCurrentYear  = new Date().getFullYear();
+            checkUrlDeepLink();
         }
+    }
 
-        function updateDatePickerLabel(dateStr) {
-            const date = new Date(dateStr + 'T00:00:00Z');
-            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
-            const el = document.getElementById('date-picker-label');
-            if (el) el.textContent = label;
-        }
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCHEDULE GENERATION
+    // ═══════════════════════════════════════════════════════════════════════
+    function addEntry(data, date, timeRange, topic, dept, loc) {
+        const [start, end] = timeRange.split('-');
+        data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
+    }
 
-        function setupOnboardingListeners() {
-            document.getElementById('start-btn').onclick = () => {
-                const val = parseInt(document.getElementById('init-roll-input').value);
-                if (val >= 1 && val <= 150) { localStorage.setItem('afmc_roll_no', val); rollNo = val; document.getElementById('onboarding-overlay').classList.add('hidden'); document.body.classList.remove('modal-open'); initialize(); }
-                else { document.getElementById('onboarding-error').classList.remove('hidden'); }
-            };
-        }
+    function generateSchedule(gBatch, cBatch, sBatch, dynamicEvents = []) {
+        const data   = [];
+        let current  = new Date(termStartDate);
+        const eStart = new Date(electivePeriod.start + 'T00:00:00Z');
+        const eEnd   = new Date(electivePeriod.end   + 'T00:00:00Z');
 
-        function setupPWAInstallLogic() {
-            const banner = document.getElementById('install-banner');
-            const installBtn = document.getElementById('install-btn');
-            const closeBtn = document.getElementById('close-install-banner');
-            const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
-            if (isStandalone) return;
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-            if (isIOS) { document.getElementById('install-text').innerHTML = "To install, tap <span class='text-white'>Share</span> and <span class='text-white'>'Add to Home Screen'</span>"; installBtn.classList.add('hidden'); banner.classList.add('visible'); }
-            window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; banner.classList.add('visible'); });
-            installBtn.addEventListener('click', async () => { if (!deferredPrompt) return; deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; banner.classList.remove('visible'); });
-            closeBtn.addEventListener('click', () => { banner.classList.remove('visible'); });
-        }
+        while (current <= termEndDate) {
+            const dayName    = current.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+            const ds         = current.toISOString().split('T')[0];
+            const isElective = current >= eStart && current <= eEnd;
+            const week       = getNthWeekdayOfMonth(current);
+            const rules      = scheduleRules[dayName];
 
-        function setupAppListeners() {
-            document.getElementById('nav-schedule').onclick = () => switchView('schedule');
-            document.getElementById('nav-log').onclick = () => switchView('log');
-            document.getElementById('log-search').addEventListener('input', (e) => renderSearchResults(e.target.value));
-            document.getElementById('change-roll-btn').onclick = () => { localStorage.removeItem('afmc_roll_no'); location.reload(); };
-            document.getElementById('today-btn').onclick = () => { const todayStr = getTodayStr(); const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`); if (todaySlide) { scrollToSlide(todaySlide); updateDatePickerLabel(todayStr); } };
-            document.getElementById('dept-filter').onchange = (e) => { currentFilter = e.target.value; document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text; render(); };
-            
-            // Calendar button
-            document.getElementById('open-calendar-btn').onclick = openCalendar;
-            document.getElementById('cal-close-btn').onclick = closeCalendar;
-            document.getElementById('cal-today-btn').onclick = () => {
-                closeCalDayPanel();
-                closeCalendar();
-                switchView('schedule');
-                const todayStr = getTodayStr();
-                setTimeout(() => {
-                    const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
-                    if (todaySlide) { scrollToSlide(todaySlide, true); updateDatePickerLabel(todayStr); }
-                }, 50);
-            };
-            document.getElementById('cal-prev-btn').onclick = () => commitMonthShift(-1);
-            document.getElementById('cal-next-btn').onclick = () => commitMonthShift(+1);
-            setupCalSwipe();
-            setupCalDayPanelListeners();
-
-            // Add to Calendar (ICS export)
-            document.getElementById('add-to-calendar-btn').onclick = () => {
-                const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
-                const visibleDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
-                const weekStart = getStartOfWeek(visibleDate);
-                const weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
-                const weekEvents = personalizedSchedule.filter(e => { const eDate = new Date(e.date + 'T00:00:00Z'); return eDate >= weekStart && eDate <= weekEnd; });
-                if (weekEvents.length === 0) return;
-                let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-                weekEvents.forEach(e => { ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location || ''}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT'); });
-                ics.push('END:VCALENDAR');
-                const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); link.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`; link.click();
-            };
-
-            document.getElementById('close-detail').onclick = closeDetail;
-            document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
-            const dragZone = document.getElementById('detail-drag-zone');
-            const panel = document.getElementById('detail-panel');
-            let startY, isDragging = false;
-            dragZone.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
-            dragZone.addEventListener('touchmove', (e) => { if (!isDragging) return; const delta = e.touches[0].clientY - startY; if (delta > 0) { panel.style.transform = `translateY(${delta}px)`; } }, { passive: true });
-            dragZone.addEventListener('touchend', (e) => { isDragging = false; panel.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'; const delta = e.changedTouches[0].clientY - startY; if (delta > 100) { closeDetail(); } else { panel.style.transform = ''; if (delta < 10 && delta > -10) { closeDetail(); } } });
-        }
-
-        window.onload = initialize;
-        if ('serviceWorker' in navigator) { 
-            window.addEventListener('load', () => { 
-                if (!window.location.protocol.startsWith('http')) return; 
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => {
-                        console.log('SW Registered');
-                        // Setup push subscription once SW is ready
-                        setupPushSubscription(reg);
-                    })
-                    .catch(err => console.log('SW Failed', err)); 
+            // Dynamic events relevant to this user on this day
+            const myDynamic = dynamicEvents.filter(e => {
+                if (e.date !== ds) return false;
+                const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
+                if (batches.includes("ALL")) return true;
+                if (e.isClinics || e.isClinic) return batches.includes(cBatch);
+                return batches.includes(gBatch) || batches.includes(sBatch);
             });
-            navigator.serviceWorker.addEventListener('message', (event) => {
-                if (!event.data) return;
-                if (event.data.type === 'SW_UPDATED') {
-                    console.log('[App] New SW activated — reloading for update');
-                    window.location.reload();
-                }
-                // Handle notification click deep-link
-                if (event.data.type === 'NOTIFICATION_CLICK') {
-                    handleNotificationDeepLink(event.data);
-                }
+
+            myDynamic.forEach(e => {
+                const entry = { ...e, department: normalizeDept(e.department) };
+                if (!entry.topic || entry.topic.trim().toUpperCase() !== "NULL") data.push(entry);
             });
-        }
 
-        // ── Push Subscription ────────────────────────────────────────────────
-        async function setupPushSubscription(swReg) {
-            try {
-                if (!window._fcm || !('Notification' in window)) return;
-                if (VAPID_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') return;
+            const dynamicTimes    = new Set(myDynamic.map(e => e.startTime));
+            const isGlobalHoliday = dynamicEvents.some(e =>
+                e.date === ds && e.isHoliday &&
+                (Array.isArray(e.batch) ? e.batch.includes("ALL") : e.batch == "ALL")
+            );
+            const isOverridden = (range) => dynamicTimes.has(range.split('-')[0]);
 
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') return;
-
-                const { getToken, onMessage, messaging } = window._fcm;
-                const token = await getToken(messaging, {
-                    vapidKey: VAPID_KEY,
-                    serviceWorkerRegistration: swReg
-                });
-                if (!token) return;
-
-                const r = parseInt(localStorage.getItem('afmc_roll_no') || '0');
-                await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), {
-                    token,
-                    roll: r || null,
-                    updatedAt: new Date().toISOString(),
-                    userAgent: navigator.userAgent.substring(0, 100)
-                });
-                console.log('[Push] Subscribed:', token.substring(0, 20) + '...');
-
-                onMessage(messaging, (payload) => {
-                    const { title, body } = payload.notification || {};
-                    showInAppToast(title || 'Schedule Update', body || '');
-                });
-            } catch (e) {
-                console.warn('[Push] Subscription failed:', e);
-            }
-        }
-
-        // ── In-App Toast ─────────────────────────────────────────────────────
-        function showInAppToast(title, body) {
-            const existing = document.getElementById('push-toast');
-            if (existing) existing.remove();
-            const toast = document.createElement('div');
-            toast.id = 'push-toast';
-            toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-[90%] bg-slate-800 border border-blue-500/40 rounded-2xl shadow-2xl px-4 py-3 flex items-start gap-3 transition-all';
-            toast.style.cssText = 'opacity:0; transform: translateX(-50%) translateY(-12px);';
-            toast.innerHTML = `
-                <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-white font-black text-xs uppercase tracking-wide">${title}</p>
-                    <p class="text-slate-400 text-[11px] mt-0.5 leading-snug">${body}</p>
-                </div>
-                <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white shrink-0 p-1">✕</button>
-            `;
-            document.body.appendChild(toast);
-            requestAnimationFrame(() => {
-                toast.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateX(-50%) translateY(0)';
-            });
-            setTimeout(() => {
-                if (toast.parentElement) {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateX(-50%) translateY(-12px)';
-                    setTimeout(() => toast.remove(), 300);
-                }
-            }, 6000);
-        }
-
-        // ── Notification Deep-Link Handler ───────────────────────────────────
-        function handleNotificationDeepLink(data) {
-            const { notifType, eventDate, eventId } = data;
-            switchView('schedule');
-            if (eventDate) {
-                setTimeout(() => {
-                    let targetSlide = document.querySelector(`.day-slide[data-date="${eventDate}"]`);
-                    if (!targetSlide) {
-                        const allSlides = Array.from(document.querySelectorAll('.day-slide'));
-                        targetSlide = allSlides.find(s => s.dataset.date >= eventDate);
+            if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
+                if (!isElective) {
+                    // Theory lectures
+                    for (const [time, cfg] of Object.entries(rules.theory || {})) {
+                        const topic = typeof cfg === 'string' ? cfg : cfg[week];
+                        if (topic && !isOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
                     }
-                    if (targetSlide) {
-                        scrollToSlide(targetSlide, true);
-                        updateDatePickerLabel(eventDate);
-                        // For venue/faculty changes, open the detail panel of that specific event
-                        if ((notifType === 'venue_change' || notifType === 'faculty_change') && eventId) {
-                            setTimeout(() => {
-                                const idx = personalizedSchedule.findIndex(e => e.id === eventId);
-                                if (idx !== -1 && personalizedSchedule[idx].isDynamic) {
-                                    window.showDetails(eventDate, idx);
-                                }
-                            }, 400);
+                    // Pandemic module
+                    if (rules.pandemic && !isOverridden("09:00")) {
+                        for (const [time, topic] of Object.entries(rules.pandemic))
+                            addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
+                    }
+                    // Clinical rotations
+                    clinicalRotationRules.forEach(rot => {
+                        const s = new Date(rot.startDate + 'T00:00:00Z');
+                        const e = new Date(rot.endDate   + 'T00:00:00Z');
+                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden("11:00"))
+                            addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
+                    });
+                    // Tutorials
+                    for (const [time, cfg] of Object.entries(rules.tutorials || {})) {
+                        if (typeof cfg === 'string') {
+                            if (!isOverridden(time)) addEntry(data, ds, time, `${cfg} Tutorial`, cfg, "NLH Sushruta");
+                        } else if (cfg[week] && !Object.values(cfg).some(v => v === 'A' || v === 'B' || v === 'C')) {
+                            if (!isOverridden(time)) addEntry(data, ds, time, `${cfg[week]} Tutorial`, cfg[week], "NLH Sushruta");
+                        } else {
+                            for (const [topic, target] of Object.entries(cfg)) {
+                                if ((target === gBatch || (typeof target === 'number' && target === week)) && !isOverridden(time))
+                                    addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                            }
                         }
                     }
-                }, 100);
+                    // SDL
+                    for (const [time, cfg] of Object.entries(rules.sdl || {})) {
+                        const topic = cfg[week];
+                        if (topic && !isOverridden(time))
+                            (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
+                    }
+                } else {
+                    // Elective period
+                    if (!isOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
+                }
+            }
+            current.setUTCDate(current.getUTCDate() + 1);
+        }
+
+        personalizedSchedule = data;
+
+        // Populate dept filter dropdown
+        const select = document.getElementById('dept-filter');
+        const depts  = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
+        select.innerHTML = '<option value="all">ALL DEPTS</option>';
+        depts.forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d; opt.textContent = d.toUpperCase();
+            select.appendChild(opt);
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCHEDULE RENDER (day slides)
+    // ═══════════════════════════════════════════════════════════════════════
+    function render() {
+        const container = document.getElementById('day-view-container');
+        container.innerHTML = '';
+        const todayStr = getTodayStr();
+        let cur = new Date(termStartDate);
+
+        while (cur <= termEndDate) {
+            const ds            = cur.toISOString().split('T')[0];
+            const dayEvents     = personalizedSchedule.filter(e => e.date === ds);
+            const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
+
+            if (currentFilter === 'all' || filteredEvents.length > 0) {
+                const slide = document.createElement('div');
+                slide.className = 'day-slide p-5 pb-24 overflow-y-auto';
+                slide.dataset.date = ds;
+                const isToday = ds === todayStr;
+
+                slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
+                    ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
+                    ${cur.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase()}
+                </h2>`;
+
+                const sorted = filteredEvents.sort((a,b) => (a.startTime||'00:00').localeCompare(b.startTime||'00:00'));
+
+                if (sorted.length) {
+                    const holiday = sorted.find(e => e.isHoliday);
+                    if (holiday) {
+                        slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${holiday.topic || 'HOLIDAY'}</div>`;
+                    } else {
+                        slide.innerHTML += sorted.map(e => {
+                            const idx = personalizedSchedule.indexOf(e);
+                            return `
+                            <div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform ${e.isDynamic ? 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95' : ''}"
+                                ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${idx})"` : ''}>
+                                <div class="flex justify-between items-start gap-3 flex-nowrap">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                            <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${e.topic}</p>
+                                            ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
+                                        </div>
+                                        <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${e.department}</p>
+                                    </div>
+                                    <div class="text-right flex flex-col items-end shrink-0 ml-1">
+                                        <div class="bg-blue-700 text-white px-4 py-2 rounded-2xl text-lg sm:text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none whitespace-nowrap">${e.startTime}</div>
+                                        <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
+                                    </div>
+                                </div>
+                                ${e.location ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest"><span>📍 ${e.location}</span></div>` : ''}
+                            </div>`;
+                        }).join('');
+                    }
+                } else {
+                    const msg = cur.getUTCDay() === 0 ? '🌞 SUNDAY' : 'REST DAY';
+                    slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${msg}</div>`;
+                }
+
+                container.appendChild(slide);
+            }
+            cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+
+        // IntersectionObserver to track visible date & update week label
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const ds    = entry.target.dataset.date;
+                currentlyVisibleDate = ds;
+                const date  = new Date(ds + 'T00:00:00Z');
+                const start = getStartOfWeek(date);
+                const end   = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
+                document.getElementById('current-week-display').textContent =
+                    `${start.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})} - ${end.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})}, 2026`.toUpperCase();
+            });
+        }, { threshold: 0.5, root: container });
+
+        document.querySelectorAll('.day-slide').forEach(s => observer.observe(s));
+
+        // Scroll to today (or nearest future date)
+        const allSlides  = Array.from(document.querySelectorAll('.day-slide'));
+        const target     = allSlides.find(s => s.dataset.date >= todayStr);
+        const fallback   = allSlides[allSlides.length - 1];
+        scrollToSlide(target || fallback, false);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // TOPICS LOG
+    // ═══════════════════════════════════════════════════════════════════════
+    function generateTopicsLog() {
+        const todayStr    = getTodayStr();
+        const container   = document.getElementById('log-container');
+        container.innerHTML = '';
+
+        const pastEvents = personalizedSchedule.filter(e => {
+            if (e.date > todayStr) return false;
+            if (!e.topic || e.topic.toUpperCase() === 'NULL' || e.topic.toUpperCase().includes('CANCEL')) return false;
+            if (e.isHoliday) return false;
+            if (e.startTime && parseInt(e.startTime) >= 10 && parseInt(e.startTime) < 13) return false;
+            return true;
+        });
+
+        cachedLogData = pastEvents;
+        if (window.Fuse) logFuse = new Fuse(pastEvents, { keys: ['topic','department'], threshold: 0.3 });
+
+        const grouped = pastEvents.reduce((acc, e) => {
+            const dept = e.department || 'Other';
+            (acc[dept] = acc[dept] || []).push(e);
+            return acc;
+        }, {});
+
+        const deptStats = Object.keys(grouped).map(dept => {
+            const uniqueMap = new Map();
+            grouped[dept].forEach(e => {
+                const t = e.topic.trim();
+                if (!uniqueMap.has(t)) uniqueMap.set(t, { topic: t, dates: [] });
+                uniqueMap.get(t).dates.push(e.date);
+            });
+            const uniqueList = Array.from(uniqueMap.values()).sort((a, b) => {
+                const maxA = a.dates.reduce((m,d) => d>m?d:m, '');
+                const maxB = b.dates.reduce((m,d) => d>m?d:m, '');
+                return maxB.localeCompare(maxA);
+            });
+            return { dept, uniqueTopics: uniqueList, count: uniqueList.length };
+        }).sort((a, b) => b.count - a.count);
+
+        if (deptStats.length === 0) {
+            container.innerHTML = `<div class="text-center text-slate-500 font-bold mt-10 uppercase tracking-widest text-xs">No completed classes yet.</div>`;
+            return;
+        }
+
+        deptStats.forEach(({ dept, uniqueTopics, count }) => {
+            container.innerHTML += `
+                <details class="group bg-slate-800 rounded-xl border border-slate-700 overflow-hidden mb-3 open:border-blue-500/50 transition-colors">
+                    <summary class="flex justify-between items-center p-4 bg-slate-800 hover:bg-slate-750 select-none">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-8 rounded-full ${getDeptColorClass(dept)}"></div>
+                            <div>
+                                <h3 class="font-black text-white text-sm uppercase tracking-wide leading-none">${dept}</h3>
+                                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">${count} Topics Completed</p>
+                            </div>
+                        </div>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="arrow h-5 w-5 text-slate-500 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </summary>
+                    <div class="p-2 space-y-2 bg-slate-900/50 border-t border-slate-700/50">
+                        ${uniqueTopics.map(e => `
+                            <div class="p-3 bg-slate-800 rounded-lg flex items-center gap-3 border border-slate-700/50 ml-2">
+                                <div class="flex-1">
+                                    <p class="text-xs font-bold text-slate-200 leading-snug uppercase tracking-tight">${e.topic}</p>
+                                    <p class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-1">${e.dates.sort().reverse().map(formatDate).join(' • ')}</p>
+                                </div>
+                            </div>`).join('')}
+                    </div>
+                </details>`;
+        });
+    }
+
+    function renderSearchResults(query) {
+        const container = document.getElementById('log-container');
+        if (!query || !logFuse) { generateTopicsLog(); return; }
+        const results = logFuse.search(query);
+        container.innerHTML = '';
+        if (!results.length) {
+            container.innerHTML = `<div class="text-center text-slate-500 font-bold mt-10 uppercase tracking-widest text-xs">No topics found for "${query}"</div>`;
+            return;
+        }
+        results.forEach(({ item: e }) => {
+            container.innerHTML += `
+                <div class="p-4 bg-slate-800 rounded-xl mb-3 border border-slate-700 flex flex-col gap-1">
+                    <div class="flex justify-between items-start">
+                        <p class="text-sm font-black text-white uppercase tracking-tight leading-snug">${e.topic}</p>
+                        <span class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 whitespace-nowrap">${e.department}</span>
+                    </div>
+                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${formatDate(e.date)} • ${e.startTime}</p>
+                </div>`;
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CALENDAR VIEW
+    // ═══════════════════════════════════════════════════════════════════════
+    function openCalendar() {
+        const d = new Date(currentlyVisibleDate + 'T00:00:00Z');
+        calCurrentYear  = d.getUTCFullYear();
+        calCurrentMonth = d.getUTCMonth();
+        renderAllCalSlides();
+        const ov = document.getElementById('calendar-overlay');
+        ov.classList.remove('cal-hidden');
+        ov.classList.add('cal-visible');
+    }
+
+    function closeCalendar() {
+        closeCalDayPanel();
+        const ov = document.getElementById('calendar-overlay');
+        ov.classList.remove('cal-visible');
+        ov.classList.add('cal-hidden');
+    }
+
+    function offsetMonth(year, month, delta) {
+        let m = month + delta, y = year;
+        while (m > 11) { m -= 12; y++; }
+        while (m < 0)  { m += 12; y--; }
+        return { year: y, month: m };
+    }
+
+    function renderMonthIntoSlide(slideIndex, year, month) {
+        const slide = document.getElementById(`cal-slide-${slideIndex}`);
+        const grid  = slide.querySelector('.cal-grid-inner');
+        grid.innerHTML = '';
+        slide.scrollTop = 0;
+
+        const todayStr = getTodayStr();
+        const eventMap = {};
+        personalizedSchedule.forEach(e => {
+            (eventMap[e.date] = eventMap[e.date] || []).push(e);
+        });
+
+        const firstDay    = new Date(Date.UTC(year, month, 1));
+        const totalDays   = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+        const startOffset = (firstDay.getUTCDay() + 6) % 7;
+        const legendDepts = new Set();
+
+        for (let i = 0; i < startOffset; i++) {
+            const d  = new Date(Date.UTC(year, month, 1 - startOffset + i));
+            const ds = d.toISOString().split('T')[0];
+            grid.appendChild(buildDayCell(ds, d.getUTCDate(), true, eventMap[ds]||[], todayStr, legendDepts));
+        }
+        for (let d = 1; d <= totalDays; d++) {
+            const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            grid.appendChild(buildDayCell(ds, d, false, eventMap[ds]||[], todayStr, legendDepts));
+        }
+        const remainder = (startOffset + totalDays) % 7;
+        if (remainder !== 0) {
+            for (let i = 1; i <= 7 - remainder; i++) {
+                const d  = new Date(Date.UTC(year, month + 1, i));
+                const ds = d.toISOString().split('T')[0];
+                grid.appendChild(buildDayCell(ds, d.getUTCDate(), true, eventMap[ds]||[], todayStr, legendDepts));
+            }
+        }
+        return legendDepts;
+    }
+
+    function renderAllCalSlides() {
+        const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+        document.getElementById('cal-month-label').textContent = `${MONTHS[calCurrentMonth]} ${calCurrentYear}`;
+
+        const prev = offsetMonth(calCurrentYear, calCurrentMonth, -1);
+        const next = offsetMonth(calCurrentYear, calCurrentMonth, +1);
+        renderMonthIntoSlide(0, prev.year, prev.month);
+        const legendDepts = renderMonthIntoSlide(1, calCurrentYear, calCurrentMonth);
+        renderMonthIntoSlide(2, next.year, next.month);
+
+        const carousel = document.getElementById('cal-carousel');
+        carousel.style.transition = 'none';
+        carousel.style.transform  = 'translateX(-100%)';
+        renderCalLegend(legendDepts);
+    }
+
+    function commitMonthShift(direction) {
+        if (calIsAnimating) return;
+        calIsAnimating = true;
+        closeCalDayPanel();
+        const carousel = document.getElementById('cal-carousel');
+        carousel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+        carousel.style.transform  = direction === 1 ? 'translateX(-200%)' : 'translateX(0%)';
+        carousel.addEventListener('transitionend', function handler() {
+            carousel.removeEventListener('transitionend', handler);
+            const shifted   = offsetMonth(calCurrentYear, calCurrentMonth, direction);
+            calCurrentYear  = shifted.year;
+            calCurrentMonth = shifted.month;
+            renderAllCalSlides();
+            calIsAnimating = false;
+        }, { once: true });
+    }
+
+    function buildDayCell(dateStr, dayNum, isOtherMonth, events, todayStr, legendDepts) {
+        const cell       = document.createElement('div');
+        const isToday    = dateStr === todayStr;
+        const dow        = new Date(dateStr + 'T00:00:00Z').getUTCDay();
+        const isSunday   = dow === 0;
+        const inTerm     = dateStr >= '2026-01-12' && dateStr <= '2026-05-17';
+        const holiday    = events.find(e => e.isHoliday);
+
+        cell.className = [
+            'cal-day-cell bg-slate-900 p-1.5 flex flex-col',
+            isOtherMonth ? 'other-month' : '',
+            isToday      ? 'today-cell'  : '',
+            isSunday     ? 'is-sunday'   : '',
+            holiday      ? 'is-holiday'  : ''
+        ].join(' ');
+        cell.dataset.date = dateStr;
+
+        // Day number
+        const numEl = document.createElement('div');
+        numEl.className = [
+            'cal-day-num text-[11px] font-black mb-1',
+            isSunday     ? 'text-amber-400' : 'text-slate-300',
+            isOtherMonth ? '!text-slate-600' : '',
+            isToday      ? '!text-white'    : ''
+        ].join(' ');
+        numEl.textContent = dayNum;
+        cell.appendChild(numEl);
+
+        if (holiday && !isOtherMonth) {
+            legendDepts.add('__holiday__');
+            const banner = document.createElement('div');
+            banner.className = 'rounded bg-amber-400/20 border border-amber-400/40 px-1 py-1 text-center mb-1';
+            banner.innerHTML = `<div class="text-base leading-none mb-0.5">🎉</div><span class="text-[8px] font-black text-amber-300 uppercase tracking-wide block leading-tight">${(holiday.topic||'Holiday').replace(/Holiday/i,'').trim()||'Holiday'}</span>`;
+            cell.appendChild(banner);
+        } else if (isSunday && !isOtherMonth) {
+            const sun = document.createElement('div');
+            sun.className = 'text-center text-base leading-none mb-1';
+            sun.textContent = '☀️';
+            cell.appendChild(sun);
+        } else if (inTerm && !isOtherMonth) {
+            const sorted = [...events].sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
+            sorted.slice(0, 4).forEach(e => {
+                const dept = e.department || 'Other';
+                legendDepts.add(dept);
+                const chip = document.createElement('span');
+                chip.className = `event-chip ${getChipClass(dept)}`;
+                chip.textContent = (e.topic || dept).replace(/Tutorial|SDL|Clinics/gi, '').trim() || dept;
+                cell.appendChild(chip);
+            });
+            if (sorted.length > 4) {
+                const more = document.createElement('span');
+                more.className = 'text-[8px] font-black text-slate-500 pl-0.5 mt-0.5';
+                more.textContent = `+${sorted.length - 4} more`;
+                cell.appendChild(more);
             }
         }
 
-        // Also handle deep-link from URL params (when app is opened cold from notification)
-        function checkUrlDeepLink() {
-            const params = new URLSearchParams(window.location.search);
-            const eventDate = params.get('date');
-            const eventId = params.get('eventId');
-            if (eventDate) {
-                handleNotificationDeepLink({ notifType: 'venue_change', eventDate, eventId });
-                // Clean up URL
-                window.history.replaceState({}, '', window.location.pathname);
+        cell.addEventListener('click', () => openCalDayPanel(dateStr, events));
+        return cell;
+    }
+
+    function renderCalLegend(deptSet) {
+        const el      = document.getElementById('cal-legend');
+        el.innerHTML  = '';
+        const chipMap = {
+            "Internal Medicine":  { cls: "chip-medicine", label: "Medicine"  },
+            "Surgery":            { cls: "chip-surgery",  label: "Surgery"   },
+            "Obs & Gynae":        { cls: "chip-obg",      label: "OBG"       },
+            "Paediatrics":        { cls: "chip-paeds",    label: "Paeds"     },
+            "ENT":                { cls: "chip-ent",      label: "ENT"       },
+            "Orthopaedics":       { cls: "chip-ortho",    label: "Ortho"     },
+            "Ophthalmology":      { cls: "chip-ophthal",  label: "Ophtha"    },
+            "Dermatology":        { cls: "chip-derm",     label: "Derm"      },
+            "Psychiatry":         { cls: "chip-psych",    label: "Psych"     },
+            "Anaesthesia":        { cls: "chip-anaes",    label: "Anaes"     },
+            "Emergency Medicine": { cls: "chip-em",       label: "EM"        },
+            "Radiology":          { cls: "chip-radiology",label: "Radio"     }
+        };
+        deptSet.forEach(dept => {
+            const info = chipMap[dept];
+            if (!info) return;
+            const item = document.createElement('div');
+            item.className = 'flex items-center gap-1';
+            item.innerHTML = `<span class="event-chip ${info.cls} text-[8px] px-1.5 py-0.5">${info.label}</span>`;
+            el.appendChild(item);
+        });
+    }
+
+    // ── Swipe & Trackpad Navigation ─────────────────────────────────────
+    function setupCalSwipe() {
+        const wrapper  = document.getElementById('cal-swipe-wrapper');
+        const carousel = document.getElementById('cal-carousel');
+
+        // Touch
+        let touchStartX = 0, touchStartY = 0, touchDeltaX = 0;
+        let isSwiping = false, isVertical = false;
+
+        wrapper.addEventListener('touchstart', (e) => {
+            if (calIsAnimating) return;
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchDeltaX = 0; isSwiping = true; isVertical = false;
+            carousel.style.transition = 'none';
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
+            if (!isSwiping || calIsAnimating) return;
+            const dx = e.touches[0].clientX - touchStartX;
+            const dy = e.touches[0].clientY - touchStartY;
+            if (!isVertical && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) { isVertical = true; }
+            if (isVertical) return;
+            if (Math.abs(dx) > 5) {
+                e.preventDefault();
+                touchDeltaX = dx;
+                carousel.style.transform = `translateX(calc(-100% + ${dx}px))`;
             }
+        }, { passive: false });
+
+        wrapper.addEventListener('touchend', () => {
+            if (!isSwiping || calIsAnimating || isVertical) { isSwiping = false; return; }
+            isSwiping = false;
+            const threshold = wrapper.offsetWidth * 0.25;
+            if      (touchDeltaX < -threshold) commitMonthShift(+1);
+            else if (touchDeltaX >  threshold) commitMonthShift(-1);
+            else { carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)'; carousel.style.transform = 'translateX(-100%)'; }
+        }, { passive: true });
+
+        // Trackpad / mouse wheel
+        let wheelAccumX = 0, wheelAccumY = 0, wheelTimer = null;
+        const WHEEL_THRESHOLD = 60;
+
+        wrapper.addEventListener('wheel', (e) => {
+            if (calIsAnimating) return;
+            wheelAccumX += e.deltaX;
+            wheelAccumY += e.deltaY;
+            if (Math.abs(wheelAccumY) > Math.abs(wheelAccumX) * 1.5) { wheelAccumX = 0; wheelAccumY = 0; return; }
+            if (Math.abs(wheelAccumX) > 8) e.preventDefault();
+            const liveOffset = Math.max(-120, Math.min(120, -wheelAccumX));
+            carousel.style.transition = 'none';
+            carousel.style.transform  = `translateX(calc(-100% + ${liveOffset}px))`;
+            clearTimeout(wheelTimer);
+            wheelTimer = setTimeout(() => {
+                if (Math.abs(wheelAccumX) >= WHEEL_THRESHOLD) commitMonthShift(wheelAccumX > 0 ? +1 : -1);
+                else { carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)'; carousel.style.transform = 'translateX(-100%)'; }
+                wheelAccumX = 0; wheelAccumY = 0;
+            }, 80);
+        }, { passive: false });
+    }
+
+    // ── Cal Day Detail Panel ─────────────────────────────────────────────
+    function openCalDayPanel(dateStr, events) {
+        calDayPanelDateStr = dateStr;
+        const panel      = document.getElementById('cal-day-panel');
+        const dateLabel  = document.getElementById('cal-day-panel-date');
+        const countLabel = document.getElementById('cal-day-panel-count');
+        const eventsList = document.getElementById('cal-day-panel-events');
+
+        const d             = new Date(dateStr + 'T00:00:00Z');
+        const dayName       = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+        const dateFmt       = d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+        dateLabel.textContent = `${dayName}, ${dateFmt}`;
+
+        const allDayEvents = personalizedSchedule.filter(e => e.date === dateStr).sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
+        const holiday      = allDayEvents.find(e => e.isHoliday);
+        const isSunday     = d.getUTCDay() === 0;
+
+        countLabel.textContent = holiday ? (holiday.topic||'Holiday')
+            : isSunday ? 'Sunday — Rest Day'
+            : allDayEvents.length === 0 ? 'No scheduled events'
+            : `${allDayEvents.length} event${allDayEvents.length > 1 ? 's' : ''}`;
+
+        eventsList.innerHTML = '';
+        if (holiday) {
+            eventsList.innerHTML = `<div class="text-center py-8"><div class="text-4xl mb-3">🎉</div><p class="text-amber-300 font-black text-sm uppercase tracking-wide">${holiday.topic||'Holiday'}</p></div>`;
+        } else if (isSunday && !allDayEvents.length) {
+            eventsList.innerHTML = `<div class="text-center py-8"><div class="text-4xl mb-3">☀️</div><p class="text-slate-500 font-black text-sm uppercase tracking-wide">Sunday — Rest Day</p></div>`;
+        } else if (!allDayEvents.length) {
+            eventsList.innerHTML = `<div class="text-center py-8"><p class="text-slate-600 font-bold text-sm uppercase tracking-wide">No events scheduled</p></div>`;
+        } else {
+            allDayEvents.forEach(e => {
+                const dept     = e.department || 'Other';
+                const barColor = DEPT_BAR_COLORS[dept] || '#475569';
+                const row      = document.createElement('div');
+                row.className  = 'flex items-start gap-3 py-2.5 border-b border-slate-800 last:border-0';
+                row.innerHTML  = `
+                    <div class="text-right shrink-0 w-12">
+                        <p class="text-white font-black text-sm leading-none">${e.startTime||'--'}</p>
+                        <p class="text-slate-600 text-[9px] font-bold mt-0.5">${e.endTime||''}</p>
+                    </div>
+                    <div class="w-0.5 self-stretch rounded-full shrink-0 mt-0.5" style="background-color:${barColor};"></div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-white font-black text-sm leading-snug">${e.topic||'Untitled'}</p>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${dept}</p>
+                        ${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${e.location}</p>` : ''}
+                    </div>`;
+                eventsList.appendChild(row);
+            });
         }
+
+        // Fade in backdrop
+        const backdrop = document.getElementById('cal-day-backdrop');
+        backdrop.style.pointerEvents = 'auto';
+        setTimeout(() => { backdrop.style.opacity = '1'; }, 10);
+
+        // Slide up panel (same pattern as showDetails)
+        panel.style.transform = '';
+        panel.classList.replace('panel-visible', 'panel-hidden');
+        setTimeout(() => { panel.classList.replace('panel-hidden', 'panel-visible'); }, 10);
+    }
+
+    function closeCalDayPanel() {
+        const panel    = document.getElementById('cal-day-panel');
+        const backdrop = document.getElementById('cal-day-backdrop');
+        if (!panel) return;
+        panel.style.transform = '';
+        panel.classList.replace('panel-visible', 'panel-hidden');
+        if (backdrop) { backdrop.style.opacity = '0'; backdrop.style.pointerEvents = 'none'; }
+        calDayPanelDateStr = null;
+    }
+
+    function setupCalDayPanelListeners() {
+        // Go to Day button
+        document.getElementById('cal-day-panel-goto').addEventListener('click', () => {
+            if (!calDayPanelDateStr) return;
+            const ds = calDayPanelDateStr;
+            closeCalDayPanel(); closeCalendar(); switchView('schedule');
+            setTimeout(() => {
+                const slide = document.querySelector(`.day-slide[data-date="${ds}"]`)
+                           || Array.from(document.querySelectorAll('.day-slide')).find(s => s.dataset.date >= ds);
+                if (slide) { scrollToSlide(slide, true); updateDatePickerLabel(ds); }
+            }, 50);
+        });
+
+        // Drag to dismiss
+        const handle = document.getElementById('cal-day-panel-handle');
+        const panel  = document.getElementById('cal-day-panel');
+        let startY = 0, isDragging = false;
+        handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
+        handle.addEventListener('touchmove',  (e) => { if (!isDragging) return; const d = e.touches[0].clientY - startY; if (d > 0) panel.style.transform = `translateY(${d}px)`; }, { passive: true });
+        handle.addEventListener('touchend',   (e) => {
+            isDragging = false;
+            panel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+            const d = e.changedTouches[0].clientY - startY;
+            if (d > 80) closeCalDayPanel(); else panel.style.transform = '';
+        }, { passive: true });
+
+        // Tap backdrop to dismiss
+        document.getElementById('cal-day-backdrop').addEventListener('click', closeCalDayPanel);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EVENT DETAIL PANEL (schedule view)
+    // ═══════════════════════════════════════════════════════════════════════
+    window.showDetails = (date, index) => {
+        const event = personalizedSchedule[index];
+        if (!event || !event.isDynamic) return;
+        const content     = document.getElementById('detail-content');
+        const facultyName = event.instructor || event.faculty || 'Staff';
+        content.innerHTML = `
+            <div class="space-y-6">
+                <div>
+                    <p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p>
+                    <h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
+                        <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p>
+                        <p class="text-white font-black text-lg uppercase">${facultyName}</p>
+                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
+                        <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p>
+                        <p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p>
+                    </div>
+                </div>
+                ${event.location ? `
+                <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
+                    <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p>
+                    <p class="text-white font-black text-lg uppercase">📍 ${event.location}</p>
+                </div>` : ''}
+            </div>`;
+        document.getElementById('detail-overlay').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('detail-panel').classList.replace('panel-hidden', 'panel-visible');
+        }, 10);
+        document.body.classList.add('modal-open');
+    };
+
+    function closeDetail() {
+        const panel = document.getElementById('detail-panel');
+        panel.style.transform = '';
+        panel.classList.replace('panel-visible', 'panel-hidden');
+        setTimeout(() => {
+            document.getElementById('detail-overlay').classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        }, 300);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UI HELPERS
+    // ═══════════════════════════════════════════════════════════════════════
+    function scrollToSlide(slideElement, smooth = true) {
+        if (!slideElement) return;
+        const container = document.getElementById('day-view-container');
+        const targetLeft = slideElement.offsetLeft;
+        if (!smooth) { container.scrollLeft = targetLeft; return; }
+        // Manual RAF animation — iOS Safari < 15 ignores behavior:'smooth'
+        const startLeft = container.scrollLeft;
+        const delta     = targetLeft - startLeft;
+        if (Math.abs(delta) < 2) return;
+        const duration  = 320;
+        const startTime = performance.now();
+        (function step(now) {
+            const elapsed  = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const ease     = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+            container.scrollLeft = startLeft + delta * ease;
+            if (progress < 1) requestAnimationFrame(step);
+        })(startTime);
+    }
+
+    function switchView(viewName) {
+        const isSchedule = viewName === 'schedule';
+        document.getElementById('schedule-tab-content').classList.toggle('active', isSchedule);
+        document.getElementById('log-tab-content').classList.toggle('active', !isSchedule);
+        document.getElementById('nav-schedule').classList.toggle('text-blue-500',  isSchedule);
+        document.getElementById('nav-schedule').classList.toggle('text-slate-500', !isSchedule);
+        document.getElementById('nav-log').classList.toggle('text-blue-500',  !isSchedule);
+        document.getElementById('nav-log').classList.toggle('text-slate-500',  isSchedule);
+    }
+
+    function updateDatePickerLabel(dateStr) {
+        const el = document.getElementById('date-picker-label');
+        if (el) el.textContent = new Date(dateStr + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LISTENERS
+    // ═══════════════════════════════════════════════════════════════════════
+    function setupOnboardingListeners() {
+        document.getElementById('start-btn').onclick = () => {
+            const val = parseInt(document.getElementById('init-roll-input').value);
+            if (val >= 1 && val <= 150) {
+                localStorage.setItem('afmc_roll_no', val);
+                rollNo = val;
+                document.getElementById('onboarding-overlay').classList.add('hidden');
+                document.body.classList.remove('modal-open');
+                initialize();
+            } else {
+                document.getElementById('onboarding-error').classList.remove('hidden');
+            }
+        };
+    }
+
+    function setupPWAInstallLogic() {
+        const banner     = document.getElementById('install-banner');
+        const installBtn = document.getElementById('install-btn');
+        const closeBtn   = document.getElementById('close-install-banner');
+        const standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+        if (standalone) return;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+            document.getElementById('install-text').innerHTML = "To install, tap <span class='text-white'>Share</span> and <span class='text-white'>'Add to Home Screen'</span>";
+            installBtn.classList.add('hidden');
+            banner.classList.add('visible');
+        }
+        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; banner.classList.add('visible'); });
+        installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            await deferredPrompt.userChoice;
+            deferredPrompt = null;
+            banner.classList.remove('visible');
+        });
+        closeBtn.addEventListener('click', () => banner.classList.remove('visible'));
+    }
+
+    function setupAppListeners() {
+        // Navigation
+        document.getElementById('nav-schedule').onclick = () => switchView('schedule');
+        document.getElementById('nav-log').onclick      = () => switchView('log');
+        document.getElementById('log-search').addEventListener('input', e => renderSearchResults(e.target.value));
+        document.getElementById('change-roll-btn').onclick = () => { localStorage.removeItem('afmc_roll_no'); location.reload(); };
+
+        // Schedule controls
+        document.getElementById('today-btn').onclick = () => {
+            const todayStr = getTodayStr();
+            const slide    = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
+            if (slide) { scrollToSlide(slide); updateDatePickerLabel(todayStr); }
+        };
+        document.getElementById('dept-filter').onchange = (e) => {
+            currentFilter = e.target.value;
+            document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text;
+            render();
+        };
+
+        // Calendar
+        document.getElementById('open-calendar-btn').onclick = openCalendar;
+        document.getElementById('cal-close-btn').onclick     = closeCalendar;
+        document.getElementById('cal-prev-btn').onclick      = () => commitMonthShift(-1);
+        document.getElementById('cal-next-btn').onclick      = () => commitMonthShift(+1);
+        document.getElementById('cal-today-btn').onclick     = () => {
+            closeCalDayPanel(); closeCalendar(); switchView('schedule');
+            const todayStr = getTodayStr();
+            setTimeout(() => {
+                const slide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
+                if (slide) { scrollToSlide(slide, true); updateDatePickerLabel(todayStr); }
+            }, 50);
+        };
+        setupCalSwipe();
+        setupCalDayPanelListeners();
+
+        // Add to Calendar (ICS export for current week)
+        document.getElementById('add-to-calendar-btn').onclick = () => {
+            const toICS     = (date, time) => `${date.replace(/-/g,'')}T${time.replace(/:/g,'')}00`;
+            const visDate   = new Date(currentlyVisibleDate + 'T00:00:00Z');
+            const weekStart = getStartOfWeek(visDate);
+            const weekEnd   = new Date(weekStart); weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+            const weekEvs   = personalizedSchedule.filter(e => {
+                const d = new Date(e.date + 'T00:00:00Z');
+                return d >= weekStart && d <= weekEnd;
+            });
+            if (!weekEvs.length) return;
+            const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+            weekEvs.forEach(e => ics.push(
+                'BEGIN:VEVENT',
+                `SUMMARY:${e.topic}`,
+                `DTSTART;TZID=Asia/Kolkata:${toICS(e.date, e.startTime)}`,
+                `DTEND;TZID=Asia/Kolkata:${toICS(e.date, e.endTime)}`,
+                `LOCATION:${e.location||''}`,
+                `DESCRIPTION:DEPT: ${e.department}`,
+                'END:VEVENT'
+            ));
+            ics.push('END:VCALENDAR');
+            const a = document.createElement('a');
+            a.href     = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' }));
+            a.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`;
+            a.click();
+        };
+
+        // Detail panel (schedule view)
+        document.getElementById('close-detail').onclick              = closeDetail;
+        document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
+        const dragZone = document.getElementById('detail-drag-zone');
+        const panel    = document.getElementById('detail-panel');
+        let startY, isDragging = false;
+        dragZone.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
+        dragZone.addEventListener('touchmove',  (e) => { if (!isDragging) return; const d = e.touches[0].clientY - startY; if (d > 0) panel.style.transform = `translateY(${d}px)`; }, { passive: true });
+        dragZone.addEventListener('touchend',   (e) => {
+            isDragging = false;
+            panel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+            const d = e.changedTouches[0].clientY - startY;
+            if (d > 100) closeDetail();
+            else { panel.style.transform = ''; if (d < 10 && d > -10) closeDetail(); }
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // PUSH NOTIFICATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+    async function setupPushSubscription(swReg) {
+        try {
+            if (!window._fcm || !('Notification' in window)) return;
+            if (VAPID_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') return;
+            if (await Notification.requestPermission() !== 'granted') return;
+            const { getToken, onMessage, messaging } = window._fcm;
+            const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
+            if (!token) return;
+            const r = parseInt(localStorage.getItem('afmc_roll_no') || '0');
+            await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), {
+                token, roll: r || null, updatedAt: new Date().toISOString(), userAgent: navigator.userAgent.substring(0, 100)
+            });
+            onMessage(messaging, (payload) => {
+                const { title, body } = payload.notification || {};
+                showInAppToast(title || 'Schedule Update', body || '');
+            });
+        } catch (e) { console.warn('[Push] Subscription failed:', e); }
+    }
+
+    function showInAppToast(title, body) {
+        const existing = document.getElementById('push-toast');
+        if (existing) existing.remove();
+        const toast = document.createElement('div');
+        toast.id        = 'push-toast';
+        toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-[90%] bg-slate-800 border border-blue-500/40 rounded-2xl shadow-2xl px-4 py-3 flex items-start gap-3 transition-all';
+        toast.style.cssText = 'opacity:0; transform: translateX(-50%) translateY(-12px);';
+        toast.innerHTML = `
+            <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <p class="text-white font-black text-xs uppercase tracking-wide">${title}</p>
+                <p class="text-slate-400 text-[11px] mt-0.5 leading-snug">${body}</p>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white shrink-0 p-1">✕</button>`;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+            toast.style.opacity    = '1';
+            toast.style.transform  = 'translateX(-50%) translateY(0)';
+        });
+        setTimeout(() => {
+            if (!toast.parentElement) return;
+            toast.style.opacity   = '0';
+            toast.style.transform = 'translateX(-50%) translateY(-12px)';
+            setTimeout(() => toast.remove(), 300);
+        }, 6000);
+    }
+
+    function handleNotificationDeepLink({ notifType, eventDate, eventId }) {
+        switchView('schedule');
+        if (!eventDate) return;
+        setTimeout(() => {
+            const slide = document.querySelector(`.day-slide[data-date="${eventDate}"]`)
+                       || Array.from(document.querySelectorAll('.day-slide')).find(s => s.dataset.date >= eventDate);
+            if (!slide) return;
+            scrollToSlide(slide, true);
+            updateDatePickerLabel(eventDate);
+            if ((notifType === 'venue_change' || notifType === 'faculty_change') && eventId) {
+                setTimeout(() => {
+                    const idx = personalizedSchedule.findIndex(e => e.id === eventId);
+                    if (idx !== -1 && personalizedSchedule[idx].isDynamic) window.showDetails(eventDate, idx);
+                }, 400);
+            }
+        }, 100);
+    }
+
+    function checkUrlDeepLink() {
+        const params    = new URLSearchParams(window.location.search);
+        const eventDate = params.get('date');
+        const eventId   = params.get('eventId');
+        if (eventDate) {
+            handleNotificationDeepLink({ notifType: 'venue_change', eventDate, eventId });
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BOOT
+    // ═══════════════════════════════════════════════════════════════════════
+    window.onload = initialize;
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            if (!window.location.protocol.startsWith('http')) return;
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => { console.log('SW Registered'); setupPushSubscription(reg); })
+                .catch(err => console.log('SW Failed', err));
+        });
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            if (!event.data) return;
+            if (event.data.type === 'SW_UPDATED')         window.location.reload();
+            if (event.data.type === 'NOTIFICATION_CLICK') handleNotificationDeepLink(event.data);
+        });
+    }
     </script>
 </body>
 </html>
