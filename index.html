@@ -1643,37 +1643,40 @@
 
     async function setupPushSubscription() {
         try {
-            if (VAPID_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') return;
             if (!isPushSupported()) return;
-
-            // FCM may not have loaded yet — wait up to 5s
-            if (!window._fcm) {
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                if (!window._fcm) return; // FCM unavailable (old iOS, etc)
-            }
 
             const permission = Notification.permission;
 
             if (permission === 'granted') {
-                // Already allowed — subscribe silently using stored SW reg
-                const reg = window._swReg || await navigator.serviceWorker.ready;
-                await doSubscribe(reg);
+                // Already allowed — try to subscribe if FCM is configured
+                if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE' && window._fcm) {
+                    const reg = window._swReg || await navigator.serviceWorker.ready;
+                    await doSubscribe(reg);
+                }
 
             } else if (permission === 'default') {
-                // Show custom prompt — button click calls requestPermission directly
+                // Never asked — show custom prompt, then native dialog
+                // Permission prompt works independently of FCM/VAPID config
                 showPushPermissionPrompt(
                     () => {
-                        // This runs synchronously inside onclick → user gesture preserved
+                        // Fires synchronously inside onclick — user gesture preserved
                         Notification.requestPermission().then(async result => {
                             if (result === 'granted') {
-                                const reg = window._swReg || await navigator.serviceWorker.ready;
-                                await doSubscribe(reg);
+                                // Only subscribe to FCM if keys are configured
+                                if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+                                    // Wait for FCM to load if not yet ready
+                                    if (!window._fcm) await new Promise(r => setTimeout(r, 3000));
+                                    if (window._fcm) {
+                                        const reg = window._swReg || await navigator.serviceWorker.ready;
+                                        await doSubscribe(reg);
+                                    }
+                                }
                             } else {
                                 localStorage.setItem('push_denied_at', Date.now().toString());
                             }
                         });
                     },
-                    () => { /* Not Now — will ask again next session */ }
+                    () => { /* Not Now — ask again next session */ }
                 );
 
             } else if (permission === 'denied') {
@@ -1681,10 +1684,8 @@
                 const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
                 if (Date.now() - deniedAt < TWO_DAYS) return;
 
-                // 2 days elapsed — show prompt explaining settings path
                 showPushPermissionPrompt(
                     () => {
-                        // Can't call requestPermission when denied — guide to settings
                         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
                         const msg   = isIOS
                             ? 'Go to iOS Settings → Notifications → AFMC Schedule → Allow Notifications'
