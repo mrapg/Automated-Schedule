@@ -505,10 +505,6 @@
             measurementId: "G-KB7RQN5DD4"
         };
         const appId = "schedule-debeb";
-        // FCM Server Key — set this to your Firebase project's server key
-        // Go to Firebase Console → Project Settings → Cloud Messaging → Server key
-        const FCM_SERVER_KEY = 'YOUR_FCM_SERVER_KEY_HERE';
-        const FCM_API_URL = 'https://fcm.googleapis.com/fcm/send';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -517,15 +513,34 @@
         const tokensCollectionRef = collection(db, `artifacts/${appId}/public/data/push_tokens`);
 
         // ── Push Notification Sender ──────────────────────────────────────────
-        async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
-            showStatus('Fetching subscriber tokens...', 'info');
-            try {
-                const snap = await getDocs(tokensCollectionRef);
-                const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
-                if (tokens.length === 0) { showStatus('No subscribers found.', 'error'); return; }
+   async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
+    try {
+        const res = await fetch("/send-notification", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                title,
+                body,
+                type,
+                eventDate,
+                eventId
+            })
+        });
 
-                showStatus(`Sending to ${tokens.length} subscribers...`, 'info');
+        const result = await res.json();
 
+        if (result.success) {
+            showStatus(`✅ Notification sent to ${result.count} users`, "success");
+        } else {
+            showStatus(`❌ Notification failed`, "error");
+        }
+
+    } catch (e) {
+        showStatus(`❌ Error sending notification`, "error");
+    }
+}
                 // FCM accepts up to 1000 tokens per request — batch if needed
                 const BATCH_SIZE = 500;
                 let sent = 0;
