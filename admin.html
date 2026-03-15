@@ -59,6 +59,9 @@
             <button id="tab-manage" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-gray-400 hover:text-white hover:bg-gray-700">
                 ✏️ Manage Schedule
             </button>
+            <button id="tab-notify" class="px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-gray-400 hover:text-white hover:bg-gray-700">
+                📣 Send Notification
+            </button>
         </div>
 
         <!-- SECTION 1: BULK UPLOAD -->
@@ -311,7 +314,82 @@
         </div>
     </div>
 
-    <!-- Edit Modal -->
+        <!-- SECTION 4: SEND NOTIFICATION -->
+        <div id="view-notify" class="hidden bg-gray-800 rounded-2xl shadow-xl border border-gray-700 p-6 md:p-8 space-y-6">
+            <div>
+                <h2 class="text-xl font-bold text-white border-b border-gray-700 pb-4 mb-6">📣 Send Push Notification</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- Notification Type -->
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Notification Type</label>
+                        <select id="notif-type" class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 outline-none appearance-none cursor-pointer text-sm">
+                            <option value="general">📋 General Announcement</option>
+                            <option value="weekly_update">📅 Weekly Schedule Update</option>
+                            <option value="venue_change">📍 Venue Changed</option>
+                            <option value="faculty_change">👨‍🏫 Faculty Changed</option>
+                            <option value="holiday">🎉 Holiday Announced</option>
+                            <option value="cancellation">🚫 Class Cancelled</option>
+                        </select>
+                    </div>
+
+                    <!-- Target audience info -->
+                    <div class="flex items-end">
+                        <div class="w-full p-3 bg-gray-900/60 rounded-xl border border-gray-700 flex items-center gap-3">
+                            <span class="text-2xl font-black text-white" id="notify-tab-sub-count">—</span>
+                            <div>
+                                <p class="text-xs font-black text-gray-300 uppercase tracking-wider">Active Subscribers</p>
+                                <p class="text-[10px] text-gray-500">All subscribed devices will be notified</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Title & Body -->
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Notification Title</label>
+                    <input type="text" id="notif-title" placeholder="e.g. 📅 Weekly Schedule Updated"
+                        class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 outline-none transition font-medium">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Notification Body</label>
+                    <textarea id="notif-body" rows="3" placeholder="e.g. Your schedule for the upcoming week has been posted. Tap to view."
+                        class="w-full bg-gray-900 border border-gray-600 rounded-xl p-3 text-white focus:border-blue-500 outline-none transition resize-none text-sm"></textarea>
+                </div>
+            </div>
+
+            <!-- Deep-link fields (shown for venue/faculty change) -->
+            <div id="notif-deeplink-fields" class="hidden space-y-4 p-4 bg-orange-900/10 border border-orange-500/20 rounded-xl">
+                <p class="text-xs font-bold text-orange-300 uppercase tracking-widest">Deep Link (Optional — tap goes to specific class)</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Event Date (YYYY-MM-DD)</label>
+                        <input type="date" id="notif-event-date" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none text-sm [color-scheme:dark]">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Firestore Event ID (optional)</label>
+                        <input type="text" id="notif-event-id" placeholder="Leave blank if unknown"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none text-sm">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule option -->
+            <div class="flex items-center gap-3 p-3 bg-gray-900/40 rounded-xl border border-gray-700">
+                <input type="checkbox" id="notif-schedule-2000" class="w-5 h-5 rounded">
+                <div>
+                    <p class="text-sm font-bold text-gray-300">Schedule for 20:00 hrs tonight</p>
+                    <p class="text-[10px] text-gray-500">If unchecked, notification is sent immediately</p>
+                </div>
+            </div>
+
+            <!-- Send Button -->
+            <button id="send-notif-btn" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2 text-sm">
+                <span>📣</span> Send Notification Now
+            </button>
+        </div>
     <div id="edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-gray-900 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b border-gray-800 flex justify-between items-center">
@@ -553,8 +631,8 @@
         };
 
         // DOM Elements
-        const views = { upload: document.getElementById('view-upload'), add: document.getElementById('view-add'), manage: document.getElementById('view-manage') };
-        const tabs = { upload: document.getElementById('tab-upload'), add: document.getElementById('tab-add'), manage: document.getElementById('tab-manage') };
+        const views = { upload: document.getElementById('view-upload'), add: document.getElementById('view-add'), manage: document.getElementById('view-manage'), notify: document.getElementById('view-notify') };
+        const tabs = { upload: document.getElementById('tab-upload'), add: document.getElementById('tab-add'), manage: document.getElementById('tab-manage'), notify: document.getElementById('tab-notify') };
         const statusMessage = document.getElementById('status-message');
         
         let allEvents = [];
@@ -578,6 +656,8 @@
             try {
                 const snap = await getDocs(tokensCollectionRef);
                 document.getElementById('subscriber-count').textContent = snap.size;
+                const notifyCount = document.getElementById('notify-tab-sub-count');
+                if (notifyCount) notifyCount.textContent = snap.size;
             } catch (e) {
                 document.getElementById('subscriber-count').textContent = '—';
             }
@@ -604,6 +684,7 @@
             tabs[tabName].classList.remove('text-gray-400', 'hover:text-white');
             tabs[tabName].classList.add('bg-blue-600', 'text-white', 'shadow-lg');
             if (tabName === 'manage') loadEvents();
+            if (tabName === 'notify') loadSubscriberCount();
         }
 
         // Manage Events
@@ -875,6 +956,7 @@
             tabs.upload.onclick = () => switchTab('upload');
             tabs.add.onclick = () => switchTab('add');
             tabs.manage.onclick = () => switchTab('manage');
+            tabs.notify.onclick = () => switchTab('notify');
             document.getElementById('refresh-btn').onclick = loadEvents;
             document.getElementById('refresh-subscribers-btn').onclick = loadSubscriberCount;
             document.getElementById('select-all-checkbox').onchange = (e) => toggleSelectAll(e.target.checked);
@@ -1011,7 +1093,50 @@
 
             document.getElementById('clear-btn').onclick = () => { scheduleInput.value = ''; showStatus("Cleared."); };
 
-            const dateTimeInputs = document.querySelectorAll('input[type="date"], input[type="time"]');
+            // Standalone notification tab — auto-fill title/body on type change
+            const NOTIF_TEMPLATES = {
+                general:       { title: '📋 AFMC Announcement',        body: '' },
+                weekly_update: { title: '📅 Weekly Schedule Updated',   body: 'Your schedule for the upcoming week has been posted. Tap to view.' },
+                venue_change:  { title: '📍 Venue Changed',             body: 'A class venue has been updated. Tap to view details.' },
+                faculty_change:{ title: '👨‍🏫 Faculty Changed',           body: 'A class faculty has been updated. Tap to view details.' },
+                holiday:       { title: '🎉 Holiday Announced',         body: 'A holiday has been announced. Check your schedule.' },
+                cancellation:  { title: '🚫 Class Cancelled',           body: 'A class has been cancelled. Please check your updated schedule.' },
+            };
+            document.getElementById('notif-type').addEventListener('change', (e) => {
+                const t = NOTIF_TEMPLATES[e.target.value] || {};
+                document.getElementById('notif-title').value = t.title || '';
+                document.getElementById('notif-body').value  = t.body  || '';
+                // Show deep-link fields only for venue/faculty changes
+                const showDeeplink = ['venue_change','faculty_change'].includes(e.target.value);
+                document.getElementById('notif-deeplink-fields').classList.toggle('hidden', !showDeeplink);
+            });
+
+            // Update subscriber count shown in notify tab
+            async function loadNotifyTabSubCount() {
+                try {
+                    const snap = await getDocs(tokensCollectionRef);
+                    document.getElementById('notify-tab-sub-count').textContent = snap.size;
+                } catch { document.getElementById('notify-tab-sub-count').textContent = '—'; }
+            }
+
+            // Send notification button
+            document.getElementById('send-notif-btn').onclick = async () => {
+                const type       = document.getElementById('notif-type').value;
+                const title      = document.getElementById('notif-title').value.trim();
+                const body       = document.getElementById('notif-body').value.trim();
+                const eventDate  = document.getElementById('notif-event-date')?.value || null;
+                const eventId    = document.getElementById('notif-event-id')?.value.trim() || null;
+                const schedule   = document.getElementById('notif-schedule-2000').checked;
+
+                if (!title) return showStatus('❌ Title is required.', 'error');
+                if (!body)  return showStatus('❌ Body is required.', 'error');
+
+                if (schedule) {
+                    scheduleNotifAt2000({ title, body, type, eventDate, eventId });
+                } else {
+                    await sendPushNotification({ title, body, type, eventDate, eventId });
+                }
+            };
             dateTimeInputs.forEach(input => {
                 input.addEventListener('click', () => {
                     if (typeof input.showPicker === 'function') { try { input.showPicker(); } catch (e) {} }
