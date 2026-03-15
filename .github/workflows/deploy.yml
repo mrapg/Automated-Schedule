@@ -20,3 +20,8 @@ jobs:
         with:
           branch: gh-pages
           folder: .
+          exclude: |
+            functions/**
+            .firebaserc
+            firebase.json
+            node_modules/**
