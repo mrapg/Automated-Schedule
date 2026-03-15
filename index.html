@@ -18,8 +18,8 @@
         /* --- Layout & Scroll Locking --- */
         html, body { 
             height: 100%; 
-            overflow: hidden; /* Freezes the background */
-            overscroll-behavior: none; /* Prevents bounce effects */
+            overflow: hidden;
+            overscroll-behavior: none;
         }
         body { 
             font-family: 'Inter', sans-serif; 
@@ -30,22 +30,21 @@
 
         /* --- App Container --- */
         #app-container {
-            height: 100dvh; /* Exact viewport height */
+            height: 100dvh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Clips anything extending beyond screen */
+            overflow: hidden;
         }
         
         /* --- Independent Slide Scrolling --- */
         .day-view { 
             scroll-snap-type: x mandatory; 
             scroll-behavior: smooth; 
-            flex: 1; /* Takes all remaining height */
+            flex: 1;
             height: 100%;
-            overflow-x: auto; /* Horizontal swipe enabled */
-            overflow-y: hidden; /* Vertical scroll disabled on wrapper */
+            overflow-x: auto;
+            overflow-y: hidden;
             display: flex;
-            /* Hide scrollbar for the wrapper */
             scrollbar-width: none; 
         }
         .day-view::-webkit-scrollbar { display: none; }
@@ -54,18 +53,15 @@
             scroll-snap-align: start; 
             flex-shrink: 0; 
             width: 100%; 
-            height: 100%; /* Matches wrapper height */
-            overflow-y: auto; /* Enables vertical scroll per slide */
-            overscroll-behavior-y: contain; /* Prevents scroll chaining */
+            height: 100%;
+            overflow-y: auto;
+            overscroll-behavior-y: contain;
         }
         
-        /* --- Custom Scrollbar Styling (Shared) --- */
-        /* Applied to both .day-slide and .custom-scrollbar */
         .day-slide::-webkit-scrollbar, 
         .custom-scrollbar::-webkit-scrollbar { 
             width: 4px; 
         }
-        
         .day-slide::-webkit-scrollbar-thumb, 
         .custom-scrollbar::-webkit-scrollbar-thumb { 
             background: #334155; 
@@ -107,8 +103,6 @@
 
         /* --- Transitions --- */
         .tab-content { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
-        
-        /* REMOVED overflow: hidden from here to prevent locking the Log tab */
         .tab-content.active { display: flex; opacity: 1; height: 100%; } 
         
         #detail-panel {
@@ -125,6 +119,82 @@
         #install-banner.visible {
             max-height: 150px; opacity: 1; padding: 1rem;
         }
+
+        /* --- Calendar Month View --- */
+        #calendar-overlay {
+            transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        #calendar-overlay.cal-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-8px);
+        }
+        #calendar-overlay.cal-visible {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .cal-day-cell {
+            min-height: 100px;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-radius: 0;
+        }
+        .cal-day-cell:active { background: rgba(255,255,255,0.06); }
+        .cal-day-cell.today-cell .cal-day-num {
+            background: #2563eb;
+            color: #fff;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .cal-day-cell.other-month { opacity: 0.25; }
+        .cal-day-cell.is-sunday .cal-day-num { color: #fbbf24; }
+        .cal-day-cell.is-holiday { background: rgba(251,191,36,0.07); }
+
+        .event-chip {
+            font-size: 7.5px;
+            font-weight: 700;
+            line-height: 1.25;
+            padding: 1.5px 3px;
+            border-radius: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.01em;
+            cursor: pointer;
+            margin-bottom: 1.5px;
+        }
+
+        /* Chip colors by department */
+        .chip-medicine    { background: #1d4ed8; color: #bfdbfe; }
+        .chip-surgery     { background: #065f46; color: #a7f3d0; }
+        .chip-obg         { background: #9f1239; color: #fecdd3; }
+        .chip-paeds       { background: #9d174d; color: #fbcfe8; }
+        .chip-ent         { background: #92400e; color: #fde68a; }
+        .chip-ortho       { background: #7c2d12; color: #fed7aa; }
+        .chip-ophthal     { background: #4c1d95; color: #ddd6fe; }
+        .chip-derm        { background: #713f12; color: #fef08a; }
+        .chip-psych       { background: #312e81; color: #c7d2fe; }
+        .chip-anaes       { background: #164e63; color: #a5f3fc; }
+        .chip-em          { background: #7f1d1d; color: #fca5a5; }
+        .chip-elective    { background: #4c1d95; color: #e9d5ff; }
+        .chip-holiday     { background: #14532d; color: #86efac; }
+        .chip-radiology   { background: #1f2937; color: #d1d5db; }
+        .chip-default     { background: #1e293b; color: #94a3b8; }
+
+        #cal-scroll-area::-webkit-scrollbar { display: none; }
+
+        /* Carousel slides — hide scrollbar */
+        .cal-month-slide { scrollbar-width: none; }
+        .cal-month-slide::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="transition-colors duration-200 fixed inset-0 overflow-hidden">
@@ -181,7 +251,6 @@
     </div>
 
     <!-- Detail View Overlay -->
-    <!-- Removed 'backdrop-blur-sm' to prevent iOS crash -->
     <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[130] hidden transition-opacity">
         <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]">
             <div id="detail-drag-zone" class="w-full flex justify-center py-6 -mt-8 mb-2 cursor-grab active:cursor-grabbing touch-none">
@@ -192,9 +261,62 @@
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- CALENDAR OVERLAY — full-screen month view                    -->
+    <!-- ============================================================ -->
+    <div id="calendar-overlay" class="cal-hidden fixed inset-0 bg-slate-950/98 z-[115] flex flex-col max-w-lg mx-auto">
+
+        <!-- Cal Header -->
+        <div class="bg-slate-950 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0">
+            <button id="cal-close-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+            <div class="flex items-center gap-4">
+                <button id="cal-prev-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform font-black text-lg leading-none">‹</button>
+                <h2 id="cal-month-label" class="text-base font-black text-white uppercase tracking-widest w-32 text-center"></h2>
+                <button id="cal-next-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform font-black text-lg leading-none">›</button>
+            </div>
+            <button id="cal-today-btn" class="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg active:scale-95 transition-transform">Today</button>
+        </div>
+
+        <!-- Day-of-week header -->
+        <div class="grid grid-cols-7 bg-slate-900 border-b border-slate-800 shrink-0">
+            <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">M</div>
+            <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">T</div>
+            <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">W</div>
+            <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">T</div>
+            <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">F</div>
+            <div class="text-[9px] font-black text-slate-500 uppercase tracking-widest text-center py-2">S</div>
+            <div class="text-[9px] font-black text-red-500/70 uppercase tracking-widest text-center py-2">S</div>
+        </div>
+
+        <!-- Cal Grid — swipeable carousel -->
+        <div id="cal-swipe-wrapper" class="flex-1 overflow-hidden relative touch-pan-y">
+            <div id="cal-carousel" class="flex h-full" style="transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); will-change: transform;">
+                <!-- 3 slides: prev / current / next month -->
+                <div class="cal-month-slide flex-shrink-0 w-full h-full overflow-y-auto bg-slate-900" id="cal-slide-0">
+                    <div class="cal-grid-inner grid grid-cols-7 gap-px bg-slate-800/60 p-px"></div>
+                </div>
+                <div class="cal-month-slide flex-shrink-0 w-full h-full overflow-y-auto bg-slate-900" id="cal-slide-1">
+                    <div class="cal-grid-inner grid grid-cols-7 gap-px bg-slate-800/60 p-px"></div>
+                </div>
+                <div class="cal-month-slide flex-shrink-0 w-full h-full overflow-y-auto bg-slate-900" id="cal-slide-2">
+                    <div class="cal-grid-inner grid grid-cols-7 gap-px bg-slate-800/60 p-px"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div id="cal-legend" class="bg-slate-950 border-t border-slate-800 px-4 py-2 flex flex-wrap gap-2 shrink-0">
+            <!-- Injected by JS -->
+        </div>
+    </div>
+
     <!-- Main App Container -->
     <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl h-screen flex flex-col border-x border-slate-800 overflow-hidden relative">
-        <!-- Main Header remains fixed at top -->
+        <!-- Main Header -->
         <header class="bg-slate-950 text-white p-4 sticky top-0 z-[50] border-b border-slate-800 shadow-lg shrink-0">
             <div class="flex justify-between items-center">
                 <div>
@@ -223,12 +345,16 @@
                         Today
                     </button>
                     
-                    <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer overflow-hidden group">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <!-- Calendar View button — replaces the old date picker pill -->
+                    <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-violet-500 hover:bg-violet-900/20 transition-all cursor-pointer overflow-hidden group">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-violet-400 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <span id="date-picker-label" class="text-[10px] font-black text-slate-200 uppercase tracking-tighter">Date</span>
-                        <input type="date" id="date-picker" class="absolute inset-0 opacity-0 cursor-pointer">
+                        <!-- Hidden date input preserved for JS compatibility -->
+                        <input type="date" id="date-picker" class="absolute inset-0 opacity-0 cursor-pointer" style="display:none">
+                        <!-- Invisible full-area click target for calendar open -->
+                        <button id="open-calendar-btn" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" aria-label="Open calendar view"></button>
                     </div>
                 </div>
                 
@@ -274,13 +400,8 @@
                 </div>
             </div>
             
-            <!-- Scrollable Content Area -->
-            <!-- ADDED: custom-scrollbar and overscroll-contain classes -->
-            <!-- MODIFIED: Reduced pb-24 to pb-20 to match smaller footer -->
             <div class="flex-1 overflow-y-auto pb-20 px-4 space-y-3 custom-scrollbar overscroll-contain" id="log-scroll-area">
-                 <div id="log-container">
-                     <!-- Dynamic Content Here -->
-                 </div>
+                 <div id="log-container"></div>
             </div>
         </div>
 
@@ -289,16 +410,13 @@
     <!-- Bottom Navigation Bar -->
     <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 z-50 bottom-nav-safe">
         <div class="flex justify-around items-center max-w-lg mx-auto">
-            <!-- MODIFIED: Changed py-3 to py-1.5 to reduce height -->
             <button id="nav-schedule" class="flex-1 py-1.5 flex flex-col items-center gap-1 group transition-colors text-blue-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-active:scale-95 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span class="text-[9px] font-black uppercase tracking-widest">Schedule</span>
             </button>
-            <!-- MODIFIED: Changed h-8 to h-5 to match new height -->
             <div class="w-px h-5 bg-slate-800"></div>
-            <!-- MODIFIED: Changed py-3 to py-1.5 to reduce height -->
             <button id="nav-log" class="flex-1 py-1.5 flex flex-col items-center gap-1 group transition-colors text-slate-500 hover:text-slate-300">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-active:scale-95 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
@@ -462,6 +580,27 @@
             return styles[dept] || "border-slate-600 bg-slate-800 text-slate-300";
         };
 
+        // --- Calendar chip class by department ---
+        const getChipClass = (dept, isHoliday) => {
+            if (isHoliday) return 'chip-holiday';
+            const map = {
+                "Internal Medicine": "chip-medicine",
+                "Surgery": "chip-surgery",
+                "Obs & Gynae": "chip-obg",
+                "Paediatrics": "chip-paeds",
+                "ENT": "chip-ent",
+                "Orthopaedics": "chip-ortho",
+                "Ophthalmology": "chip-ophthal",
+                "Dermatology": "chip-derm",
+                "Psychiatry": "chip-psych",
+                "Anaesthesia": "chip-anaes",
+                "Emergency Medicine": "chip-em",
+                "Electives": "chip-elective",
+                "Radiology": "chip-radiology",
+            };
+            return map[dept] || 'chip-default';
+        };
+
         let rollNo = localStorage.getItem('afmc_roll_no');
         let personalizedSchedule = [];
         let currentFilter = 'all';
@@ -469,6 +608,10 @@
         let deferredPrompt; 
         let logFuse = null;
         let cachedLogData = [];
+
+        // --- Calendar State ---
+        let calCurrentYear = new Date().getFullYear();
+        let calCurrentMonth = new Date().getMonth(); // 0-indexed
 
         function updateOfflineNotice(msg) {
             const notice = document.getElementById('offline-notice');
@@ -490,7 +633,7 @@
                 const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
                 const querySnapshot = await getDocs(scheduleCollectionRef);
                 querySnapshot.forEach((doc) => { const data = doc.data(); data.id = doc.id; data.isDynamic = true; dynamicEvents.push(data); });
-                if (dynamicEvents.length > 0) { localStorage.setItem('afmc_schedule_cache', JSON.stringify(dynamicEvents)); console.log('Schedule synced.'); }
+                if (dynamicEvents.length > 0) { localStorage.setItem('afmc_schedule_cache', JSON.stringify(dynamicEvents)); }
             } catch (e) {
                 console.warn('Firebase fetch failed:', e);
                 const cachedData = localStorage.getItem('afmc_schedule_cache');
@@ -501,13 +644,16 @@
                 render();
                 generateTopicsLog(); 
                 setupAppListeners();
-                const today = getTodayStr(); document.getElementById('date-picker').value = today; updateDatePickerLabel(today);
+                const today = getTodayStr(); updateDatePickerLabel(today);
                 document.getElementById('loading-indicator').classList.add('hidden');
+                // Init calendar to current month
+                calCurrentMonth = new Date().getMonth();
+                calCurrentYear = new Date().getFullYear();
             }
         }
 
         function generateSchedule(gBatch, cBatch, sBatch, dynamicEvents = []) {
-             const data = [];
+            const data = [];
             let current = new Date(termStartDate);
             const eStart = new Date(electivePeriod.start + 'T00:00:00Z');
             const eEnd = new Date(electivePeriod.end + 'T00:00:00Z');
@@ -530,7 +676,6 @@
                 
                 filteredDynamicForMe.forEach(e => {
                     const entry = { ...e, department: normalizeDept(e.department) };
-                    // Removed the line that forced "NLH Sushruta" for ALL batches
                     if (!entry.topic || entry.topic.trim().toUpperCase() !== "NULL") { data.push(entry); }
                 });
 
@@ -575,7 +720,6 @@
                         }
                     } else {
                         if (!isSlotOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
-                        if (!isSlotOverridden("17:00")) addEntry(data, ds, "17:00-20:00", "Labour Room Duty", "Obs & Gynae", "Labour Room");
                     }
                 }
                 current.setUTCDate(current.getUTCDate() + 1);
@@ -591,6 +735,338 @@
             const [start, end] = timeRange.split('-');
             data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
         }
+
+        // ================================================================
+        // CALENDAR VIEW LOGIC — swipeable month carousel
+        // ================================================================
+
+        // Carousel state: currentSlot is always the "centre" slide (index 1)
+        // Slots: 0=prev, 1=current, 2=next
+        // We render 3 months and translate the strip so slot 1 is visible.
+        // On swipe commit, we shift months and re-render.
+
+        let calIsAnimating = false;
+
+        function openCalendar() {
+            const visDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
+            calCurrentYear = visDate.getUTCFullYear();
+            calCurrentMonth = visDate.getUTCMonth();
+            renderAllCalSlides();
+            const overlay = document.getElementById('calendar-overlay');
+            overlay.classList.remove('cal-hidden');
+            overlay.classList.add('cal-visible');
+        }
+
+        function closeCalendar() {
+            const overlay = document.getElementById('calendar-overlay');
+            overlay.classList.remove('cal-visible');
+            overlay.classList.add('cal-hidden');
+        }
+
+        // Render a month into a specific slide grid
+        function renderMonthIntoSlide(slideIndex, year, month) {
+            const slide = document.getElementById(`cal-slide-${slideIndex}`);
+            const grid = slide.querySelector('.cal-grid-inner');
+            grid.innerHTML = '';
+            slide.scrollTop = 0;
+
+            const todayStr = getTodayStr();
+            const eventMap = {};
+            personalizedSchedule.forEach(e => {
+                if (!eventMap[e.date]) eventMap[e.date] = [];
+                eventMap[e.date].push(e);
+            });
+
+            const firstDay = new Date(Date.UTC(year, month, 1));
+            const lastDay = new Date(Date.UTC(year, month + 1, 0));
+            const startOffset = (firstDay.getUTCDay() + 6) % 7;
+            const totalDays = lastDay.getUTCDate();
+            const legendDepts = new Set();
+
+            for (let i = 0; i < startOffset; i++) {
+                const prevDate = new Date(Date.UTC(year, month, 1 - startOffset + i));
+                const ds = prevDate.toISOString().split('T')[0];
+                grid.appendChild(buildDayCell(ds, prevDate.getUTCDate(), true, eventMap[ds] || [], todayStr, legendDepts));
+            }
+            for (let d = 1; d <= totalDays; d++) {
+                const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                grid.appendChild(buildDayCell(ds, d, false, eventMap[ds] || [], todayStr, legendDepts));
+            }
+            const totalCells = startOffset + totalDays;
+            const remainder = totalCells % 7;
+            if (remainder !== 0) {
+                const extra = 7 - remainder;
+                for (let i = 1; i <= extra; i++) {
+                    const nextDate = new Date(Date.UTC(year, month + 1, i));
+                    const ds = nextDate.toISOString().split('T')[0];
+                    grid.appendChild(buildDayCell(ds, nextDate.getUTCDate(), true, eventMap[ds] || [], todayStr, legendDepts));
+                }
+            }
+            return legendDepts;
+        }
+
+        function offsetMonth(year, month, delta) {
+            let m = month + delta;
+            let y = year;
+            while (m > 11) { m -= 12; y++; }
+            while (m < 0)  { m += 12; y--; }
+            return { year: y, month: m };
+        }
+
+        function renderAllCalSlides() {
+            const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+            document.getElementById('cal-month-label').textContent = `${monthNames[calCurrentMonth]} ${calCurrentYear}`;
+
+            const prev = offsetMonth(calCurrentYear, calCurrentMonth, -1);
+            const next = offsetMonth(calCurrentYear, calCurrentMonth, +1);
+
+            renderMonthIntoSlide(0, prev.year, prev.month);
+            const legendDepts = renderMonthIntoSlide(1, calCurrentYear, calCurrentMonth);
+            renderMonthIntoSlide(2, next.year, next.month);
+
+            // Reset carousel to centre (no animation)
+            const carousel = document.getElementById('cal-carousel');
+            carousel.style.transition = 'none';
+            carousel.style.transform = 'translateX(-100%)';
+            renderCalLegend(legendDepts);
+        }
+
+        function commitMonthShift(direction) {
+            // direction: -1 = go to prev, +1 = go to next
+            if (calIsAnimating) return;
+            calIsAnimating = true;
+            const carousel = document.getElementById('cal-carousel');
+            const targetX = direction === 1 ? '-200%' : '0%';
+
+            carousel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+            carousel.style.transform = `translateX(${targetX})`;
+
+            carousel.addEventListener('transitionend', function handler() {
+                carousel.removeEventListener('transitionend', handler);
+                const shifted = offsetMonth(calCurrentYear, calCurrentMonth, direction);
+                calCurrentYear = shifted.year;
+                calCurrentMonth = shifted.month;
+                renderAllCalSlides();
+                calIsAnimating = false;
+            }, { once: true });
+        }
+
+        // Legacy renderCalendar alias (used by cal-today-btn)
+        function renderCalendar() { renderAllCalSlides(); }
+
+        // Swipe handling on the carousel wrapper
+        function setupCalSwipe() {
+            const wrapper = document.getElementById('cal-swipe-wrapper');
+            const carousel = document.getElementById('cal-carousel');
+
+            // --- Touch (mobile) ---
+            let touchStartX = 0, touchStartY = 0, touchDeltaX = 0;
+            let isSwiping = false, isVertical = false;
+
+            wrapper.addEventListener('touchstart', (e) => {
+                if (calIsAnimating) return;
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+                touchDeltaX = 0;
+                isSwiping = true;
+                isVertical = false;
+                carousel.style.transition = 'none';
+            }, { passive: true });
+
+            wrapper.addEventListener('touchmove', (e) => {
+                if (!isSwiping || calIsAnimating) return;
+                const dx = e.touches[0].clientX - touchStartX;
+                const dy = e.touches[0].clientY - touchStartY;
+
+                if (!isVertical && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) {
+                    isVertical = true;
+                }
+                if (isVertical) return;
+
+                if (Math.abs(dx) > 5) {
+                    e.preventDefault();
+                    touchDeltaX = dx;
+                    carousel.style.transform = `translateX(calc(-100% + ${dx}px))`;
+                }
+            }, { passive: false });
+
+            wrapper.addEventListener('touchend', () => {
+                if (!isSwiping || calIsAnimating || isVertical) { isSwiping = false; return; }
+                isSwiping = false;
+                const threshold = wrapper.offsetWidth * 0.25;
+                if (touchDeltaX < -threshold) {
+                    commitMonthShift(+1);
+                } else if (touchDeltaX > threshold) {
+                    commitMonthShift(-1);
+                } else {
+                    carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+                    carousel.style.transform = 'translateX(-100%)';
+                }
+            }, { passive: true });
+
+            // --- Trackpad / mouse wheel ---
+            // Accumulate deltaX; commit once a clear horizontal swipe is detected.
+            // Debounce so rapid small deltas don't fire multiple months.
+            let wheelAccumX = 0, wheelAccumY = 0;
+            let wheelTimer = null;
+            const WHEEL_THRESHOLD = 60; // px of horizontal scroll to trigger
+
+            wrapper.addEventListener('wheel', (e) => {
+                if (calIsAnimating) return;
+
+                wheelAccumX += e.deltaX;
+                wheelAccumY += e.deltaY;
+
+                // If scroll is clearly more vertical than horizontal, let it scroll the slide
+                if (Math.abs(wheelAccumY) > Math.abs(wheelAccumX) * 1.5) {
+                    wheelAccumX = 0; wheelAccumY = 0;
+                    return;
+                }
+
+                // Horizontal gesture detected — prevent vertical scroll bleed
+                if (Math.abs(wheelAccumX) > 8) e.preventDefault();
+
+                // Live-drag the carousel to give tactile feedback
+                const liveOffset = Math.max(-120, Math.min(120, -wheelAccumX));
+                carousel.style.transition = 'none';
+                carousel.style.transform = `translateX(calc(-100% + ${liveOffset}px))`;
+
+                // Debounce: commit after gesture settles
+                clearTimeout(wheelTimer);
+                wheelTimer = setTimeout(() => {
+                    if (Math.abs(wheelAccumX) >= WHEEL_THRESHOLD) {
+                        commitMonthShift(wheelAccumX > 0 ? +1 : -1);
+                    } else {
+                        // Snap back
+                        carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+                        carousel.style.transform = 'translateX(-100%)';
+                    }
+                    wheelAccumX = 0; wheelAccumY = 0;
+                }, 80);
+            }, { passive: false });
+        }
+
+        function buildDayCell(dateStr, dayNum, isOtherMonth, events, todayStr, legendDepts) {
+            const cell = document.createElement('div');
+            const isToday = dateStr === todayStr;
+            const dayOfWeek = new Date(dateStr + 'T00:00:00Z').getUTCDay(); // 0=Sun
+            const isSunday = dayOfWeek === 0;
+            const inTerm = dateStr >= '2026-01-12' && dateStr <= '2026-05-17';
+            const holidayEvent = events.find(e => e.isHoliday);
+            const isHoliday = !!holidayEvent;
+
+            cell.className = [
+                'cal-day-cell bg-slate-900 p-1.5 flex flex-col',
+                isOtherMonth ? 'other-month' : '',
+                isToday ? 'today-cell' : '',
+                isSunday ? 'is-sunday' : '',
+                isHoliday ? 'is-holiday' : '',
+            ].join(' ');
+            cell.dataset.date = dateStr;
+
+            // Day number row
+            const numRow = document.createElement('div');
+            numRow.className = 'flex items-center justify-between mb-1';
+
+            const numEl = document.createElement('div');
+            numEl.className = [
+                'cal-day-num text-[11px] font-black',
+                isSunday ? 'text-amber-400' : 'text-slate-300',
+                isOtherMonth ? '!text-slate-600' : '',
+                isToday ? '!text-white' : '',
+            ].join(' ');
+            numEl.textContent = dayNum;
+            numRow.appendChild(numEl);
+            cell.appendChild(numRow);
+
+            // Holiday: bright yellow banner + confetti
+            if (isHoliday && !isOtherMonth) {
+                legendDepts.add('__holiday__');
+                const banner = document.createElement('div');
+                banner.className = 'rounded bg-amber-400/20 border border-amber-400/40 px-1 py-1 text-center mb-1';
+                banner.innerHTML = `<div class="text-base leading-none mb-0.5">🎉</div><span class="text-[8px] font-black text-amber-300 uppercase tracking-wide block leading-tight">${(holidayEvent.topic || 'Holiday').replace(/Holiday/i,'').trim() || 'Holiday'}</span>`;
+                cell.appendChild(banner);
+            }
+            // Sunday (no holiday): just a small sun marker
+            else if (isSunday && !isOtherMonth) {
+                const sunEl = document.createElement('div');
+                sunEl.className = 'text-center text-base leading-none mb-1';
+                sunEl.textContent = '☀️';
+                cell.appendChild(sunEl);
+            }
+            // Regular day: show event chips
+            else if (inTerm && !isOtherMonth) {
+                const sorted = [...events].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+                const MAX_CHIPS = 4;
+                sorted.slice(0, MAX_CHIPS).forEach(e => {
+                    const dept = e.department || 'Other';
+                    legendDepts.add(dept);
+                    const chip = document.createElement('span');
+                    chip.className = `event-chip ${getChipClass(dept, false)}`;
+                    const label = e.topic ? e.topic.replace(/Tutorial|SDL|Clinics/gi, '').trim() : dept;
+                    chip.textContent = label || dept;
+                    cell.appendChild(chip);
+                });
+                if (sorted.length > MAX_CHIPS) {
+                    const more = document.createElement('span');
+                    more.className = 'text-[8px] font-black text-slate-500 pl-0.5 mt-0.5';
+                    more.textContent = `+${sorted.length - MAX_CHIPS} more`;
+                    cell.appendChild(more);
+                }
+            }
+
+            // Click: go to this date in schedule view
+            cell.addEventListener('click', () => {
+                closeCalendar();
+                switchView('schedule');
+                setTimeout(() => {
+                    // Find nearest date in schedule if exact not found (filtered view)
+                    let targetSlide = document.querySelector(`.day-slide[data-date="${dateStr}"]`);
+                    if (!targetSlide) {
+                        // find nearest future slide
+                        const allSlides = Array.from(document.querySelectorAll('.day-slide'));
+                        targetSlide = allSlides.find(s => s.dataset.date >= dateStr);
+                    }
+                    if (targetSlide) {
+                        scrollToSlide(targetSlide, true);
+                        updateDatePickerLabel(dateStr);
+                    }
+                }, 50);
+            });
+
+            return cell;
+        }
+
+        function renderCalLegend(deptSet) {
+            const legendEl = document.getElementById('cal-legend');
+            legendEl.innerHTML = '';
+
+            const chipMap = {
+                "Internal Medicine": { cls: "chip-medicine", label: "Medicine" },
+                "Surgery": { cls: "chip-surgery", label: "Surgery" },
+                "Obs & Gynae": { cls: "chip-obg", label: "OBG" },
+                "Paediatrics": { cls: "chip-paeds", label: "Paeds" },
+                "ENT": { cls: "chip-ent", label: "ENT" },
+                "Orthopaedics": { cls: "chip-ortho", label: "Ortho" },
+                "Ophthalmology": { cls: "chip-ophthal", label: "Ophtha" },
+                "Dermatology": { cls: "chip-derm", label: "Derm" },
+                "Psychiatry": { cls: "chip-psych", label: "Psych" },
+                "Anaesthesia": { cls: "chip-anaes", label: "Anaes" },
+                "Emergency Medicine": { cls: "chip-em", label: "EM" },
+                "Radiology": { cls: "chip-radiology", label: "Radio" },
+            };
+
+            deptSet.forEach(dept => {
+                const info = chipMap[dept];
+                if (!info) return;
+                const item = document.createElement('div');
+                item.className = 'flex items-center gap-1';
+                item.innerHTML = `<span class="event-chip ${info.cls} text-[8px] px-1.5 py-0.5">${info.label}</span>`;
+                legendEl.appendChild(item);
+            });
+        }
+
+        // ================================================================
 
         function generateTopicsLog() {
             const todayStr = getTodayStr();
@@ -717,7 +1193,6 @@
                 const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
                 if (currentFilter === 'all' || filteredEvents.length > 0) {
                     const slide = document.createElement('div');
-                    // MODIFIED: Changed pb-32 to pb-24 to match smaller footer
                     slide.className = 'day-slide p-5 pb-24 overflow-y-auto'; 
                     slide.dataset.date = ds;
                     const isToday = ds === todayStr;
@@ -804,7 +1279,6 @@
             const event = personalizedSchedule[index];
             if (!event || !event.isDynamic) return;
             const content = document.getElementById('detail-content');
-            // MODIFIED: Added check for BOTH instructor and faculty keys
             const facultyName = event.instructor || event.faculty || 'Staff';
             content.innerHTML = `
                 <div class="space-y-6">
@@ -834,8 +1308,10 @@
         }
 
         function updateDatePickerLabel(dateStr) {
-            const date = new Date(dateStr);
-            document.getElementById('date-picker-label').textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+            const date = new Date(dateStr + 'T00:00:00Z');
+            const label = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
+            const el = document.getElementById('date-picker-label');
+            if (el) el.textContent = label;
         }
 
         function setupOnboardingListeners() {
@@ -865,9 +1341,25 @@
             document.getElementById('log-search').addEventListener('input', (e) => renderSearchResults(e.target.value));
             document.getElementById('change-roll-btn').onclick = () => { localStorage.removeItem('afmc_roll_no'); location.reload(); };
             document.getElementById('today-btn').onclick = () => { const todayStr = getTodayStr(); const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`); if (todaySlide) { scrollToSlide(todaySlide); updateDatePickerLabel(todayStr); } };
-            document.getElementById('date-picker').onchange = (e) => { const targetSlide = document.querySelector(`.day-slide[data-date="${e.target.value}"]`); if (targetSlide) { scrollToSlide(targetSlide); updateDatePickerLabel(e.target.value); } };
             document.getElementById('dept-filter').onchange = (e) => { currentFilter = e.target.value; document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text; render(); };
             
+            // Calendar button
+            document.getElementById('open-calendar-btn').onclick = openCalendar;
+            document.getElementById('cal-close-btn').onclick = closeCalendar;
+            document.getElementById('cal-today-btn').onclick = () => {
+                closeCalendar();
+                switchView('schedule');
+                const todayStr = getTodayStr();
+                setTimeout(() => {
+                    const todaySlide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
+                    if (todaySlide) { scrollToSlide(todaySlide, true); updateDatePickerLabel(todayStr); }
+                }, 50);
+            };
+            document.getElementById('cal-prev-btn').onclick = () => commitMonthShift(-1);
+            document.getElementById('cal-next-btn').onclick = () => commitMonthShift(+1);
+            setupCalSwipe();
+
+            // Add to Calendar (ICS export)
             document.getElementById('add-to-calendar-btn').onclick = () => {
                 const toICSDate = (date, time) => `${date.replace(/-/g, '')}T${time.replace(/:/g, '')}00`;
                 const visibleDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
@@ -876,10 +1368,11 @@
                 const weekEvents = personalizedSchedule.filter(e => { const eDate = new Date(e.date + 'T00:00:00Z'); return eDate >= weekStart && eDate <= weekEnd; });
                 if (weekEvents.length === 0) return;
                 let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-                weekEvents.forEach(e => { ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT'); });
+                weekEvents.forEach(e => { ics.push('BEGIN:VEVENT',`SUMMARY:${e.topic}`,`DTSTART;TZID=Asia/Kolkata:${toICSDate(e.date, e.startTime)}`,`DTEND;TZID=Asia/Kolkata:${toICSDate(e.date, e.endTime)}`,`LOCATION:${e.location || ''}`,`DESCRIPTION:DEPT: ${e.department}`,'END:VEVENT'); });
                 ics.push('END:VCALENDAR');
                 const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); link.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`; link.click();
             };
+
             document.getElementById('close-detail').onclick = closeDetail;
             document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
             const dragZone = document.getElementById('detail-drag-zone');
