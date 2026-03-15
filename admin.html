@@ -8,18 +8,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        /* Custom scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #1f2937; }
         ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-        
-        /* Checkbox transition */
         input[type="checkbox"] { accent-color: #2563eb; }
-        /* Cancel checkbox specific color */
         input.cancel-checkbox { accent-color: #ef4444; }
-
-        /* Make date and time inputs clickable area obvious */
         input[type="date"], input[type="time"] { cursor: pointer; }
     </style>
 </head>
@@ -43,6 +37,16 @@
 
         <!-- Status Message -->
         <div id="status-message" class="hidden mb-6 p-4 rounded-lg font-bold uppercase tracking-widest text-xs border animate-pulse"></div>
+
+        <!-- Push Notification Stats Bar -->
+        <div id="push-stats-bar" class="mb-6 p-4 bg-gray-800/50 rounded-xl border border-gray-700 flex items-center gap-4 flex-wrap">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                <span class="text-xs font-bold text-gray-300 uppercase tracking-widest">Push Subscribers</span>
+            </div>
+            <span id="subscriber-count" class="text-2xl font-black text-white">—</span>
+            <button id="refresh-subscribers-btn" class="ml-auto text-xs font-bold text-blue-400 hover:text-blue-300 transition px-3 py-1.5 bg-gray-700 rounded-lg">🔄 Refresh</button>
+        </div>
 
         <!-- Tabs -->
         <div class="flex gap-1 mb-6 bg-gray-800/50 p-1 rounded-xl w-fit border border-gray-700">
@@ -88,6 +92,32 @@
     "batch": ["A1"]
   }
 ]'></textarea>
+            </div>
+
+            <!-- Push Notification Option for Bulk Upload -->
+            <div class="mb-6 p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl space-y-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-bold text-blue-300 uppercase tracking-widest">📣 Push Notification</p>
+                        <p class="text-xs text-gray-400 mt-0.5">Send a notification to all subscribers after upload</p>
+                    </div>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="upload-send-notif" class="w-5 h-5 rounded" checked>
+                        <span class="text-sm font-bold text-gray-300">Send</span>
+                    </label>
+                </div>
+                <div id="upload-notif-fields" class="space-y-2">
+                    <input type="text" id="upload-notif-title" value="📅 Weekly Schedule Updated" placeholder="Notification title"
+                        class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm font-medium">
+                    <textarea id="upload-notif-body" rows="2" placeholder="Notification body message..."
+                        class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm resize-none">Your schedule for the upcoming week has been posted. Tap to view.</textarea>
+                    <div class="flex items-center gap-3 pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="upload-schedule-notif" class="w-4 h-4 rounded">
+                            <span class="text-xs font-bold text-gray-400">Schedule for 20:00 hrs tonight</span>
+                        </label>
+                    </div>
+                </div>
             </div>
             
             <div class="flex gap-4">
@@ -188,6 +218,26 @@
                     </label>
                 </div>
 
+                <!-- Push Notification Option for Add Event -->
+                <div class="p-4 bg-blue-900/20 border border-blue-500/30 rounded-xl space-y-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-bold text-blue-300 uppercase tracking-widest">📣 Push Notification</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Notify subscribers about this new event</p>
+                        </div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="add-send-notif" class="w-5 h-5 rounded">
+                            <span class="text-sm font-bold text-gray-300">Send</span>
+                        </label>
+                    </div>
+                    <div id="add-notif-fields" class="space-y-2 hidden">
+                        <input type="text" id="add-notif-title" value="📅 New Class Added" placeholder="Notification title"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm font-medium">
+                        <textarea id="add-notif-body" rows="2" placeholder="Notification body..."
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm resize-none"></textarea>
+                    </div>
+                </div>
+
                 <div class="pt-6">
                     <button type="submit" id="submit-add-btn" class="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-8 rounded-xl transition shadow-lg shadow-blue-900/30 flex items-center justify-center gap-2">
                         <span>➕</span> Add to Schedule
@@ -198,15 +248,13 @@
 
         <!-- SECTION 3: MANAGE SCHEDULE -->
         <div id="view-manage" class="hidden space-y-6">
-            <!-- Advanced Filters & Search -->
+            <!-- Filters -->
             <div class="bg-gray-800 p-5 rounded-2xl border border-gray-700 shadow-xl space-y-4">
-                <!-- Toolbar Row -->
                 <div class="flex justify-end">
                     <button id="refresh-btn" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 justify-center transition shadow-lg shadow-blue-900/20">
                         🔄 Refresh
                     </button>
                 </div>
-
                 <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2 border-t border-gray-700/50">
                     <div>
                         <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1 tracking-wider">Filter by Department</label>
@@ -229,7 +277,6 @@
                         <input type="date" id="filter-end-date" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none text-sm [color-scheme:dark]">
                     </div>
                 </div>
-                
                 <div class="flex justify-end">
                     <button id="reset-filters-btn" class="text-xs font-bold text-blue-400 hover:text-blue-300 flex items-center gap-1 transition">
                         <span>✖</span> Reset Filters
@@ -255,9 +302,7 @@
             </div>
 
             <!-- Events Grid -->
-            <div id="events-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <!-- Event cards injected here via JS -->
-            </div>
+            <div id="events-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             
             <!-- Empty State -->
             <div id="no-results" class="hidden text-center py-20 bg-gray-800/50 rounded-2xl border border-gray-800 border-dashed">
@@ -280,7 +325,7 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
-                        <input type="date" id="edit-date" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                        <input type="date" id="edit-date" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none [color-scheme:dark]">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Department</label>
@@ -291,11 +336,11 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Time</label>
-                        <input type="time" id="edit-start" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                        <input type="time" id="edit-start" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none [color-scheme:dark]">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Time</label>
-                        <input type="time" id="edit-end" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none">
+                        <input type="time" id="edit-end" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2.5 text-white focus:border-blue-500 outline-none [color-scheme:dark]">
                     </div>
                 </div>
 
@@ -334,6 +379,31 @@
                     </label>
                 </div>
 
+                <!-- Push Notification Option for Edit -->
+                <div class="p-4 bg-orange-900/20 border border-orange-500/30 rounded-xl space-y-3 mt-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-bold text-orange-300 uppercase tracking-widest">📣 Notify Change</p>
+                            <p class="text-xs text-gray-400 mt-0.5">Send a push notification about this update</p>
+                        </div>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="edit-send-notif" class="w-5 h-5 rounded">
+                            <span class="text-sm font-bold text-gray-300">Send</span>
+                        </label>
+                    </div>
+                    <div id="edit-notif-fields" class="space-y-2 hidden">
+                        <select id="edit-notif-type" class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none text-sm appearance-none cursor-pointer">
+                            <option value="venue_change">📍 Venue Changed</option>
+                            <option value="faculty_change">👨‍🏫 Faculty Changed</option>
+                            <option value="general">📋 General Update</option>
+                        </select>
+                        <input type="text" id="edit-notif-title" placeholder="Notification title (auto-filled)" 
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none text-sm font-medium">
+                        <textarea id="edit-notif-body" rows="2" placeholder="Notification body (auto-filled)"
+                            class="w-full bg-gray-900 border border-gray-600 rounded-lg p-2.5 text-white focus:border-orange-500 outline-none text-sm resize-none"></textarea>
+                    </div>
+                </div>
+
                 <div class="pt-4 flex gap-3">
                     <button type="button" id="save-edit-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl transition">Save Changes</button>
                     <button type="button" id="cancel-edit-btn" class="px-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl transition">Cancel</button>
@@ -356,14 +426,100 @@
             appId: "1:139527638715:web:cfce01b41f323fd113239e",
             measurementId: "G-KB7RQN5DD4"
         };
-        const appId = "schedule-debeb";	
+        const appId = "schedule-debeb";
+        // FCM Server Key — set this to your Firebase project's server key
+        // Go to Firebase Console → Project Settings → Cloud Messaging → Server key
+        const FCM_SERVER_KEY = 'YOUR_FCM_SERVER_KEY_HERE';
+        const FCM_API_URL = 'https://fcm.googleapis.com/fcm/send';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const scheduleCollectionRef = collection(db, `artifacts/${appId}/public/data/schedule`);
+        const tokensCollectionRef = collection(db, `artifacts/${appId}/public/data/push_tokens`);
 
-        // Helper: Normalize Department Names (Consistent with App)
+        // ── Push Notification Sender ──────────────────────────────────────────
+        async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
+            showStatus('Fetching subscriber tokens...', 'info');
+            try {
+                const snap = await getDocs(tokensCollectionRef);
+                const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
+                if (tokens.length === 0) { showStatus('No subscribers found.', 'error'); return; }
+
+                showStatus(`Sending to ${tokens.length} subscribers...`, 'info');
+
+                // FCM accepts up to 1000 tokens per request — batch if needed
+                const BATCH_SIZE = 500;
+                let sent = 0;
+                for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
+                    const batch = tokens.slice(i, i + BATCH_SIZE);
+                    const payload = {
+                        registration_ids: batch,
+                        notification: { title, body, icon: './icon-192.png', click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+                        data: { type, eventDate: eventDate || '', eventId: eventId || '', title, body }
+                    };
+                    const res = await fetch(FCM_API_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `key=${FCM_SERVER_KEY}`
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        const result = await res.json();
+                        sent += result.success || 0;
+                        // Clean up invalid tokens
+                        if (result.results) {
+                            result.results.forEach((r, idx) => {
+                                if (r.error === 'NotRegistered' || r.error === 'InvalidRegistration') {
+                                    const tokenToDelete = batch[idx];
+                                    snap.docs.find(d => d.data().token === tokenToDelete)?.ref && deleteDoc(snap.docs.find(d => d.data().token === tokenToDelete).ref).catch(() => {});
+                                }
+                            });
+                        }
+                    }
+                }
+                showStatus(`✅ Notification sent to ${sent} subscribers!`, 'success');
+            } catch (e) {
+                showStatus(`❌ Notification failed: ${e.message}`, 'error');
+            }
+        }
+
+        // ── Scheduled Notification (20:00 hrs) ──────────────────────────────
+        function scheduleNotifAt2000(notifData) {
+            const now = new Date();
+            const target = new Date();
+            target.setHours(20, 0, 0, 0);
+            if (target <= now) target.setDate(target.getDate() + 1); // next day if past 20:00
+            const delay = target - now;
+            showStatus(`⏰ Notification scheduled for ${target.toLocaleTimeString()} (${Math.round(delay/60000)} min)`, 'success');
+            setTimeout(() => sendPushNotification(notifData), delay);
+        }
+
+        // ── Helper: auto-fill notification fields based on type ──────────────
+        function autoFillEditNotif() {
+            const type = document.getElementById('edit-notif-type').value;
+            const topic = document.getElementById('edit-topic').value;
+            const location = document.getElementById('edit-location').value;
+            const instructor = document.getElementById('edit-instructor').value;
+            const date = document.getElementById('edit-date').value;
+            let title = '', body = '';
+            if (type === 'venue_change') {
+                title = '📍 Venue Changed';
+                body = `${topic || 'A class'}${date ? ' on ' + date : ''} is now at ${location || 'a new location'}.`;
+            } else if (type === 'faculty_change') {
+                title = '👨‍🏫 Faculty Changed';
+                body = `${topic || 'A class'}${date ? ' on ' + date : ''} will now be taken by ${instructor || 'a new faculty'}.`;
+            } else {
+                title = '📋 Schedule Update';
+                body = `${topic || 'A class'} has been updated.`;
+            }
+            document.getElementById('edit-notif-title').value = title;
+            document.getElementById('edit-notif-body').value = body;
+        }
+
+        // Helper: Normalize Department Names
         const normalizeDept = (dept) => {
             if (!dept) return dept;
             const d = String(dept).toUpperCase();
@@ -376,7 +532,6 @@
             return dept;
         };
 
-        // Helper: Get Department Styles (Consistent with App)
         const getDeptStyles = (dept) => {
             const styles = { 
                 "Internal Medicine": "border-blue-500 bg-blue-900/30 text-blue-200", 
@@ -402,22 +557,31 @@
         const tabs = { upload: document.getElementById('tab-upload'), add: document.getElementById('tab-add'), manage: document.getElementById('tab-manage') };
         const statusMessage = document.getElementById('status-message');
         
-        // State
         let allEvents = [];
-        let currentFilteredEvents = []; // To track what's currently visible
-        let selectedIds = new Set();    // Track selected IDs
+        let currentFilteredEvents = [];
+        let selectedIds = new Set();
         let isAuthReady = false;
 
-        // Auth Logic
+        // Auth
         const initAuth = async () => {
             try { await signInAnonymously(auth); } 
             catch (error) { showStatus(`⚠️ Auth Error: ${error.message}`, "error", true); }
         };
         onAuthStateChanged(auth, (user) => { 
             isAuthReady = !!user; 
-            if(user) showStatus("✅ Connected to Database", "success");
+            if (user) { showStatus("✅ Connected to Database", "success"); loadSubscriberCount(); }
         });
         initAuth();
+
+        // Load subscriber count
+        async function loadSubscriberCount() {
+            try {
+                const snap = await getDocs(tokensCollectionRef);
+                document.getElementById('subscriber-count').textContent = snap.size;
+            } catch (e) {
+                document.getElementById('subscriber-count').textContent = '—';
+            }
+        }
 
         // UI Helpers
         function showStatus(message, type = 'info', persist = false) {
@@ -425,7 +589,6 @@
             if (type === 'success') statusMessage.className += ' bg-green-900/20 text-green-300 border-green-500/30';
             else if (type === 'error') statusMessage.className += ' bg-red-900/20 text-red-300 border-red-500/30';
             else statusMessage.className += ' bg-blue-900/20 text-blue-300 border-blue-500/30';
-            
             statusMessage.textContent = message;
             statusMessage.classList.remove('hidden');
             if (!persist) setTimeout(() => { if (statusMessage.textContent === message) statusMessage.classList.add('hidden'); }, 4000);
@@ -437,43 +600,30 @@
                 el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg');
                 el.classList.add('text-gray-400', 'hover:text-white');
             });
-
             views[tabName].classList.remove('hidden');
             tabs[tabName].classList.remove('text-gray-400', 'hover:text-white');
             tabs[tabName].classList.add('bg-blue-600', 'text-white', 'shadow-lg');
-
-            if(tabName === 'manage') loadEvents();
+            if (tabName === 'manage') loadEvents();
         }
 
-        // --- MANAGE EVENTS LOGIC ---
-
+        // Manage Events
         async function loadEvents() {
             if (!isAuthReady) return showStatus("Wait for connection...", "error");
-            
             document.getElementById('manage-loading').classList.remove('hidden');
             document.getElementById('events-grid').innerHTML = '';
             document.getElementById('no-results').classList.add('hidden');
             document.getElementById('bulk-actions-bar').classList.add('hidden');
-
             try {
                 const snapshot = await getDocs(scheduleCollectionRef);
-                // Map and Normalize Departments immediately
                 allEvents = snapshot.docs.map(doc => {
                     const data = doc.data();
-                    return { 
-                        id: doc.id, 
-                        ...data,
-                        department: normalizeDept(data.department) 
-                    };
+                    return { id: doc.id, ...data, department: normalizeDept(data.department) };
                 });
-                
-                // Sort by Date Descending
                 allEvents.sort((a, b) => b.date.localeCompare(a.date));
-                
-                selectedIds.clear(); // Reset selections on reload
+                selectedIds.clear();
                 updateBulkUI();
                 populateFilters(allEvents);
-                applyFilters(); // Render initially
+                applyFilters();
             } catch (e) {
                 showStatus(`Failed to load events: ${e.message}`, 'error', true);
             } finally {
@@ -484,46 +634,26 @@
         function populateFilters(events) {
             const deptSelect = document.getElementById('filter-dept');
             const batchSelect = document.getElementById('filter-batch');
-            
             const currentDept = deptSelect.value;
             const currentBatch = batchSelect.value;
-            
             const depts = new Set();
             const batches = new Set();
-            
             events.forEach(ev => {
                 if (ev.isHoliday) depts.add("Holiday");
                 else if (ev.department) depts.add(ev.department);
                 else depts.add("General");
-
-                // Normalize batches to Uppercase for the set (merges 'All', 'all', 'ALL')
-                let eventBatches = [];
-                if (Array.isArray(ev.batch)) eventBatches = ev.batch;
-                else if (ev.batch) eventBatches = [ev.batch];
-
-                eventBatches.forEach(b => {
-                    if(b) batches.add(String(b).toUpperCase().trim());
-                });
+                let eventBatches = Array.isArray(ev.batch) ? ev.batch : (ev.batch ? [ev.batch] : []);
+                eventBatches.forEach(b => { if (b) batches.add(String(b).toUpperCase().trim()); });
             });
-
-            // Populate Dept Filter
             const sortedDepts = Array.from(depts).sort();
             deptSelect.innerHTML = '<option value="">All Departments</option>';
-            sortedDepts.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d; opt.textContent = d;
-                deptSelect.appendChild(opt);
-            });
+            sortedDepts.forEach(d => { const opt = document.createElement('option'); opt.value = d; opt.textContent = d; deptSelect.appendChild(opt); });
             if (sortedDepts.includes(currentDept)) deptSelect.value = currentDept;
-
-            // Populate Batch Filter
             const sortedBatches = Array.from(batches).sort();
             batchSelect.innerHTML = '<option value="">All Batches</option>';
             sortedBatches.forEach(b => {
-                if (b === 'ALL') return; // Consolidated into 'All Batches'
-                const opt = document.createElement('option');
-                opt.value = b; opt.textContent = b;
-                batchSelect.appendChild(opt);
+                if (b === 'ALL') return;
+                const opt = document.createElement('option'); opt.value = b; opt.textContent = b; batchSelect.appendChild(opt);
             });
             if (sortedBatches.includes(currentBatch)) batchSelect.value = currentBatch;
         }
@@ -533,32 +663,19 @@
             const batchFilter = document.getElementById('filter-batch').value;
             const startDate = document.getElementById('filter-start-date').value;
             const endDate = document.getElementById('filter-end-date').value;
-
             const filtered = allEvents.filter(ev => {
-                // Department
                 const evDept = ev.department || (ev.isHoliday ? "Holiday" : "General");
                 const matchesDept = !deptFilter || evDept === deptFilter || (deptFilter === 'Holiday' && ev.isHoliday);
-
-                // Batch (Case insensitive check)
                 let matchesBatch = true;
                 if (batchFilter) {
-                    let eventBatches = [];
-                    if (Array.isArray(ev.batch)) eventBatches = ev.batch;
-                    else if (ev.batch) eventBatches = [ev.batch];
-                    
-                    // Normalize event data to match filter format
-                    const normalizedEventBatches = eventBatches.map(b => String(b).toUpperCase().trim());
-                    matchesBatch = normalizedEventBatches.includes(batchFilter);
+                    let eventBatches = Array.isArray(ev.batch) ? ev.batch : (ev.batch ? [ev.batch] : []);
+                    matchesBatch = eventBatches.map(b => String(b).toUpperCase().trim()).includes(batchFilter);
                 }
-
-                // Date Range
                 let matchesDate = true;
                 if (startDate) matchesDate = matchesDate && (ev.date >= startDate);
                 if (endDate) matchesDate = matchesDate && (ev.date <= endDate);
-
                 return matchesDept && matchesBatch && matchesDate;
             });
-
             renderEvents(filtered);
         }
 
@@ -567,31 +684,21 @@
             const selectedCountSpan = document.getElementById('selected-count');
             const visibleCountSpan = document.getElementById('visible-count');
             const selectAllCheckbox = document.getElementById('select-all-checkbox');
-            
             const count = selectedIds.size;
             selectedCountSpan.textContent = count;
             visibleCountSpan.textContent = currentFilteredEvents.length;
-            
             deleteBtn.disabled = count === 0;
-            if (count > 0) {
-                deleteBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            } else {
-                deleteBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            }
-
-            // Check if all visible items are selected
-            const allVisibleSelected = currentFilteredEvents.length > 0 && 
-                                       currentFilteredEvents.every(ev => selectedIds.has(ev.id));
+            if (count > 0) deleteBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            else deleteBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            const allVisibleSelected = currentFilteredEvents.length > 0 && currentFilteredEvents.every(ev => selectedIds.has(ev.id));
             selectAllCheckbox.checked = allVisibleSelected;
         }
 
         function renderEvents(events) {
-            currentFilteredEvents = events; // Track for select all logic
+            currentFilteredEvents = events;
             const grid = document.getElementById('events-grid');
             grid.innerHTML = '';
-            
             const bulkBar = document.getElementById('bulk-actions-bar');
-
             if (events.length === 0) {
                 document.getElementById('no-results').classList.remove('hidden');
                 bulkBar.classList.add('hidden');
@@ -599,67 +706,35 @@
             }
             document.getElementById('no-results').classList.add('hidden');
             bulkBar.classList.remove('hidden');
-            
-            updateBulkUI(); // Ensure counters are correct based on current filter
-
+            updateBulkUI();
             events.forEach(ev => {
                 const card = document.createElement('div');
                 const isSelected = selectedIds.has(ev.id);
-                
-                // Determine styles
                 let styleClasses = "bg-gray-800 border-gray-700";
                 let textClass = "text-blue-400";
-                
-                // Check for Null/Cancelled
                 const isNull = ev.topic && ev.topic.toUpperCase() === "NULL";
-
-                if (isNull) {
-                     styleClasses = "bg-red-900/10 border-red-500/50 opacity-75";
-                     textClass = "text-red-400";
-                } else if (ev.isHoliday) {
-                    styleClasses = "bg-gray-800 border-amber-500/30";
-                    textClass = "text-amber-400";
-                } else if (ev.department) {
-                    const deptStyle = getDeptStyles(ev.department);
-                    styleClasses = deptStyle;
-                    const match = deptStyle.match(/text-\S+/);
-                    if (match) textClass = match[0];
-                }
-
+                if (isNull) { styleClasses = "bg-red-900/10 border-red-500/50 opacity-75"; textClass = "text-red-400"; }
+                else if (ev.isHoliday) { styleClasses = "bg-gray-800 border-amber-500/30"; textClass = "text-amber-400"; }
+                else if (ev.department) { const deptStyle = getDeptStyles(ev.department); styleClasses = deptStyle; const match = deptStyle.match(/text-\S+/); if (match) textClass = match[0]; }
                 card.className = `rounded-xl border border-l-[10px] ${styleClasses} p-5 relative group transition-all shadow-lg select-none`;
                 if (isSelected) card.className += " ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-900";
-                
                 const batchBadge = Array.isArray(ev.batch) ? ev.batch.join(', ') : ev.batch || 'ALL';
-                
-                // Resolve instructor from either key
                 const instructorName = ev.instructor || ev.faculty;
-
                 const displayTopic = isNull ? "🚫 CANCELLED SLOT" : (ev.topic || 'Untitled');
-
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <div class="flex items-center gap-3">
-                            <input type="checkbox" onchange="window.toggleSelection('${ev.id}')" class="w-5 h-5 rounded bg-gray-900 border-gray-600 text-blue-600 focus:ring-offset-gray-800 focus:ring-blue-500 cursor-pointer" ${isSelected ? 'checked' : ''}>
-                            <div class="bg-black/30 text-white/80 text-xs font-mono px-2 py-1 rounded border border-white/10">
-                                ${ev.date}
-                            </div>
+                            <input type="checkbox" onchange="window.toggleSelection('${ev.id}')" class="w-5 h-5 rounded bg-gray-900 border-gray-600 text-blue-600 cursor-pointer" ${isSelected ? 'checked' : ''}>
+                            <div class="bg-black/30 text-white/80 text-xs font-mono px-2 py-1 rounded border border-white/10">${ev.date}</div>
                         </div>
                         <div class="flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onclick="window.editEvent('${ev.id}')" class="p-1.5 bg-blue-600/20 text-blue-300 rounded hover:bg-blue-600 hover:text-white transition" title="Edit">
-                                ✏️
-                            </button>
-                            <button onclick="window.deleteEvent('${ev.id}')" class="p-1.5 bg-red-600/20 text-red-300 rounded hover:bg-red-600 hover:text-white transition" title="Delete">
-                                🗑️
-                            </button>
+                            <button onclick="window.editEvent('${ev.id}')" class="p-1.5 bg-blue-600/20 text-blue-300 rounded hover:bg-blue-600 hover:text-white transition" title="Edit">✏️</button>
+                            <button onclick="window.deleteEvent('${ev.id}')" class="p-1.5 bg-red-600/20 text-red-300 rounded hover:bg-red-600 hover:text-white transition" title="Delete">🗑️</button>
                         </div>
                     </div>
-                    
-                    <h4 class="font-bold text-white text-lg leading-tight mb-1 line-clamp-2 mix-blend-overlay ${isNull ? 'text-red-300' : ''}">${displayTopic}</h4>
+                    <h4 class="font-bold text-white text-lg leading-tight mb-1 line-clamp-2">${displayTopic}</h4>
                     ${instructorName && !isNull ? `<p class="text-xs text-gray-300 font-medium mb-1">👨‍🏫 ${instructorName}</p>` : ''}
-                    <p class="text-xs font-bold uppercase tracking-wider ${textClass} mb-4 opacity-90">
-                        ${ev.isHoliday ? 'HOLIDAY' : (ev.department || 'General')}
-                    </p>
-
+                    <p class="text-xs font-bold uppercase tracking-wider ${textClass} mb-4 opacity-90">${ev.isHoliday ? 'HOLIDAY' : (ev.department || 'General')}</p>
                     <div class="flex items-center justify-between text-xs text-white/60 border-t border-white/10 pt-3">
                         <span>⏰ ${ev.startTime || '--'} - ${ev.endTime || '--'}</span>
                         <span class="bg-black/30 text-white/80 px-2 py-0.5 rounded">Batch: ${batchBadge}</span>
@@ -669,80 +744,55 @@
             });
         }
 
-        // --- SELECTION LOGIC ---
         window.toggleSelection = (id) => {
-            if (selectedIds.has(id)) selectedIds.delete(id);
-            else selectedIds.add(id);
-            renderEvents(currentFilteredEvents); 
+            if (selectedIds.has(id)) selectedIds.delete(id); else selectedIds.add(id);
+            renderEvents(currentFilteredEvents);
         };
 
         const toggleSelectAll = (checked) => {
-            currentFilteredEvents.forEach(ev => {
-                if (checked) selectedIds.add(ev.id);
-                else selectedIds.delete(ev.id);
-            });
+            currentFilteredEvents.forEach(ev => { if (checked) selectedIds.add(ev.id); else selectedIds.delete(ev.id); });
             renderEvents(currentFilteredEvents);
         };
 
         const deleteSelectedEvents = async () => {
             if (selectedIds.size === 0) return;
-            // Removed confirm() as it can be blocked in some environments
-            
             try {
                 showStatus("Deleting...", "info");
                 const batch = writeBatch(db);
-                selectedIds.forEach(id => {
-                    const ref = doc(db, `artifacts/${appId}/public/data/schedule`, id);
-                    batch.delete(ref);
-                });
+                selectedIds.forEach(id => { const ref = doc(db, `artifacts/${appId}/public/data/schedule`, id); batch.delete(ref); });
                 await batch.commit();
-                
                 showStatus(`Successfully deleted ${selectedIds.size} events`, "success");
-                // Remove deleted from local lists
                 allEvents = allEvents.filter(ev => !selectedIds.has(ev.id));
                 selectedIds.clear();
-                populateFilters(allEvents); // Re-populate filters in case some options are gone
-                applyFilters(); // Re-apply filter to update view
-            } catch (e) {
-                showStatus(`Bulk delete failed: ${e.message}`, "error");
-            }
+                populateFilters(allEvents);
+                applyFilters();
+            } catch (e) { showStatus(`Bulk delete failed: ${e.message}`, "error"); }
         };
 
         window.deleteEvent = async (id) => {
-            // Removed confirm() as it can be blocked in some environments
             try {
                 await deleteDoc(doc(db, `artifacts/${appId}/public/data/schedule`, id));
                 showStatus("Event deleted successfully", "success");
                 allEvents = allEvents.filter(e => e.id !== id);
                 if (selectedIds.has(id)) selectedIds.delete(id);
                 applyFilters();
-            } catch (e) {
-                showStatus(`Delete failed: ${e.message}`, "error");
-            }
+            } catch (e) { showStatus(`Delete failed: ${e.message}`, "error"); }
         };
 
-        // --- NULL / CANCEL CHECKBOX LOGIC ---
         function toggleNullState(isAddMode) {
             const prefix = isAddMode ? 'add' : 'edit';
             const isNullCheckbox = document.getElementById(`${prefix}-isNull`);
             const topicInput = document.getElementById(`${prefix}-topic`);
-            
-            if (isNullCheckbox.checked) {
-                topicInput.value = "Null";
-            } else {
-                if (topicInput.value === "Null") topicInput.value = "";
-            }
+            if (isNullCheckbox.checked) { topicInput.value = "Null"; }
+            else { if (topicInput.value === "Null") topicInput.value = ""; }
         }
 
-        // --- EDIT MODAL LOGIC ---
-        
+        // Edit Modal
         const modal = document.getElementById('edit-modal');
         
         window.editEvent = (id) => {
             const ev = allEvents.find(e => e.id === id);
             if (!ev) return;
-
-            // Populate Form
             document.getElementById('edit-id').value = ev.id;
             document.getElementById('edit-date').value = ev.date || '';
             document.getElementById('edit-start').value = ev.startTime || '';
@@ -754,11 +804,10 @@
             document.getElementById('edit-batch').value = Array.isArray(ev.batch) ? ev.batch.join(', ') : (ev.batch || '');
             document.getElementById('edit-isHoliday').checked = !!ev.isHoliday;
             document.getElementById('edit-isClinics').checked = !!ev.isClinics;
-            
-            // Handle Null/Cancel
-            const isNull = ev.topic === "Null";
-            document.getElementById('edit-isNull').checked = isNull;
-
+            document.getElementById('edit-isNull').checked = ev.topic === "Null";
+            // Reset notification fields
+            document.getElementById('edit-send-notif').checked = false;
+            document.getElementById('edit-notif-fields').classList.add('hidden');
             modal.classList.remove('hidden');
         };
 
@@ -769,7 +818,6 @@
         document.getElementById('save-edit-btn').onclick = async () => {
             const id = document.getElementById('edit-id').value;
             const batchStr = document.getElementById('edit-batch').value;
-            
             const updates = {
                 date: document.getElementById('edit-date').value,
                 startTime: document.getElementById('edit-start').value,
@@ -782,34 +830,39 @@
                 isHoliday: document.getElementById('edit-isHoliday').checked,
                 isClinics: document.getElementById('edit-isClinics').checked
             };
-
-            // Cleanup empty fields
-            Object.keys(updates).forEach(key => {
-                if (updates[key] === '' || updates[key] === undefined) delete updates[key];
-            });
-
+            Object.keys(updates).forEach(key => { if (updates[key] === '' || updates[key] === undefined) delete updates[key]; });
             try {
                 await updateDoc(doc(db, `artifacts/${appId}/public/data/schedule`, id), updates);
                 showStatus("Event updated successfully!", "success");
+
+                // Send notification if opted in
+                if (document.getElementById('edit-send-notif').checked) {
+                    const notifType = document.getElementById('edit-notif-type').value;
+                    const notifTitle = document.getElementById('edit-notif-title').value;
+                    const notifBody = document.getElementById('edit-notif-body').value;
+                    if (notifTitle && notifBody) {
+                        await sendPushNotification({
+                            title: notifTitle, body: notifBody,
+                            type: notifType,
+                            eventDate: updates.date,
+                            eventId: id
+                        });
+                    }
+                }
+
                 closeModal();
-                loadEvents(); // Reload to ensure sync
-            } catch (e) {
-                showStatus(`Update failed: ${e.message}`, "error");
-            }
+                loadEvents();
+            } catch (e) { showStatus(`Update failed: ${e.message}`, "error"); }
         };
 
-        // --- FILTER & UPLOAD LOGIC ---
-        
+        // Filter logic
         function validateScheduleData(data) {
             if (!Array.isArray(data)) return ["Data must be an array"];
             const errors = [];
             data.forEach((event, index) => {
-                if (event.isHoliday) {
-                    if (!event.date) errors.push(`Event ${index+1}: Holiday missing date`);
-                } else if (event.topic === "Null") {
-                     // minimal validation for cancel events
-                     if (!event.date) errors.push(`Event ${index+1}: Cancel/Null missing date`);
-                } else {
+                if (event.isHoliday) { if (!event.date) errors.push(`Event ${index+1}: Holiday missing date`); }
+                else if (event.topic === "Null") { if (!event.date) errors.push(`Event ${index+1}: Cancel/Null missing date`); }
+                else {
                     const required = ['date', 'startTime', 'endTime', 'topic', 'department', 'batch'];
                     required.forEach(f => { if (!event[f]) errors.push(`Event ${index+1}: Missing ${f}`); });
                 }
@@ -819,46 +872,60 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Tabs Listeners
             tabs.upload.onclick = () => switchTab('upload');
             tabs.add.onclick = () => switchTab('add');
             tabs.manage.onclick = () => switchTab('manage');
-            
-            // Refresh
             document.getElementById('refresh-btn').onclick = loadEvents;
-
-            // Bulk Actions
+            document.getElementById('refresh-subscribers-btn').onclick = loadSubscriberCount;
             document.getElementById('select-all-checkbox').onchange = (e) => toggleSelectAll(e.target.checked);
             document.getElementById('delete-selected-btn').onclick = deleteSelectedEvents;
-
-            // Filter Listeners
             ['filter-dept', 'filter-batch', 'filter-start-date', 'filter-end-date'].forEach(id => {
                 document.getElementById(id).addEventListener('input', applyFilters);
             });
-
             document.getElementById('reset-filters-btn').onclick = () => {
-                document.getElementById('filter-dept').value = '';
-                document.getElementById('filter-batch').value = '';
-                document.getElementById('filter-start-date').value = '';
-                document.getElementById('filter-end-date').value = '';
+                ['filter-dept','filter-batch','filter-start-date','filter-end-date'].forEach(id => document.getElementById(id).value = '');
                 applyFilters();
             };
-            
-            // Null Checkbox Listeners
+
+            // Null checkbox
             document.getElementById('add-isNull').addEventListener('change', () => toggleNullState(true));
             document.getElementById('edit-isNull').addEventListener('change', () => toggleNullState(false));
 
-            // Handle Add Form
+            // Notification panel toggles
+            document.getElementById('upload-send-notif').addEventListener('change', (e) => {
+                document.getElementById('upload-notif-fields').style.display = e.target.checked ? '' : 'none';
+            });
+            document.getElementById('add-send-notif').addEventListener('change', (e) => {
+                document.getElementById('add-notif-fields').classList.toggle('hidden', !e.target.checked);
+                if (e.target.checked) {
+                    const topic = document.getElementById('add-topic').value;
+                    document.getElementById('add-notif-body').value = `A new class has been added${topic ? ': ' + topic : ''}.`;
+                }
+            });
+            document.getElementById('edit-send-notif').addEventListener('change', (e) => {
+                document.getElementById('edit-notif-fields').classList.toggle('hidden', !e.target.checked);
+                if (e.target.checked) autoFillEditNotif();
+            });
+            document.getElementById('edit-notif-type').addEventListener('change', autoFillEditNotif);
+            document.getElementById('edit-topic').addEventListener('input', () => {
+                if (document.getElementById('edit-send-notif').checked) autoFillEditNotif();
+            });
+            document.getElementById('edit-location').addEventListener('input', () => {
+                if (document.getElementById('edit-send-notif').checked && document.getElementById('edit-notif-type').value === 'venue_change') autoFillEditNotif();
+            });
+            document.getElementById('edit-instructor').addEventListener('input', () => {
+                if (document.getElementById('edit-send-notif').checked && document.getElementById('edit-notif-type').value === 'faculty_change') autoFillEditNotif();
+            });
+
+            // Add Form
             document.getElementById('add-form').onsubmit = async (e) => {
                 e.preventDefault();
                 if (!isAuthReady) return showStatus("❌ Not authenticated.", "error");
-
                 const date = document.getElementById('add-date').value;
                 const isHoliday = document.getElementById('add-isHoliday').checked;
                 const batchStr = document.getElementById('add-batch').value;
-                
                 const newEvent = {
-                    date: date,
+                    date,
                     startTime: document.getElementById('add-start').value,
                     endTime: document.getElementById('add-end').value,
                     topic: document.getElementById('add-topic').value,
@@ -866,43 +933,39 @@
                     department: normalizeDept(document.getElementById('add-dept').value),
                     location: document.getElementById('add-location').value,
                     batch: batchStr.split(',').map(s => s.trim()).filter(s => s),
-                    isHoliday: isHoliday,
+                    isHoliday,
                     isClinics: document.getElementById('add-isClinics').checked
                 };
-
-                // Basic Validation
                 if (!date) return showStatus("❌ Date is required.", "error");
-                
-                if (isHoliday) {
-                    if (!newEvent.batch || newEvent.batch.length === 0) newEvent.batch = ["ALL"];
-                    if (!newEvent.topic) newEvent.topic = "Holiday";
-                } else if (newEvent.topic === "Null") {
-                    // minimal checking for null events
-                    if (!newEvent.batch || newEvent.batch.length === 0) return showStatus("❌ Batch is required for cancellation.", "error");
-                } else {
+                if (isHoliday) { if (!newEvent.batch.length) newEvent.batch = ["ALL"]; if (!newEvent.topic) newEvent.topic = "Holiday"; }
+                else if (newEvent.topic === "Null") { if (!newEvent.batch.length) return showStatus("❌ Batch is required.", "error"); }
+                else {
                     if (!newEvent.startTime || !newEvent.endTime) return showStatus("❌ Start & End times required.", "error");
                     if (!newEvent.department) return showStatus("❌ Department is required.", "error");
                     if (!newEvent.topic) return showStatus("❌ Topic is required.", "error");
-                    if (!newEvent.batch || newEvent.batch.length === 0) return showStatus("❌ Batch is required.", "error");
+                    if (!newEvent.batch.length) return showStatus("❌ Batch is required.", "error");
                 }
-
-                // Cleanup empty optional fields
                 if (!newEvent.location) delete newEvent.location;
                 if (!newEvent.instructor) delete newEvent.instructor;
-
                 try {
                     showStatus("Adding event...", "info");
-                    await addDoc(scheduleCollectionRef, newEvent);
+                    const docRef = await addDoc(scheduleCollectionRef, newEvent);
                     showStatus("✅ Event added successfully!", "success");
+
+                    // Send notification if opted in
+                    if (document.getElementById('add-send-notif').checked) {
+                        const notifTitle = document.getElementById('add-notif-title').value;
+                        const notifBody = document.getElementById('add-notif-body').value;
+                        if (notifTitle && notifBody) {
+                            await sendPushNotification({ title: notifTitle, body: notifBody, type: 'general', eventDate: date, eventId: docRef.id });
+                        }
+                    }
                     document.getElementById('add-form').reset();
-                } catch (e) {
-                    showStatus(`❌ Error adding event: ${e.message}`, "error");
-                }
+                } catch (e) { showStatus(`❌ Error: ${e.message}`, "error"); }
             };
 
             // Upload Logic
             const scheduleInput = document.getElementById('schedule-input');
-            
             document.getElementById('validate-btn').onclick = () => {
                 try {
                     const data = JSON.parse(scheduleInput.value);
@@ -918,40 +981,40 @@
                     const data = JSON.parse(scheduleInput.value);
                     const errors = validateScheduleData(data);
                     if (errors.length > 0) return showStatus(errors[0], "error");
-
                     showStatus("Saving...", "info");
                     const batch = writeBatch(db);
                     data.forEach(event => {
-                        if (event.department) {
-                            event.department = normalizeDept(event.department);
-                        }
-                        if (event.isHoliday) {
-                            if (!event.batch) event.batch = ["ALL"];
-                            if (!event.topic) event.topic = "Holiday";
-                        }
+                        if (event.department) event.department = normalizeDept(event.department);
+                        if (event.isHoliday) { if (!event.batch) event.batch = ["ALL"]; if (!event.topic) event.topic = "Holiday"; }
                         const docRef = doc(scheduleCollectionRef);
                         batch.set(docRef, event);
                     });
                     await batch.commit();
                     showStatus(`🎉 Saved ${data.length} entries!`, "success");
                     scheduleInput.value = '';
+
+                    // Send notification if opted in
+                    if (document.getElementById('upload-send-notif').checked) {
+                        const notifTitle = document.getElementById('upload-notif-title').value;
+                        const notifBody = document.getElementById('upload-notif-body').value;
+                        if (notifTitle && notifBody) {
+                            const scheduleFor2000 = document.getElementById('upload-schedule-notif').checked;
+                            if (scheduleFor2000) {
+                                scheduleNotifAt2000({ title: notifTitle, body: notifBody, type: 'weekly_update' });
+                            } else {
+                                await sendPushNotification({ title: notifTitle, body: notifBody, type: 'weekly_update' });
+                            }
+                        }
+                    }
                 } catch (e) { showStatus(`❌ Error: ${e.message}`, "error"); }
             };
 
             document.getElementById('clear-btn').onclick = () => { scheduleInput.value = ''; showStatus("Cleared."); };
 
-            // NEW: Make date/time inputs open picker on click anywhere
             const dateTimeInputs = document.querySelectorAll('input[type="date"], input[type="time"]');
             dateTimeInputs.forEach(input => {
-                input.addEventListener('click', (e) => {
-                    // Check if showPicker is supported (modern browsers)
-                    if (typeof input.showPicker === 'function') {
-                        try {
-                            input.showPicker();
-                        } catch (error) {
-                            // Ignore errors (e.g. if already open or security context issues)
-                        }
-                    }
+                input.addEventListener('click', () => {
+                    if (typeof input.showPicker === 'function') { try { input.showPicker(); } catch (e) {} }
                 });
             });
         });
