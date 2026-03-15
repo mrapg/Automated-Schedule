@@ -1,4 +1,4 @@
-const CACHE_NAME = 'afmc-schedule-v17'; // Bumped for push notification support
+const CACHE_NAME = 'afmc-schedule-v18'; // Bumped for push notification support
 const ASSETS = [
   './',
   './index.html',
