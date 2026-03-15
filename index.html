@@ -1566,11 +1566,107 @@
     // ═══════════════════════════════════════════════════════════════════════
     // PUSH NOTIFICATIONS
     // ═══════════════════════════════════════════════════════════════════════
+
+    // Show a custom in-app permission prompt before the browser native dialog.
+    // 'denied' users see this again after 2 days.
+    function showPushPermissionPrompt(onAllow, onDismiss) {
+        const existing = document.getElementById('push-permission-prompt');
+        if (existing) return;
+
+        const prompt = document.createElement('div');
+        prompt.id = 'push-permission-prompt';
+        prompt.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-[92%] bg-slate-800 border border-blue-500/30 rounded-2xl shadow-2xl p-4 transition-all';
+        prompt.style.cssText = 'opacity:0; transform: translateX(-50%) translateY(16px);';
+        prompt.innerHTML = `
+            <div class="flex items-start gap-3 mb-4">
+                <div class="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0 border border-blue-500/30">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="text-white font-black text-sm uppercase tracking-wide">Schedule Notifications</p>
+                    <p class="text-slate-400 text-[11px] mt-0.5 leading-snug">Get notified when the weekly schedule is uploaded or a class venue changes.</p>
+                </div>
+            </div>
+            <div class="flex gap-2">
+                <button id="push-allow-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest py-2.5 rounded-xl active:scale-95 transition-all">Enable</button>
+                <button id="push-dismiss-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-black text-xs uppercase tracking-widest py-2.5 rounded-xl active:scale-95 transition-all">Not Now</button>
+            </div>`;
+        document.body.appendChild(prompt);
+
+        requestAnimationFrame(() => {
+            prompt.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+            prompt.style.opacity    = '1';
+            prompt.style.transform  = 'translateX(-50%) translateY(0)';
+        });
+
+        const dismiss = (allowed) => {
+            prompt.style.opacity   = '0';
+            prompt.style.transform = 'translateX(-50%) translateY(16px)';
+            setTimeout(() => prompt.remove(), 300);
+            if (allowed) onAllow();
+            else         onDismiss();
+        };
+
+        document.getElementById('push-allow-btn').onclick   = () => dismiss(true);
+        document.getElementById('push-dismiss-btn').onclick = () => dismiss(false);
+    }
+
     async function setupPushSubscription(swReg) {
         try {
             if (!window._fcm || !('Notification' in window)) return;
             if (VAPID_KEY === 'YOUR_VAPID_PUBLIC_KEY_HERE') return;
-            if (await Notification.requestPermission() !== 'granted') return;
+
+            const permission = Notification.permission;
+
+            if (permission === 'granted') {
+                // Already allowed — subscribe silently
+                await doSubscribe(swReg);
+
+            } else if (permission === 'default') {
+                // Never asked — show custom prompt first, then native dialog
+                setTimeout(() => {
+                    showPushPermissionPrompt(
+                        async () => {
+                            const result = await Notification.requestPermission();
+                            if (result === 'granted') await doSubscribe(swReg);
+                            else localStorage.setItem('push_denied_at', Date.now().toString());
+                        },
+                        () => { /* user tapped Not Now — leave permission as default, ask next session */ }
+                    );
+                }, 3000); // 3 s delay so app loads first
+
+            } else if (permission === 'denied') {
+                // Denied — check if 2 days have passed since last prompt
+                const deniedAt = parseInt(localStorage.getItem('push_denied_at') || '0');
+                const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
+                if (Date.now() - deniedAt < TWO_DAYS) return;
+
+                // 2 days elapsed — show custom prompt again
+                // (Browser won't show native dialog since permission=denied,
+                //  so we explain they need to allow it in browser settings)
+                setTimeout(() => {
+                    showPushPermissionPrompt(
+                        () => {
+                            // Show a toast explaining how to enable in settings
+                            showInAppToast(
+                                'Enable in Browser Settings',
+                                'Tap the 🔒 icon in your browser address bar → Notifications → Allow'
+                            );
+                            localStorage.setItem('push_denied_at', Date.now().toString());
+                        },
+                        () => {
+                            localStorage.setItem('push_denied_at', Date.now().toString());
+                        }
+                    );
+                }, 3000);
+            }
+        } catch (e) { console.warn('[Push] Subscription setup failed:', e); }
+    }
+
+    async function doSubscribe(swReg) {
+        try {
             const { getToken, onMessage, messaging } = window._fcm;
             const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: swReg });
             if (!token) return;
@@ -1582,7 +1678,8 @@
                 const { title, body } = payload.notification || {};
                 showInAppToast(title || 'Schedule Update', body || '');
             });
-        } catch (e) { console.warn('[Push] Subscription failed:', e); }
+            console.log('[Push] Subscribed successfully');
+        } catch (e) { console.warn('[Push] doSubscribe failed:', e); }
     }
 
     function showInAppToast(title, body) {
