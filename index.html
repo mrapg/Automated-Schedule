@@ -427,6 +427,7 @@
     import { getFirestore, collection, getDocs,
              doc, setDoc, deleteDoc,
              enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     // Set this to your VAPID public key from Firebase Console → Project Settings → Cloud Messaging
     const VAPID_KEY = 'YOUR_VAPID_PUBLIC_KEY_HERE';
@@ -443,6 +444,10 @@
     const appId = "schedule-debeb";
     const app   = initializeApp(firebaseConfig);
     const db    = getFirestore(app);
+    const auth  = getAuth(app);
+
+    // Sign in anonymously so Firestore security rules allow reads/writes
+    signInAnonymously(auth).catch(() => {});
 
     // Offline cache — non-blocking, silently ignored on private browsing
     enableIndexedDbPersistence(db).catch(() => {});
