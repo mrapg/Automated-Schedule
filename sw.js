@@ -1,4 +1,23 @@
-const CACHE_NAME = 'afmc-schedule-v21';
+/* sw.js - Consolidated Offline Cache + Firebase Messaging */
+
+// 1. IMPORT FIREBASE COMPAT SCRIPTS (Required for Service Workers)
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+
+// 2. INITIALIZE FIREBASE (Must use your project config)
+firebase.initializeApp({
+    apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+    authDomain: "schedule-debeb.firebaseapp.com",
+    projectId: "schedule-debeb",
+    storageBucket: "schedule-debeb.firebasestorage.app",
+    messagingSenderId: "139527638715",
+    appId: "1:139527638715:web:cfce01b41f323fd113239e"
+});
+
+const messaging = firebase.messaging();
+
+// 3. CACHING CONFIGURATION
+const CACHE_NAME = 'afmc-schedule-v22'; // Incremented version to refresh cache
 const ASSETS = [
   './',
   './index.html',
@@ -14,27 +33,20 @@ const ASSETS = [
   'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
 ];
 
-// 1. Install
+// 4. INSTALL & ACTIVATE (Your existing logic)
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Caching app shell v14');
-      return cache.addAll(ASSETS);
-    })
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
   );
   self.skipWaiting();
 });
 
-// 2. Activate: purge old caches, claim clients, notify for reload
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('[SW] Removing old cache:', key);
-            return caches.delete(key);
-          }
+          if (key !== CACHE_NAME) return caches.delete(key);
         })
       );
     }).then(() => self.clients.claim())
@@ -46,13 +58,10 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Fetch: Network-first for HTML, Cache-first for assets
+// 5. FETCH (Your existing Network-first for HTML logic)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
-  if (event.request.mode === 'navigate' ||
-      event.request.url.endsWith('index.html') ||
-      event.request.url.endsWith('/')) {
+  if (event.request.mode === 'navigate' || event.request.url.endsWith('index.html') || event.request.url.endsWith('/')) {
     event.respondWith(
       fetch(event.request)
         .then((response) => {
@@ -66,13 +75,11 @@ self.addEventListener('fetch', (event) => {
     );
     return;
   }
-
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) return cachedResponse;
       return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 ||
-            (response.type !== 'basic' && response.type !== 'cors')) return response;
+        if (!response || response.status !== 200) return response;
         const responseToCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         return response;
@@ -81,72 +88,50 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ─── PUSH NOTIFICATIONS ──────────────────────────────────────────────────────
+// 6. PUSH NOTIFICATIONS (Consolidated handler)
+messaging.onBackgroundMessage((payload) => {
+    console.log('[SW] Background message received', payload);
+    const { title, body } = payload.notification;
+    const { type, eventDate, eventId } = payload.data;
 
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
+    let targetUrl = './index.html';
+    if (type === 'venue_change' || type === 'faculty_change') {
+        targetUrl = `./index.html?date=${eventDate || ''}&eventId=${eventId || ''}`;
+    }
 
-  let payload;
-  try {
-    payload = event.data.json();
-  } catch (e) {
-    payload = { title: 'AFMC Schedule', body: event.data.text(), type: 'general' };
-  }
+    const options = {
+        body: body || 'Your schedule has been updated.',
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        tag: type || 'schedule-update',
+        renotify: true,
+        vibrate: [200, 100, 200],
+        data: { targetUrl, type, eventDate, eventId }
+    };
 
-  const { title, body, type, eventDate, eventId } = payload;
-
-  // Build the URL to open when notification is clicked
-  let targetUrl = './index.html';
-  if (type === 'venue_change' || type === 'faculty_change') {
-    // Deep link to specific date — index.html will scroll to it on load
-    targetUrl = `./index.html?date=${eventDate || ''}&eventId=${eventId || ''}`;
-  }
-
-  const options = {
-    body: body || 'Your schedule has been updated.',
-    icon: './icon-192.png',
-    badge: './icon-192.png',
-    tag: type || 'schedule-update',   // tag collapses duplicate notifications
-    renotify: true,
-    vibrate: [200, 100, 200],
-    data: { targetUrl, type, eventDate, eventId },
-    actions: [
-      { action: 'open', title: 'View Schedule' },
-      { action: 'dismiss', title: 'Dismiss' }
-    ]
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title || 'AFMC Schedule', options)
-  );
+    return self.registration.showNotification(title || 'AFMC Schedule', options);
 });
 
+// 7. NOTIFICATION CLICK HANDLING
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
-  if (event.action === 'dismiss') return;
-
-  const targetUrl = (event.notification.data && event.notification.data.targetUrl)
-    ? event.notification.data.targetUrl
-    : './index.html';
+  const targetUrl = event.notification.data?.targetUrl || './index.html';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If app is already open, focus it and post a message to navigate
       for (const client of clientList) {
         if (client.url.includes('index.html') || client.url.endsWith('/')) {
           client.focus();
           client.postMessage({
             type: 'NOTIFICATION_CLICK',
             targetUrl,
-            notifType: event.notification.data.type,
-            eventDate: event.notification.data.eventDate,
-            eventId: event.notification.data.eventId,
+            notifType: event.notification.data?.type,
+            eventDate: event.notification.data?.eventDate,
+            eventId: event.notification.data?.eventId,
           });
           return;
         }
       }
-      // Otherwise open a new window
       return self.clients.openWindow(targetUrl);
     })
   );
