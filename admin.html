@@ -1088,29 +1088,33 @@ async function sendPushNotification({ title, body, type = 'general', eventDate =
             }
 
             // Send notification button
-           document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
-                const type       = document.getElementById('notif-type').value;
-                const title      = document.getElementById('notif-title').value.trim();
-                const body       = document.getElementById('notif-body').value.trim();
-                const eventDate  = document.getElementById('notif-event-date')?.value || null;
-                const eventId    = document.getElementById('notif-event-id')?.value.trim() || null;
-                const schedule   = document.getElementById('notif-schedule-2000').checked;
-
-                if (!title) return showStatus('❌ Title is required.', 'error');
-                if (!body)  return showStatus('❌ Body is required.', 'error');
-
-                if (schedule) {
-                    scheduleNotifAt2000({ title, body, type, eventDate, eventId });
-                } else {
-                    await sendPushNotification({ title, body, type, eventDate, eventId });
-                }
-            };
+           document.getElementById('send-notification-btn').addEventListener('click', async () => {
+               const type       = document.getElementById('notif-type').value;
+               const title      = document.getElementById('notif-title').value.trim();
+               const body       = document.getElementById('notif-body').value.trim();
+               const eventDate  = document.getElementById('notif-event-date')?.value || null;
+               const eventId    = document.getElementById('notif-event-id')?.value.trim() || null;
+               const schedule   = document.getElementById('notif-schedule-2000').checked;
+               
+               if (!title) return showStatus('❌ Title is required.', 'error');
+               if (!body)  return showStatus('❌ Body is required.', 'error');
+               
+               if (schedule) {
+                   scheduleNotifAt2000({ title, body, type, eventDate, eventId });
+               } else {
+                   await sendPushNotification({ title, body, type, eventDate, eventId });
+               }
+               
+           });
+            
+            const dateTimeInputs = document.querySelectorAll('input[type="date"], input[type="time"]');
             dateTimeInputs.forEach(input => {
                 input.addEventListener('click', () => {
-                    if (typeof input.showPicker === 'function') { try { input.showPicker(); } catch (e) {} }
+                    if (typeof input.showPicker === 'function') {
+                        try { input.showPicker(); } catch (e) {}
+                    }
                 });
             });
-        });
     </script>
 </body>
 </html>
