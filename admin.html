@@ -493,7 +493,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, writeBatch, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { 
+            getFirestore, collection, getDocs, doc, deleteDoc, updateDoc, writeBatch, addDoc, setDoc 
+        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
@@ -518,7 +520,7 @@
 async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
     showStatus('Queuing notification...', 'info');
     try {
-        await setDoc(doc(collection(db, `artifacts/${appId}/public/data/notification_queue`)), {
+        await addDoc(doc(collection(db, `artifacts/${appId}/public/data/notification_queue`)), {
             title, body, type,
             eventDate: eventDate || null,
             eventId:   eventId   || null,
@@ -529,6 +531,7 @@ async function sendPushNotification({ title, body, type = 'general', eventDate =
         showStatus('✅ Notification queued — Cloud Function will deliver it shortly!', 'success');
 
     } catch (e) {
+        console.error("❌ Firestore error:", e);
         showStatus(`❌ Failed to queue notification: ${e.message}`, 'error');
     }
 }
