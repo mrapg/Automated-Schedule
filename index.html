@@ -451,7 +451,7 @@
     const db    = getFirestore(app);
     const auth  = getAuth(app);
 
-signInAnonymously(auth).then(() => {
+signInAnonymously(auth).then(async () => {
 
     Notification.requestPermission().then((permission) => {
 
