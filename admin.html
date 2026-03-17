@@ -515,7 +515,7 @@
         const tokensCollectionRef = collection(db, `artifacts/${appId}/public/data/push_tokens`);
 
         // ── Push Notification Sender ──────────────────────────────────────────
-    async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
+async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
     showStatus('Queuing notification...', 'info');
     try {
         await setDoc(doc(collection(db, `artifacts/${appId}/public/data/notification_queue`)), {
@@ -525,50 +525,13 @@
             createdAt: new Date().toISOString(),
             status:    'pending'
         });
+
         showStatus('✅ Notification queued — Cloud Function will deliver it shortly!', 'success');
+
     } catch (e) {
         showStatus(`❌ Failed to queue notification: ${e.message}`, 'error');
     }
-};
-
-                // FCM accepts up to 1000 tokens per request — batch if needed
-                const BATCH_SIZE = 500;
-                let sent = 0;
-                for (let i = 0; i < tokens.length; i += BATCH_SIZE) {
-                    const batch = tokens.slice(i, i + BATCH_SIZE);
-                    const payload = {
-                        registration_ids: batch,
-                        notification: { title, body, icon: './icon-192.png', click_action: 'FLUTTER_NOTIFICATION_CLICK' },
-                        data: { type, eventDate: eventDate || '', eventId: eventId || '', title, body }
-                    };
-                    const res = await fetch(FCM_API_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `key=${FCM_SERVER_KEY}`
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    if (res.ok) {
-                        const result = await res.json();
-                        sent += result.success || 0;
-                        // Clean up invalid tokens
-                        if (result.results) {
-                            result.results.forEach((r, idx) => {
-                                if (r.error === 'NotRegistered' || r.error === 'InvalidRegistration') {
-                                    const tokenToDelete = batch[idx];
-                                    snap.docs.find(d => d.data().token === tokenToDelete)?.ref && deleteDoc(snap.docs.find(d => d.data().token === tokenToDelete).ref).catch(() => {});
-                                }
-                            });
-                        }
-                    }
-                }
-                showStatus(`✅ Notification sent to ${sent} subscribers!`, 'success');
-            } catch (e) {
-                showStatus(`❌ Notification failed: ${e.message}`, 'error');
-            }
-        }
-
+}
         // ── Scheduled Notification (20:00 hrs) ──────────────────────────────
         function scheduleNotifAt2000(notifData) {
             const now = new Date();
