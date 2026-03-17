@@ -432,9 +432,10 @@
              doc, setDoc, deleteDoc,
              enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
     // Set this to your VAPID public key from Firebase Console → Project Settings → Cloud Messaging
-    const VAPID_KEY = 'BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo';
+    const VAPID_KEY = "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo";
 
     const firebaseConfig = {
         apiKey:            "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
@@ -450,21 +451,35 @@
     const db    = getFirestore(app);
     const auth  = getAuth(app);
 
-    // Sign in anonymously so Firestore security rules allow reads/writes
-    signInAnonymously(auth).catch(() => {});
+signInAnonymously(auth).then(() => {
 
+    const messaging = getMessaging(app);
+
+    getToken(messaging, {
+        vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo"
+    }).then((currentToken) => {
+
+        if (currentToken) {
+            console.log("🔥 TOKEN:", currentToken);
+
+            setDoc(
+                doc(collection(db, `artifacts/${appId}/public/data/push_tokens`)),
+                { token: currentToken }
+            );
+
+        } else {
+            console.log("❌ No token received");
+        }
+
+    }).catch((err) => {
+        console.log("❌ Token error:", err);
+    });
+
+}).catch(() => {
+    console.log("❌ Auth failed");
+});
     // Offline cache — non-blocking, silently ignored on private browsing
     enableIndexedDbPersistence(db).catch(() => {});
-
-    // FCM loaded lazily — never blocks the main app boot
-    if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE') {
-        import("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js")
-            .then(({ getMessaging, getToken, onMessage }) => {
-                try { window._fcm = { getToken, onMessage, messaging: getMessaging(app) }; }
-                catch (e) { console.warn('FCM init failed:', e); }
-            })
-            .catch(e => console.warn('FCM module load failed:', e));
-    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // SCHEDULE DATA — term dates, timetable rules, clinical rotations
