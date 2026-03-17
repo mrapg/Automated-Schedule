@@ -459,12 +459,15 @@ signInAnonymously(auth).then(() => {
         console.log("✅ Notification permission granted");
 
         const messaging = getMessaging(app);
-
-        getToken(messaging, {
-            vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo"
-        }).then((currentToken) => {
-
-            if (currentToken) {
+        
+        const registration = await navigator.serviceWorker.register('/Automated-Schedule/firebase-messaging-sw.js');
+        
+        const currentToken = await getToken(messaging, {
+            vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo",
+            serviceWorkerRegistration: registration
+        });
+        
+        if (currentToken) {
                 console.log("🔥 TOKEN:", currentToken);
 
                 setDoc(
@@ -476,16 +479,14 @@ signInAnonymously(auth).then(() => {
                 console.log("❌ No token received");
             }
 
-        }).catch((err) => {
-            console.log("❌ Token error:", err);
-        });
+        } else {
+            console.log("❌ Notification permission denied");
+        }
 
-    } else {
-        console.log("❌ Notification permission denied");
-    }
-    
     });
 
+}).catch(() => {
+    console.log("❌ Auth failed");
 });
     // Offline cache — non-blocking, silently ignored on private browsing
     enableIndexedDbPersistence(db).catch(() => {});
