@@ -58,12 +58,12 @@
             width: 100%;
             height: 100%;
             overflow-y: auto;
-             overflow-x: hidden;
+            overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-overflow-scrolling: touch;
-             touch-action: pan-y;
-
+            touch-action: pan-x pan-y; 
         }
+        
         .day-slide::-webkit-scrollbar,
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .day-slide::-webkit-scrollbar-thumb,
@@ -460,7 +460,6 @@ signInAnonymously(auth).then(async () => {
 
         const messaging = getMessaging(app);
 
-        const registration = await navigator.serviceWorker.register('/Automated-Schedule/firebase-messaging-sw.js');
 
         const currentToken = await getToken(messaging, {
             vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo",
@@ -1813,24 +1812,29 @@ signInAnonymously(auth).then(async () => {
     // ═══════════════════════════════════════════════════════════════════════
     // BOOT
     // ═══════════════════════════════════════════════════════════════════════
+// ... existing logic above ...
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BOOT
+    // ═══════════════════════════════════════════════════════════════════════
     window.onload = initialize;
 
     // Store SW registration globally so push subscription can be set up
-    // after the app initialises (needs user context, not SW load event)
+    // after the app initialises
     window._swReg = null;
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            if (!window.location.protocol.startsWith('http')) return;
-            navigator.serviceWorker.register('./sw.js')
-                .then(reg => {
-                    console.log('SW Registered');
-                    window._swReg = reg;
-                    // Push setup is called from initialize() after app loads
-                    // so it runs in user context, not cold SW load
-                })
-                .catch(err => console.log('SW Failed', err));
+        window.addEventListener('load', async () => {
+            try {
+                // Register sw.js as the SINGLE consolidated controller
+                const reg = await navigator.serviceWorker.register('./sw.js');
+                console.log('✅ Consolidated SW Registered');
+                window._swReg = reg;
+            } catch (err) {
+                console.error('❌ SW Registration Failed', err);
+            }
         });
+
         navigator.serviceWorker.addEventListener('message', (event) => {
             if (!event.data) return;
             if (event.data.type === 'SW_UPDATED')         window.location.reload();
