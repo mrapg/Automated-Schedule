@@ -56,23 +56,32 @@ exports.sendScheduleNotification = onDocumentCreated(
 
             for (let i = 0; i < tokens.length; i += BATCH) {
                 const batchTokens = tokens.slice(i, i + BATCH);
+                // functions/index.js - Update the message object
                 const message = {
                     tokens: batchTokens,
                     notification: { title, body },
+                    // Android high priority
+                    android: {
+                        priority: 'high'
+                    },
                     webpush: {
+                        headers: {
+                            // iOS/Web high priority
+                            Urgency: 'high'
+                        },
                         notification: {
                             title,
                             body,
-                            icon:  '/icon-192.png',
+                            icon: '/icon-192.png',
                             badge: '/icon-192.png',
                             vibrate: [200, 100, 200]
                         },
                         fcmOptions: { link: buildDeepLink(type, eventDate, eventId) }
                     },
                     data: {
-                        type:      type      || 'general',
+                        type: type || 'general',
                         eventDate: eventDate || '',
-                        eventId:   eventId   || ''
+                        eventId: eventId || ''
                     }
                 };
 
