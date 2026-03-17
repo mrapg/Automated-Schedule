@@ -518,16 +518,17 @@
 
         // ── Push Notification Sender ──────────────────────────────────────────
 async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
-    // 1. Check if user is actually logged in first
+    showStatus('Queuing notification...', 'info');
+    
+    // Ensure you are authenticated before trying to write
     if (!auth.currentUser) {
-        showStatus('❌ Error: Not authenticated yet. Wait a second and try again.', 'error');
+        showStatus('❌ Error: Not connected to database. Please refresh.', 'error');
         return;
     }
 
-    showStatus('Queuing notification...', 'info');
     try {
-        // 2. Use the exact path defined in your rules
-        await addDoc(collection(db, `artifacts/schedule-debeb/public/data/notification_queue`), {
+        // Use addDoc and hardcode the path to match your Security Rules EXACTLY
+        await addDoc(collection(db, "artifacts/schedule-debeb/public/data/notification_queue"), {
             title, 
             body, 
             type,
@@ -537,10 +538,12 @@ async function sendPushNotification({ title, body, type = 'general', eventDate =
             status:    'pending'
         });
 
-        showStatus('✅ Notification queued!', 'success');
+        showStatus('✅ Notification queued — Cloud Function will deliver it shortly!', 'success');
+
     } catch (e) {
-        console.error(e);
-        showStatus(`❌ Database Error: ${e.message}`, 'error');
+        // Log the actual error to the console so you can see if it's a Permission Denied error
+        console.error("Full Firebase Error:", e);
+        showStatus(`❌ Failed to queue: ${e.code || e.message}`, 'error');
     }
 }
         window.sendPushNotification = sendPushNotification;
