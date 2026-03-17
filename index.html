@@ -453,30 +453,39 @@
 
 signInAnonymously(auth).then(() => {
 
-    const messaging = getMessaging(app);
+    Notification.requestPermission().then((permission) => {
 
-    getToken(messaging, {
-        vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo"
-    }).then((currentToken) => {
+    if (permission === "granted") {
+        console.log("✅ Notification permission granted");
 
-        if (currentToken) {
-            console.log("🔥 TOKEN:", currentToken);
+        const messaging = getMessaging(app);
 
-            setDoc(
-                doc(collection(db, `artifacts/${appId}/public/data/push_tokens`)),
-                { token: currentToken }
-            );
+        getToken(messaging, {
+            vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo"
+        }).then((currentToken) => {
 
-        } else {
-            console.log("❌ No token received");
-        }
+            if (currentToken) {
+                console.log("🔥 TOKEN:", currentToken);
 
-    }).catch((err) => {
-        console.log("❌ Token error:", err);
+                setDoc(
+                    doc(collection(db, `artifacts/${appId}/public/data/push_tokens`)),
+                    { token: currentToken }
+                );
+
+            } else {
+                console.log("❌ No token received");
+            }
+
+        }).catch((err) => {
+            console.log("❌ Token error:", err);
+        });
+
+    } else {
+        console.log("❌ Notification permission denied");
+    }
+    
     });
 
-}).catch(() => {
-    console.log("❌ Auth failed");
 });
     // Offline cache — non-blocking, silently ignored on private browsing
     enableIndexedDbPersistence(db).catch(() => {});
