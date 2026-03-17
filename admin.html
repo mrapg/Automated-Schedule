@@ -518,21 +518,29 @@
 
         // ── Push Notification Sender ──────────────────────────────────────────
 async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
+    // 1. Check if user is actually logged in first
+    if (!auth.currentUser) {
+        showStatus('❌ Error: Not authenticated yet. Wait a second and try again.', 'error');
+        return;
+    }
+
     showStatus('Queuing notification...', 'info');
     try {
-        await addDoc(doc(collection(db, `artifacts/${appId}/public/data/notification_queue`)), {
-            title, body, type,
+        // 2. Use the exact path defined in your rules
+        await addDoc(collection(db, `artifacts/schedule-debeb/public/data/notification_queue`), {
+            title, 
+            body, 
+            type,
             eventDate: eventDate || null,
             eventId:   eventId   || null,
             createdAt: new Date().toISOString(),
             status:    'pending'
         });
 
-        showStatus('✅ Notification queued — Cloud Function will deliver it shortly!', 'success');
-
+        showStatus('✅ Notification queued!', 'success');
     } catch (e) {
-        console.error("❌ Firestore error:", e);
-        showStatus(`❌ Failed to queue notification: ${e.message}`, 'error');
+        console.error(e);
+        showStatus(`❌ Database Error: ${e.message}`, 'error');
     }
 }
         window.sendPushNotification = sendPushNotification;
