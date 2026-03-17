@@ -36,6 +36,10 @@
             flex-direction: column;
             overflow: hidden;
         }
+        header {
+            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+            background-color: #0f172a;
+        }
 
         /* ── Day Slide Carousel (horizontal swipe) ───────────────────────── */
         .day-view {
@@ -175,7 +179,7 @@
         /* ── Calendar Carousel Slides ────────────────────────────────────── */
         .cal-month-slide { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .cal-month-slide::-webkit-scrollbar { display: none; }
-        #cal-swipe-wrapper { touch-action: pan-y; }
+        #cal-swipe-wrapper { touch-action: pan-x pan-y; }
     </style>
 </head>
 
