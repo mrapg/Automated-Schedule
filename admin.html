@@ -532,6 +532,7 @@ async function sendPushNotification({ title, body, type = 'general', eventDate =
         showStatus(`❌ Failed to queue notification: ${e.message}`, 'error');
     }
 }
+        window.sendPushNotification = sendPushNotification;
         // ── Scheduled Notification (20:00 hrs) ──────────────────────────────
         function scheduleNotifAt2000(notifData) {
             const now = new Date();
@@ -1088,24 +1089,29 @@ async function sendPushNotification({ title, body, type = 'general', eventDate =
             }
 
             // Send notification button
-            document.getElementById('send-notification-btn').addEventListener('click', async () => {
-                const type       = document.getElementById('notif-type').value;
-                const title      = document.getElementById('notif-title').value.trim();
-                const body       = document.getElementById('notif-body').value.trim();
-                const eventDate  = document.getElementById('notif-event-date')?.value || null;
-                const eventId    = document.getElementById('notif-event-id')?.value.trim() || null;
-                const schedule   = document.getElementById('notif-schedule-2000').checked;
+// Change 'send-notification-btn' to 'send-notif-btn' to match the HTML ID
+            const notifyBtn = document.getElementById('send-notif-btn');
             
-                if (!title) return showStatus('❌ Title is required.', 'error');
-                if (!body)  return showStatus('❌ Body is required.', 'error');
-            
-                if (schedule) {
-                    scheduleNotifAt2000({ title, body, type, eventDate, eventId });
-                } else {
-                    await sendPushNotification({ title, body, type, eventDate, eventId });
-                }
-            });
-            
+            if (notifyBtn) {
+                notifyBtn.addEventListener('click', async () => {
+                    const type       = document.getElementById('notif-type').value;
+                    const title      = document.getElementById('notif-title').value.trim();
+                    const body       = document.getElementById('notif-body').value.trim();
+                    const eventDate  = document.getElementById('notif-event-date')?.value || null;
+                    const eventId    = document.getElementById('notif-event-id')?.value.trim() || null;
+                    const schedule   = document.getElementById('notif-schedule-2000').checked;
+                
+                    if (!title) return showStatus('❌ Title is required.', 'error');
+                    if (!body)  return showStatus('❌ Body is required.', 'error');
+                
+                    if (schedule) {
+                        scheduleNotifAt2000({ title, body, type, eventDate, eventId });
+                    } else {
+                        await sendPushNotification({ title, body, type, eventDate, eventId });
+                    }
+                });
+            }
+                        
             const dateTimeInputs = document.querySelectorAll('input[type="date"], input[type="time"]');
             dateTimeInputs.forEach(input => {
                 input.addEventListener('click', () => {
@@ -1115,6 +1121,7 @@ async function sendPushNotification({ title, body, type = 'general', eventDate =
                 });
             });
             
-            </script>
+        }); // This closes the document.addEventListener('DOMContentLoaded', ...) block
+    </script> 
 </body>
 </html>
