@@ -506,9 +506,7 @@
         };
         const appId = "schedule-debeb";
         // FCM Server Key — set this to your Firebase project's server key
-        // Go to Firebase Console → Project Settings → Cloud Messaging → Server key
-        const FCM_SERVER_KEY = 'YOUR_FCM_SERVER_KEY_HERE';
-        const FCM_API_URL = 'https://fcm.googleapis.com/fcm/send';
+       
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -517,14 +515,21 @@
         const tokensCollectionRef = collection(db, `artifacts/${appId}/public/data/push_tokens`);
 
         // ── Push Notification Sender ──────────────────────────────────────────
-        async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
-            showStatus('Fetching subscriber tokens...', 'info');
-            try {
-                const snap = await getDocs(tokensCollectionRef);
-                const tokens = snap.docs.map(d => d.data().token).filter(Boolean);
-                if (tokens.length === 0) { showStatus('No subscribers found.', 'error'); return; }
-
-                showStatus(`Sending to ${tokens.length} subscribers...`, 'info');
+    async function sendPushNotification({ title, body, type = 'general', eventDate = null, eventId = null }) {
+    showStatus('Queuing notification...', 'info');
+    try {
+        await setDoc(doc(collection(db, `artifacts/${appId}/public/data/notification_queue`)), {
+            title, body, type,
+            eventDate: eventDate || null,
+            eventId:   eventId   || null,
+            createdAt: new Date().toISOString(),
+            status:    'pending'
+        });
+        showStatus('✅ Notification queued — Cloud Function will deliver it shortly!', 'success');
+    } catch (e) {
+        showStatus(`❌ Failed to queue notification: ${e.message}`, 'error');
+    }
+};
 
                 // FCM accepts up to 1000 tokens per request — batch if needed
                 const BATCH_SIZE = 500;
@@ -1120,7 +1125,7 @@
             }
 
             // Send notification button
-            document.getElementById('send-notif-btn').onclick = async () => {
+           document.querySelectorAll('input[type="date"], input[type="time"]').forEach(input => {
                 const type       = document.getElementById('notif-type').value;
                 const title      = document.getElementById('notif-title').value.trim();
                 const body       = document.getElementById('notif-body').value.trim();
