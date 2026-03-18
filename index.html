@@ -455,6 +455,31 @@
     const db    = getFirestore(app);
     const auth  = getAuth(app);
 
+        signInAnonymously(auth).then(async () => {
+    const permission = await Notification.requestPermission();
+    if (permission === "granted") {
+        console.log("✅ Notification permission granted");
+        const messaging = getMessaging(app);
+        const currentToken = await getToken(messaging, {
+            vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo",
+            serviceWorkerRegistration: registration
+        });
+        if (currentToken) {
+            console.log("🔥 TOKEN:", currentToken);
+            await setDoc(
+                doc(collection(db, `artifacts/${appId}/public/data/push_tokens`)),
+                { token: currentToken }
+            );
+        } else {
+            console.log("❌ No token received");
+        }
+    } else {
+        console.log("❌ Notification permission denied");
+    }
+}).catch(() => {
+    console.log("❌ Auth failed");
+});
+
     // Offline cache — non-blocking, silently ignored on private browsing
     enableIndexedDbPersistence(db).catch(() => {});
 
