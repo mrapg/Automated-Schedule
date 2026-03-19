@@ -14,20 +14,21 @@
     <style>
         /* ── Base Layout ─────────────────────────────────────────────────── */
         html, body {
-            height: 100%;
+            height: 100dvh; /* Use dynamic viewport height */
             overflow: hidden;
-            overscroll-behavior: none;
-            position: fixed;          /* iOS: prevent elastic bounce */
+            overscroll-behavior: none; /* Modern way to prevent elastic bounce */
+            /* position: fixed;  <-- REMOVE THIS line */
             width: 100%;
+            margin: 0;
         }
         body {
+            position: relative;
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
-            -webkit-text-size-adjust: 100%;  /* iOS: prevent font inflation on rotate */
+            -webkit-text-size-adjust: 100%;
             background-color: #0f172a;
             color: #f8fafc;
         }
-
         /* ── App Shell ───────────────────────────────────────────────────── */
         #app-container {
             height: 100dvh;
@@ -51,7 +52,8 @@
             overflow-y: hidden;
             display: flex;
             scrollbar-width: none;
-            touch-action: pan-x;
+            /* touch-action: pan-x; <-- REMOVE OR CHANGE THIS to auto */
+            touch-action: auto; 
             -webkit-overflow-scrolling: touch;
         }
         .day-view::-webkit-scrollbar { display: none; }
@@ -61,11 +63,11 @@
             flex-shrink: 0;
             width: 100%;
             height: 100%;
-            overflow-y: auto;
+            overflow-y: auto; /* Ensure this is set */
             overflow-x: hidden;
             overscroll-behavior-y: contain;
-            -webkit-overflow-scrolling: touch;
-            touch-action: pan-x pan-y; 
+            -webkit-overflow-scrolling: touch; /* Required for momentum scrolling on older iOS */
+            touch-action: auto; 
         }
         
         .day-slide::-webkit-scrollbar,
