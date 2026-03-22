@@ -1,37 +1,37 @@
 /* sw.js - Consolidated Offline Cache + Firebase Messaging */
 
-// 1. IMPORT FIREBASE COMPAT SCRIPTS (Required for Service Workers)
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+// 1. Import Modular SDKs
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getMessaging, onBackgroundMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-sw.js";
 
-// 2. INITIALIZE FIREBASE (Must use your project config)
-firebase.initializeApp({
+// 2. Initialize
+const firebaseConfig = {
     apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
     authDomain: "schedule-debeb.firebaseapp.com",
     projectId: "schedule-debeb",
     storageBucket: "schedule-debeb.firebasestorage.app",
     messagingSenderId: "139527638715",
     appId: "1:139527638715:web:cfce01b41f323fd113239e"
+};
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+// 3. Handle background messages (The missing piece!)
+onBackgroundMessage(messaging, (payload) => {
+  console.log('[sw.js] Background message received:', payload);
+  
+  const notificationTitle = payload.notification.title;
+  const notificationOptions = {
+    body: payload.notification.body,
+    icon: '/icon-192.png', // Ensure this exists in your public folder
+    badge: '/icon-192.png',
+    data: payload.data // This helps with deep-linking when clicked
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-const messaging = firebase.messaging();
-
-// 3. CACHING CONFIGURATION
-const CACHE_NAME = 'afmc-schedule-v22'; // Incremented version to refresh cache
-const ASSETS = [
-  './',
-  './index.html',
-  './manifest.json',
-  './icon-180.png',
-  './icon-192.png',
-  './icon-512.png',
-  './utils.js',
-  'https://cdn.tailwindcss.com', 
-  'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js',
-  'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js'
-];
 
 // 4. INSTALL & ACTIVATE (Your existing logic)
 self.addEventListener('install', (event) => {
