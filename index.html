@@ -462,17 +462,8 @@
     if (permission === "granted") {
         console.log("✅ Notification permission granted");
         const messaging = getMessaging(app);
-        const currentToken = await getToken(messaging, {
-            vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo",
-            serviceWorkerRegistration: registration
-        });
-        if (currentToken) {
-            console.log("🔥 TOKEN:", currentToken);
-            await setDoc(
-                doc(collection(db, `artifacts/${appId}/public/data/push_tokens`)),
-                { token: currentToken }
-            );
-        } else {
+        
+    else {
             console.log("❌ No token received");
         }
     } else {
