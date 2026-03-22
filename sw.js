@@ -136,3 +136,18 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Add this to sw.js
+messaging.onBackgroundMessage((payload) => {
+  console.log('[sw.js] Background message received:', payload);
+  const { title, body } = payload.notification;
+  
+  const notificationOptions = {
+    body: body,
+    icon: '/icon-192.png', // Ensure this path is correct in your public folder
+    badge: '/icon-192.png',
+    data: payload.data // Pass data for click actions
+  };
+
+  return self.registration.showNotification(title, notificationOptions);
+});
