@@ -4,7 +4,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getMessaging, onBackgroundMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-sw.js";
 
-// 2. Initialize
+// 2. Initialize Firebase
 const firebaseConfig = {
     apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
     authDomain: "schedule-debeb.firebaseapp.com",
@@ -17,23 +17,34 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-// 3. Handle background messages (The missing piece!)
+// --- ADDED: DEFINE YOUR CACHE VARIABLES ---
+// If these are not defined, the script crashes immediately!
+const CACHE_NAME = 'afmc-schedule-v25'; 
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './utils.js'
+];
+
+// 3. Handle background messages
 onBackgroundMessage(messaging, (payload) => {
   console.log('[sw.js] Background message received:', payload);
   
-  const notificationTitle = payload.notification.title;
+  const notificationTitle = payload.notification?.title || "New Update";
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/icon-192.png', // Ensure this exists in your public folder
-    badge: '/icon-192.png',
-    data: payload.data // This helps with deep-linking when clicked
+    body: payload.notification?.body || "Check the schedule for changes.",
+    // NOTE: Use relative paths (./) to ensure they work on GitHub Pages
+    icon: './icon-192.png', 
+    badge: './icon-192.png',
+    data: payload.data 
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-
-// 4. INSTALL & ACTIVATE (Your existing logic)
+// 4. INSTALL & ACTIVATE
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
