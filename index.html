@@ -457,21 +457,17 @@
     const db    = getFirestore(app);
     const auth  = getAuth(app);
 
-        signInAnonymously(auth).then(async () => {
-    const permission = await Notification.requestPermission();
-    if (permission === "granted") {
-        console.log("✅ Notification permission granted");
-        const messaging = getMessaging(app);
+    signInAnonymously(auth).then(async () => {
+        console.log("Logged in anonymously");
         
-    else {
-            console.log("❌ No token received");
+        // Check if Service Worker is ready, then subscribe
+        if (window._swReg) {
+            doSubscribe(window._swReg);
+        } else {
+            // Fallback if registration happened after login
+            navigator.serviceWorker.ready.then(reg => doSubscribe(reg));
         }
-    } else {
-        console.log("❌ Notification permission denied");
-    }
-}).catch(() => {
-    console.log("❌ Auth failed");
-});
+    }).catch(err => console.error("Login failed", err));
 
     // Offline cache — non-blocking, silently ignored on private browsing
     enableIndexedDbPersistence(db).catch(() => {});
@@ -1718,24 +1714,40 @@
         } catch (e) { console.warn('[Push] Setup failed:', e); }
     }
 
-    async function doSubscribe(swReg) {
-        try {
-            const { getToken, onMessage, messaging } = window._fcm;
-            // Wait for SW to be fully active — fixes "no active Service Worker" error
-            const readyReg = await navigator.serviceWorker.ready;
-            const token = await getToken(messaging, { vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo", serviceWorkerRegistration: readyReg });
-            if (!token) return;
-            const r = parseInt(localStorage.getItem('afmc_roll_no') || '0');
-            await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), {
-                token, roll: r || null, updatedAt: new Date().toISOString(), userAgent: navigator.userAgent.substring(0, 100)
-            });
-            onMessage(messaging, (payload) => {
-                const { title, body } = payload.notification || {};
-                showInAppToast(title || 'Schedule Update', body || '');
-            });
-            console.log('[Push] Subscribed successfully');
-        } catch (e) { console.warn('[Push] doSubscribe failed:', e); }
+// Locate doSubscribe(swReg) and update the setDoc part:
+async function doSubscribe(swReg) {
+    try {
+        const { getToken, onMessage, messaging } = window._fcm;
+        const readyReg = await navigator.serviceWorker.ready;
+        
+        const token = await getToken(messaging, { 
+            vapidKey: VAPID_KEY, 
+            serviceWorkerRegistration: readyReg 
+        });
+
+        if (!token) return;
+
+        const r = parseInt(localStorage.getItem('afmc_roll_no') || '0');
+
+        // UPDATED: Ensure the path matches your Firebase Rules and Cloud Function exactly
+        // Use the token as the ID: doc(db, "PATH", token)
+        await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), {
+            token: token,
+            roll: r || null,
+            updatedAt: new Date().toISOString(),
+            userAgent: navigator.userAgent.substring(0, 100)
+        });
+
+        onMessage(messaging, (payload) => {
+            const { title, body } = payload.notification || {};
+            showInAppToast(title || 'Schedule Update', body || '');
+        });
+
+        console.log('[Push] Subscribed successfully');
+    } catch (e) { 
+        console.warn('[Push] doSubscribe failed:', e); 
     }
+}
 
     function showInAppToast(title, body) {
         const existing = document.getElementById('push-toast');
