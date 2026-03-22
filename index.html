@@ -1668,7 +1668,7 @@
 
             if (permission === 'granted') {
                 // Already allowed — try to subscribe if FCM is configured
-                if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE' && window._fcm) {
+                if (VAPID_KEY !== 'BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo' && window._fcm) {
                     const reg = window._swReg || await navigator.serviceWorker.ready;
                     await doSubscribe(reg);
                 }
@@ -1682,7 +1682,7 @@
                         Notification.requestPermission().then(async result => {
                             if (result === 'granted') {
                                 // Only subscribe to FCM if keys are configured
-                                if (VAPID_KEY !== 'YOUR_VAPID_PUBLIC_KEY_HERE') {
+                                if (VAPID_KEY !== 'BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo') {
                                     // Wait for FCM to load if not yet ready
                                     if (!window._fcm) await new Promise(r => setTimeout(r, 3000));
                                     if (window._fcm) {
@@ -1723,7 +1723,7 @@
             const { getToken, onMessage, messaging } = window._fcm;
             // Wait for SW to be fully active — fixes "no active Service Worker" error
             const readyReg = await navigator.serviceWorker.ready;
-            const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: readyReg });
+            const token = await getToken(messaging, { vapidKey: "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo", serviceWorkerRegistration: readyReg });
             if (!token) return;
             const r = parseInt(localStorage.getItem('afmc_roll_no') || '0');
             await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), {
