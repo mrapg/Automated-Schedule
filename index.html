@@ -429,36 +429,44 @@
         </div>
     </nav>
 
-    <script type="module">
-    // ═══════════════════════════════════════════════════════════════════════
-    // FIREBASE SETUP
-    // ═══════════════════════════════════════════════════════════════════════
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        
-        import { 
-        initializeFirestore, 
-        persistentLocalCache,
-        collection, 
-        doc, 
-        setDoc
-    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+   <script type="module">
+    // 1. ALL IMPORTS FIRST
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { initializeFirestore, persistentLocalCache } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-        const messaging = getMessaging(app);
+    // 2. DECLARE GLOBAL VARIABLES HERE (Line 480 area)
+    let db; 
+    let auth; 
+    let messaging;
+    const VAPID_KEY = "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo";
 
-        // Initialize DB with modern persistent cache
-        const db = initializeFirestore(app, {
+    // 3. INITIALIZATION FUNCTION
+    async function setupFirebase() {
+        const firebaseConfig = {
+            apiKey:            "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+            authDomain:        "schedule-debeb.firebaseapp.com",
+            projectId:         "schedule-debeb",
+            storageBucket:     "schedule-debeb.firebasestorage.app",
+            messagingSenderId: "139527638715",
+            appId:             "1:139527638715:web:cfce01b41f323fd113239e",
+            measurementId:     "G-KB7RQN5DD4"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        
+        // IMPORTANT: Assign values WITHOUT using 'const' or 'let' again
+        auth = getAuth(app);
+        messaging = getMessaging(app);
+        db = initializeFirestore(app, {
             localCache: persistentLocalCache()
         });
 
-        // This creates the object that doSubscribe is looking for
-        window._fcm = { 
-            messaging: messaging, 
-            getToken: getToken, 
-            onMessage: onMessage 
-        };
+        // Setup the FCM object for your subscribe function
+        window._fcm = { messaging, getToken, onMessage };
+    }
+        
 
     // Set this to your VAPID public key from Firebase Console → Project Settings → Cloud Messaging
     const VAPID_KEY = "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo";
@@ -474,6 +482,7 @@
     };
         // 2. Initialize App FIRST
         const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
         
         // 3. Initialize Services using 'app'
         const auth = getAuth(app);
