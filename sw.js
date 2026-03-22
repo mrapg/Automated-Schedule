@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-const CACHE_NAME = 'afmc-schedule-v27';
+const CACHE_NAME = 'afmc-schedule-v28';
 const ASSETS = [
   './',
   './index.html',
@@ -53,16 +53,17 @@ self.addEventListener('fetch', (event) => {
   if (event.request.mode === 'navigate' ||
       event.request.url.endsWith('index.html') ||
       event.request.url.endsWith('/')) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (response && response.status === 200) {
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, response.clone()));
-          }
-          return response;
-        })
-        .catch(() => caches.match('./index.html'))
-    );
+      event.respondWith(
+          fetch(event.request)
+            .then((response) => {
+              if (response && response.status === 200) {
+                const cloned = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
+              }
+              return response;
+            })
+            .catch(() => caches.match('./index.html'))
+        );
     return;
   }
 
