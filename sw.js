@@ -49,6 +49,7 @@ self.addEventListener('activate', (event) => {
 // ── FETCH ─────────────────────────────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (!event.request.url.startsWith('http')) return;
 
   if (event.request.mode === 'navigate' ||
       event.request.url.endsWith('index.html') ||
