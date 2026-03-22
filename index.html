@@ -433,12 +433,32 @@
     // ═══════════════════════════════════════════════════════════════════════
     // FIREBASE SETUP
     // ═══════════════════════════════════════════════════════════════════════
-    import { initializeApp }           from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-    import { getFirestore, collection, getDocs,
-             doc, setDoc, deleteDoc,
-             enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        
+        import { 
+        initializeFirestore, 
+        persistentLocalCache,
+        collection, 
+        doc, 
+        setDoc
+    } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
+
+        const messaging = getMessaging(app);
+
+        // Initialize DB with modern persistent cache
+        const db = initializeFirestore(app, {
+            localCache: persistentLocalCache()
+        });
+
+        // This creates the object that doSubscribe is looking for
+        window._fcm = { 
+            messaging: messaging, 
+            getToken: getToken, 
+            onMessage: onMessage 
+        };
 
     // Set this to your VAPID public key from Firebase Console → Project Settings → Cloud Messaging
     const VAPID_KEY = "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo";
@@ -452,10 +472,20 @@
         appId:             "1:139527638715:web:cfce01b41f323fd113239e",
         measurementId:     "G-KB7RQN5DD4"
     };
-    const appId = "schedule-debeb";
-    const app   = initializeApp(firebaseConfig);
-    const db    = getFirestore(app);
-    const auth  = getAuth(app);
+        // 2. Initialize App FIRST
+        const app = initializeApp(firebaseConfig);
+        
+        // 3. Initialize Services using 'app'
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const messaging = getMessaging(app); // Now 'app' is defined!
+        
+        // 4. Create the global object for your doSubscribe function
+        window._fcm = { 
+            messaging: messaging, 
+            getToken: getToken, 
+            onMessage: onMessage 
+        };
 
     signInAnonymously(auth).then(async () => {
         console.log("Logged in anonymously");
@@ -1823,17 +1853,18 @@ async function doSubscribe(swReg) {
     // after the app initialises
     window._swReg = null;
 
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', async () => {
-            try {
-                // Register sw.js as the SINGLE consolidated controller
-                const reg = await navigator.serviceWorker.register('./sw.js');
-                console.log('✅ Consolidated SW Registered');
-                window._swReg = reg;
-            } catch (err) {
-                console.error('❌ SW Registration Failed', err);
-            }
-        });
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', async () => {
+        try {
+
+            const reg = await navigator.serviceWorker.register('./sw.js', { type: 'module' }); 
+            console.log('✅ Consolidated SW Registered');
+            window._swReg = reg;
+        } catch (err) {
+            console.error('❌ SW Registration Failed', err);
+        }
+    });
+}
 
         navigator.serviceWorker.addEventListener('message', (event) => {
             if (!event.data) return;
