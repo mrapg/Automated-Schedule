@@ -429,87 +429,62 @@
         </div>
     </nav>
 
-   <script type="module">
+    
+<script type="module">
+    // ═══════════════════════════════════════════════════════════════════════
+    // SCHEDULE DATA — term dates, timetable rules, clinical rotations
+    // ═══════════════════════════════════════════════════════════════════════
+    
     // 1. ALL IMPORTS FIRST
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { initializeFirestore, persistentLocalCache } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, persistentLocalCache, getFirestore } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-    // 2. DECLARE GLOBAL VARIABLES HERE (Line 480 area)
+    // 2. GLOBAL VARIABLES (Declared ONLY once)
     let db; 
     let auth; 
     let messaging;
     const VAPID_KEY = "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo";
 
-    // 3. INITIALIZATION FUNCTION
-    async function setupFirebase() {
-        const firebaseConfig = {
-            apiKey:            "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
-            authDomain:        "schedule-debeb.firebaseapp.com",
-            projectId:         "schedule-debeb",
-            storageBucket:     "schedule-debeb.firebasestorage.app",
-            messagingSenderId: "139527638715",
-            appId:             "1:139527638715:web:cfce01b41f323fd113239e",
-            measurementId:     "G-KB7RQN5DD4"
-        };
-        
-        const app = initializeApp(firebaseConfig);
-        
-        // IMPORTANT: Assign values WITHOUT using 'const' or 'let' again
-        auth = getAuth(app);
-        messaging = getMessaging(app);
-        db = initializeFirestore(app, {
-            localCache: persistentLocalCache()
-        });
-
-        // Setup the FCM object for your subscribe function
-        window._fcm = { messaging, getToken, onMessage };
-    }
-        
-
-    // Set this to your VAPID public key from Firebase Console → Project Settings → Cloud Messaging
-    const VAPID_KEY = "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo";
-
     const firebaseConfig = {
-        apiKey:            "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
-        authDomain:        "schedule-debeb.firebaseapp.com",
-        projectId:         "schedule-debeb",
-        storageBucket:     "schedule-debeb.firebasestorage.app",
+        apiKey: "AIzaSyDOyTh56Wt3AtsG05nc04LsE1k3YxbuEdE",
+        authDomain: "schedule-debeb.firebaseapp.com",
+        projectId: "schedule-debeb",
+        storageBucket: "schedule-debeb.firebasestorage.app",
         messagingSenderId: "139527638715",
-        appId:             "1:139527638715:web:cfce01b41f323fd113239e",
-        measurementId:     "G-KB7RQN5DD4"
+        appId: "1:139527638715:web:cfce01b41f323fd113239e",
+        measurementId: "G-KB7RQN5DD4"
     };
-        // 2. Initialize App FIRST
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        
-        // 3. Initialize Services using 'app'
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const messaging = getMessaging(app); // Now 'app' is defined!
-        
-        // 4. Create the global object for your doSubscribe function
-        window._fcm = { 
-            messaging: messaging, 
-            getToken: getToken, 
-            onMessage: onMessage 
-        };
 
+    // 3. INITIALIZATION
+    const app = initializeApp(firebaseConfig);
+    
+    // Assign to the global variables we let'd above
+    auth = getAuth(app);
+    messaging = getMessaging(app);
+    
+    // Use the modern cache setting as requested by your console logs
+    db = initializeFirestore(app, {
+        localCache: persistentLocalCache()
+    });
+
+    // Setup the FCM object for your doSubscribe function
+    window._fcm = { messaging, getToken, onMessage };
+
+    // 4. AUTHENTICATION & SUBSCRIPTION
     signInAnonymously(auth).then(async () => {
         console.log("Logged in anonymously");
         
-        // Check if Service Worker is ready, then subscribe
-        if (window._swReg) {
-            doSubscribe(window._swReg);
-        } else {
-            // Fallback if registration happened after login
-            navigator.serviceWorker.ready.then(reg => doSubscribe(reg));
+        // Ensure Service Worker is ready before subscribing
+        const reg = await navigator.serviceWorker.ready;
+        window._swReg = reg;
+        
+        if (typeof doSubscribe === 'function') {
+            doSubscribe(reg);
         }
     }).catch(err => console.error("Login failed", err));
 
-    // Offline cache — non-blocking, silently ignored on private browsing
-    enableIndexedDbPersistence(db).catch(() => {});
 
     // ═══════════════════════════════════════════════════════════════════════
     // SCHEDULE DATA — term dates, timetable rules, clinical rotations
