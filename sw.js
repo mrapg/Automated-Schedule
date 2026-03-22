@@ -100,27 +100,58 @@ self.addEventListener('fetch', (event) => {
 });
 
 // 6. PUSH NOTIFICATIONS (Consolidated handler)
-messaging.onBackgroundMessage((payload) => {
+// --- PART A: The Receiver ---
+onBackgroundMessage(messaging, (payload) => {
     console.log('[SW] Background message received', payload);
-    const { title, body } = payload.notification;
-    const { type, eventDate, eventId } = payload.data;
+    
+    // Safety check for payload data
+    const title = payload.notification?.title || 'AFMC Schedule';
+    const body  = payload.notification?.body  || 'Your schedule has been updated.';
+    const { type, eventDate, eventId } = payload.data || {};
 
+    // Logic for deep-linking
     let targetUrl = './index.html';
-    if (type === 'venue_change' || type === 'faculty_change') {
-        targetUrl = `./index.html?date=${eventDate || ''}&eventId=${eventId || ''}`;
+    if ((type === 'venue_change' || type === 'faculty_change') && eventDate) {
+        targetUrl = `./index.html?date=${eventDate}&eventId=${eventId || ''}`;
     }
 
     const options = {
-        body: body || 'Your schedule has been updated.',
+        body: body,
         icon: './icon-192.png',
         badge: './icon-192.png',
         tag: type || 'schedule-update',
         renotify: true,
         vibrate: [200, 100, 200],
-        data: { targetUrl, type, eventDate, eventId }
+        // CRITICAL: Pass the targetUrl into the notification data
+        data: { targetUrl } 
     };
 
-    return self.registration.showNotification(title || 'AFMC Schedule', options);
+    return self.registration.showNotification(title, options);
+});
+
+// --- PART B: The Click Handler (ADD THIS EXACTLY) ---
+self.addEventListener('notificationclick', (event) => {
+    // 1. Close the notification popup
+    event.notification.close();
+
+    // 2. Extract the URL we saved in Part A
+    const urlToOpen = event.notification.data?.targetUrl || './index.html';
+
+    // 3. Open the window or focus an existing one
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+            // Check if app is already open
+            for (let client of windowClients) {
+                if ('focus' in client) {
+                    return client.focus().then(() => client.navigate(urlToOpen));
+                }
+            }
+            // If not open, open new window
+            if (clients.openWindow) {
+                return clients.openWindow(urlToOpen);
+            }
+        })
+    );
 });
 
 // 7. NOTIFICATION CLICK HANDLING
