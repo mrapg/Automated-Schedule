@@ -18,10 +18,10 @@
             height: 100dvh;
             overflow: hidden;
             overscroll-behavior: none;
-            -webkit-overflow-scrolling: touch;
             width: 100%;
             margin: 0;
         }
+        
         body {
             position: relative;
             font-family: 'Inter', sans-serif;
@@ -30,44 +30,48 @@
             background-color: #0f172a;
             color: #f8fafc;
         }
+        
         /* ── App Shell ───────────────────────────────────────────────────── */
         #app-container {
             height: 100dvh;
-            height: -webkit-fill-available; 
+            height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
             position: relative;
         }
+        
         header {
             padding-top: calc(1rem + env(safe-area-inset-top)) !important;
             background-color: #0f172a;
         }
-
+        
         /* ── Day Slide Carousel (horizontal swipe) ───────────────────────── */
         .day-view {
             scroll-snap-type: x mandatory;
             scroll-behavior: smooth;
             flex: 1;
-            height: 100%;
-            overflow-x: auto;
+            min-height: 0;          /* Critical: lets flex child shrink so inner scroll works */
+            overflow-x: scroll;     /* scroll not auto — iOS needs explicit scroll */
             overflow-y: hidden;
             display: flex;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-x pan-y; 
+            touch-action: pan-x;   /* outer handles horizontal only */
         }
+        
         .day-view::-webkit-scrollbar { display: none; }
-
+        
         .day-slide {
             scroll-snap-align: start;
-            flex-shrink: 0 0 100%;
-            width: 100%;
+            flex: 0 0 100%;         /* correct shorthand — was broken as flex-shrink: 0 0 100% */
+            min-width: 100%;        /* belt-and-suspenders for iOS */
             height: 100%;
-            overflow-y: scroll;
+            overflow-y: scroll;     /* scroll not auto — iOS needs explicit scroll */
             overflow-x: hidden;
             overscroll-behavior-y: contain;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
+            touch-action: pan-y;   /* inner handles vertical only */
         }
         
         .day-slide::-webkit-scrollbar,
