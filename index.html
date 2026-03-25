@@ -1600,8 +1600,9 @@
             if (d > 100) closeDetail();
             else { panel.style.transform = ''; if (d < 10 && d > -10) closeDetail(); }
         });
-        
-        function setupDayViewTouchScroll() {
+    }
+
+            function setupDayViewTouchScroll() {
             const container = document.getElementById('day-view-container');
             if (!container) return;
         
@@ -1637,7 +1638,7 @@
             container.addEventListener('touchend', () => {
                 lock = null;
             }, { passive: true });
-    }
+            }
 
     // ═══════════════════════════════════════════════════════════════════════
     // PUSH NOTIFICATIONS
