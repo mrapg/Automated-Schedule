@@ -752,6 +752,7 @@
         } finally {
             generateSchedule(gBatch, cBatch, sBatch, dynamicEvents);
             render();
+            setupDayViewTouchScroll();
             generateTopicsLog();
             setupAppListeners();
             updateDatePickerLabel(getTodayStr());
@@ -1537,6 +1538,7 @@
             currentFilter = e.target.value;
             document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text;
             render();
+            setupDayViewTouchScroll();
         };
 
         // Calendar
@@ -1598,6 +1600,43 @@
             if (d > 100) closeDetail();
             else { panel.style.transform = ''; if (d < 10 && d > -10) closeDetail(); }
         });
+        
+        function setupDayViewTouchScroll() {
+            const container = document.getElementById('day-view-container');
+            if (!container) return;
+        
+            let startX = 0, startY = 0;
+            let lock = null; // 'h' horizontal, 'v' vertical
+        
+            container.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                lock = null;
+            }, { passive: true });
+        
+            container.addEventListener('touchmove', (e) => {
+                if (!e.touches.length) return;
+                const dx = Math.abs(e.touches[0].clientX - startX);
+                const dy = Math.abs(e.touches[0].clientY - startY);
+        
+                if (!lock) {
+                    if (dx > dy && dx > 6) lock = 'h';
+                    else if (dy > dx && dy > 6) lock = 'v';
+                }
+        
+                if (lock === 'h') {
+                    // Horizontal swipe — prevent default so iOS doesn't swallow it
+                    e.preventDefault();
+                    const delta = e.touches[0].clientX - startX;
+                    // let scroll-snap handle it via scrollLeft manipulation
+                    // just prevent default is enough — the overflow-x scroll takes over
+                }
+                // lock === 'v': do nothing, let the .day-slide scroll naturally
+            }, { passive: false });  // passive:false needed to call preventDefault()
+        
+            container.addEventListener('touchend', () => {
+                lock = null;
+            }, { passive: true });
     }
 
     // ═══════════════════════════════════════════════════════════════════════
