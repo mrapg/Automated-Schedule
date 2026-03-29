@@ -1251,7 +1251,15 @@
     function closeCalendar() {
         closeCalDayPanel();
         const ov = document.getElementById('calendar-overlay');
-        ov.classList.remove('cal-visible'); ov.classList.add('cal-hidden');
+        if (ov.classList.contains('cal-hidden')) return; // Already closed
+    
+        ov.classList.remove('cal-visible'); 
+        ov.classList.add('cal-hidden');
+    
+        // If we closed via the "X" button, remove the dummy history state
+        if (history.state && history.state.view === 'calendar') {
+            history.back();
+        }
     }
 
     function offsetMonth(year, month, delta) {
@@ -1808,6 +1816,18 @@
     // ═══════════════════════════════════════════════════════════════════════
     // BOOT
     // ═══════════════════════════════════════════════════════════════════════
+    // Listen for the back button / gesture
+    window.addEventListener('popstate', (event) => {
+        const calendarOverlay = document.getElementById('calendar-overlay');
+        
+        // If the calendar is visible and the user goes back, close it
+        if (calendarOverlay && calendarOverlay.classList.contains('cal-visible')) {
+            closeCalDayPanel();
+            calendarOverlay.classList.remove('cal-visible');
+            calendarOverlay.classList.add('cal-hidden');
+        }
+    });
+    
     window.onload = initialize;
     window._swReg = null;
 
