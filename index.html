@@ -1648,27 +1648,31 @@
             ];
         
             weekEvs.forEach(e => {
-                // Skip hidden/null topics
-                if (!e.topic || e.topic.toUpperCase() === 'NULL') return;
+                    // Skip hidden/null topics
+                    if (!e.topic || e.topic.toUpperCase() === 'NULL' || e.topic.trim() === "") return;
             
-                // 1. Identify the instructor/faculty name
-                const faculty = e.instructor || e.faculty || 'Staff';
-                
-                // 2. Format the Summary to include "Lecture by"
-                const summary = `${e.topic} (Lecture by ${faculty})`;
+                    // 1. Check for a valid faculty name (Exclude 'Staff' or empty values)
+                    const facultyName = e.faculty || e.instructor;
+                    const hasSpecificFaculty = facultyName && 
+                                               facultyName.toLowerCase() !== 'staff' && 
+                                               facultyName.trim() !== "";
             
-                const start = e.startTime ? e.startTime.replace(':', '') : "0800";
-                const end = e.endTime ? e.endTime.replace(':', '') : "0900";
-                
-                ics.push('BEGIN:VEVENT');
-                ics.push(`SUMMARY:${summary}`); // Updated to show faculty
-                ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
-                ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
-                ics.push(`LOCATION:${e.location || 'AFMC'}`);
-                // Optional: Also put the faculty in the description for better visibility in mobile apps
-                ics.push(`DESCRIPTION:Dept: ${e.department}\\nInstructor: ${faculty}${e.isDynamic ? ' (Updated)' : ''}`);
-                ics.push('END:VEVENT');
-            });
+                    // 2. Format the Summary: Only add "Faculty: ____" if a specific name exists
+                    const summary = hasSpecificFaculty 
+                        ? `${e.topic} (Faculty: ${facultyName})` 
+                        : e.topic;
+            
+                    const start = e.startTime ? e.startTime.replace(':', '') : "0800";
+                    const end = e.endTime ? e.endTime.replace(':', '') : "0900";
+                    
+                    ics.push('BEGIN:VEVENT');
+                    ics.push(`SUMMARY:${summary}`);
+                    ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
+                    ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
+                    ics.push(`LOCATION:${e.location || 'AFMC'}`);
+                    ics.push(`DESCRIPTION:Dept: ${e.department}${hasSpecificFaculty ? '\\nFaculty: ' + facultyName : ''}${e.isDynamic ? ' (Updated)' : ''}`);
+                    ics.push('END:VEVENT');
+                });
         
             ics.push('END:VCALENDAR');
         
