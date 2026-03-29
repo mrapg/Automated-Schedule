@@ -1245,6 +1245,7 @@
         renderAllCalSlides();
         const ov = document.getElementById('calendar-overlay');
         ov.classList.remove('cal-hidden'); ov.classList.add('cal-visible');
+        history.pushState({ view: 'calendar' }, '');
     }
 
     function closeCalendar() {
