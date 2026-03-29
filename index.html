@@ -12,46 +12,100 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="icon" href="./icon-192.png">
 
+    <script>
+        // Synchronous OS detection to avoid CSS FOUC (Flash of Unstyled Content)
+        window.isIOSApp = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (window.isIOSApp) {
+            document.documentElement.classList.add('is-ios');
+        }
+    </script>
+
     <style>
-        /* ── Base Layout ─────────────────────────────────────────────────── */
+        /* ── Common Base Layout ──────────────────────────────────────────── */
+        * {
+            -webkit-tap-highlight-color: transparent;
+            box-sizing: border-box;
+        }
+
         html {
-            height: 100dvh;
-            overflow: hidden;
+            background-color: #0f172a;
         }
         
         body {
-            height: 100dvh;
-            overflow: hidden;
-            overscroll-behavior: none;
-            width: 100%;
             margin: 0;
             font-family: 'Inter', sans-serif;
-            -webkit-tap-highlight-color: transparent;
             -webkit-text-size-adjust: 100%;
             background-color: #0f172a;
             color: #f8fafc;
         }
-        
-        /* ── App Shell ───────────────────────────────────────────────────── */
-        #app-container {
+
+        /* ── Android Specific Layouts ────────────────────────────────────── */
+        html:not(.is-ios) {
+            height: 100dvh;
+            overflow: hidden;
+        }
+        html:not(.is-ios) body {
+            height: 100dvh;
+            overflow: hidden;
+            overscroll-behavior: none;
+            width: 100%;
+        }
+        html:not(.is-ios) #app-container {
             height: 100dvh;
             height: -webkit-fill-available;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
-        
+
+        /* ── iOS Specific Layouts ────────────────────────────────────────── */
+        html.is-ios {
+            height: 100%;
+            height: -webkit-fill-available;
+        }
+        html.is-ios body {
+            height: 100%;
+            height: -webkit-fill-available;
+            position: fixed;
+            width: 100%;
+            overflow: hidden;
+            -webkit-touch-callout: none;
+        }
+        html.is-ios #app-container {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            padding-left: env(safe-area-inset-left);
+            padding-right: env(safe-area-inset-right);
+        }
+        html.is-ios #calendar-header {
+            padding-top: max(10px, env(safe-area-inset-top));
+        }
+
+        /* ── App Shell Common ────────────────────────────────────────────── */
         header {
-            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
             background-color: #0f172a;
             flex-shrink: 0;
+            position: relative;
+            z-index: 50;
         }
-        
-        /* ── Day Slide Carousel (horizontal swipe) ───────────────────────── */
+        html:not(.is-ios) header {
+            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+        }
+
+        /* ── Day Slide Carousel ──────────────────────────────────────────── */
         .day-view {
-            scroll-snap-type: x mandatory;
             flex: 1;
             min-height: 0;
+        }
+
+        /* Android Carousel */
+        html:not(.is-ios) #day-view-container {
+            scroll-snap-type: x mandatory;
             overflow-x: scroll;
             overflow-y: hidden;
             display: flex;
@@ -59,10 +113,9 @@
             -webkit-overflow-scrolling: touch;
             touch-action: pan-x, pan-y;
         }
+        html:not(.is-ios) #day-view-container::-webkit-scrollbar { display: none; }
         
-        .day-view::-webkit-scrollbar { display: none; }
-        
-        .day-slide {
+        html:not(.is-ios) .day-slide {
             scroll-snap-align: start;
             flex: 0 0 100%;
             min-width: 0;
@@ -73,117 +126,104 @@
             overscroll-behavior-y: contain;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-x, pan-y;
+            padding: 1.25rem; /* p-5 */
+            padding-bottom: 6rem; /* pb-24 */
         }
-        
-        .day-slide::-webkit-scrollbar,
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .day-slide::-webkit-scrollbar-thumb,
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
 
-        /* ── Shared Components ───────────────────────────────────────────── */
+        /* iOS Carousel */
+        html.is-ios #day-view-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+        }
+        html.is-ios #day-track {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: row;
+            will-change: transform;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+        }
+        html.is-ios .day-slide {
+            flex: 0 0 100vw;
+            max-width: 100vw; 
+            height: 100%;
+            overflow-y: scroll;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            padding: 20px 20px 100px;
+        }
+        @supports (padding: max(0px)) {
+            html.is-ios .day-slide {
+                max-width: min(100vw, 512px);
+                flex: 0 0 min(100vw, 512px);
+            }
+        }
+
+        /* ── Scrollbars & Panels ─────────────────────────────────────────── */
+        .day-slide::-webkit-scrollbar { display: none; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .ios-scroll { overflow-y: scroll; -webkit-overflow-scrolling: touch; }
+
         .card-shadow  { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); }
         .modal-open   { overflow: hidden; }
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-        .bottom-nav-safe { padding-bottom: env(safe-area-inset-bottom); }
+        
+        nav { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
 
         /* ── Animations ──────────────────────────────────────────────────── */
         .pulse-icon { animation: pulse-blue 2s infinite; }
-        @keyframes pulse-blue {
-            0%, 100% { transform: scale(1);    opacity: 0.8; }
-            50%       { transform: scale(1.05); opacity: 1;   }
-        }
+        @keyframes pulse-blue { 0%, 100% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; } }
         .live-dot { animation: blink 1.5s infinite; }
-        @keyframes blink {
-            0%, 100% { opacity: 1;   transform: scale(1);   }
-            50%       { opacity: 0.4; transform: scale(1.2); }
-        }
+        @keyframes blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } }
 
-        /* ── Topics Log (details/summary) ────────────────────────────────── */
-        details > summary                    { list-style: none; cursor: pointer; }
+        /* ── Topics Log ──────────────────────────────────────────────────── */
+        details > summary { list-style: none; cursor: pointer; }
         details > summary::-webkit-details-marker { display: none; }
-        details[open] > summary .arrow       { transform: rotate(180deg); }
+        details[open] > summary .arrow { transform: rotate(180deg); }
 
-        /* ── Tab Transitions ─────────────────────────────────────────────── */
-        .tab-content        { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
-        .tab-content.active { display: flex; opacity: 1; height: 100%; }
+        /* ── Transitions & Modals ────────────────────────────────────────── */
+        .tab-content { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
+        .tab-content.active { display: flex; opacity: 1; height: 100%; min-height: 0; }
 
-        /* ── Slide-up Panels (detail + cal day) ──────────────────────────── */
-        #detail-panel {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            will-change: transform;
-            -webkit-overflow-scrolling: auto;
-        }
-        .panel-hidden  { transform: translateY(100%); }
+        #detail-panel { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform; }
+        .panel-hidden { transform: translateY(100%); }
         .panel-visible { transform: translateY(0); }
 
-        /* ── PWA Install Banner ──────────────────────────────────────────── */
-        #install-banner {
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            max-height: 0; opacity: 0; overflow: hidden;
-        }
+        #install-banner { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); max-height: 0; opacity: 0; overflow: hidden; }
         #install-banner.visible { max-height: 150px; opacity: 1; padding: 1rem; }
 
-        /* ── Calendar Overlay ────────────────────────────────────────────── */
-        #calendar-overlay {
-            transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        #calendar-overlay.cal-hidden {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-8px);
-        }
-        #calendar-overlay.cal-visible {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateY(0);
-        }
+        #calendar-overlay { transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        #calendar-overlay.cal-hidden { opacity: 0; pointer-events: none; transform: translateY(-8px); }
+        #calendar-overlay.cal-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
-        /* ── Calendar Day Cells ──────────────────────────────────────────── */
-        .cal-day-cell {
-            min-height: 100px;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .cal-day-cell:active                      { background: rgba(255,255,255,0.06); }
-        .cal-day-cell.today-cell .cal-day-num     { background: #2563eb; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-        .cal-day-cell.other-month                 { opacity: 0.25; }
-        .cal-day-cell.is-sunday .cal-day-num      { color: #fbbf24; }
-        .cal-day-cell.is-holiday                  { background: rgba(251,191,36,0.07); }
+        /* ── Calendar UI ─────────────────────────────────────────────────── */
+        .cal-day-cell { min-height: 100px; cursor: pointer; transition: background 0.15s; -webkit-tap-highlight-color: rgba(255,255,255,0.06); }
+        .cal-day-cell:active { background: rgba(255,255,255,0.06); }
+        .cal-day-cell.today-cell .cal-day-num { background: #2563eb; color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+        .cal-day-cell.other-month { opacity: 0.25; }
+        .cal-day-cell.is-sunday .cal-day-num { color: #fbbf24; }
+        .cal-day-cell.is-holiday { background: rgba(251,191,36,0.07); }
 
-        /* ── Calendar Event Chips ────────────────────────────────────────── */
         .event-chip {
-            font-size: 7.5px;
-            font-weight: 700;
-            line-height: 1.25;
-            padding: 1.5px 3px;
-            border-radius: 3px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 100%;
-            display: block;
-            text-transform: uppercase;
-            letter-spacing: 0.01em;
-            cursor: pointer;
-            margin-bottom: 1.5px;
+            font-size: 7.5px; font-weight: 700; line-height: 1.25; padding: 1.5px 3px; border-radius: 3px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+            display: block; text-transform: uppercase; letter-spacing: 0.01em; cursor: margin-bottom: 1.5px;
         }
-        .chip-medicine  { background: #1d4ed8; color: #bfdbfe; }
-        .chip-surgery   { background: #065f46; color: #a7f3d0; }
-        .chip-obg       { background: #9f1239; color: #fecdd3; }
-        .chip-paeds     { background: #9d174d; color: #fbcfe8; }
-        .chip-ent       { background: #92400e; color: #fde68a; }
-        .chip-ortho     { background: #7c2d12; color: #fed7aa; }
-        .chip-ophthal   { background: #4c1d95; color: #ddd6fe; }
-        .chip-derm      { background: #713f12; color: #fef08a; }
-        .chip-psych     { background: #312e81; color: #c7d2fe; }
-        .chip-anaes     { background: #164e63; color: #a5f3fc; }
-        .chip-em        { background: #7f1d1d; color: #fca5a5; }
-        .chip-elective  { background: #4c1d95; color: #e9d5ff; }
-        .chip-holiday   { background: #14532d; color: #86efac; }
-        .chip-radiology { background: #1f2937; color: #d1d5db; }
-        .chip-default   { background: #1e293b; color: #94a3b8; }
+        .chip-medicine { background: #1d4ed8; color: #bfdbfe; } .chip-surgery { background: #065f46; color: #a7f3d0; }
+        .chip-obg { background: #9f1239; color: #fecdd3; } .chip-paeds { background: #9d174d; color: #fbcfe8; }
+        .chip-ent { background: #92400e; color: #fde68a; } .chip-ortho { background: #7c2d12; color: #fed7aa; }
+        .chip-ophthal { background: #4c1d95; color: #ddd6fe; } .chip-derm { background: #713f12; color: #fef08a; }
+        .chip-psych { background: #312e81; color: #c7d2fe; } .chip-anaes { background: #164e63; color: #a5f3fc; }
+        .chip-em { background: #7f1d1d; color: #fca5a5; } .chip-elective { background: #4c1d95; color: #e9d5ff; }
+        .chip-holiday { background: #14532d; color: #86efac; } .chip-radiology { background: #1f2937; color: #d1d5db; }
+        .chip-default { background: #1e293b; color: #94a3b8; }
 
-        /* ── Calendar Carousel Slides ────────────────────────────────────── */
         .cal-month-slide { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .cal-month-slide::-webkit-scrollbar { display: none; }
         #cal-swipe-wrapper { touch-action: pan-x pan-y; }
@@ -247,7 +287,7 @@
 
     <!-- ── Event Detail Panel (bottom sheet) ────────────────────────────── -->
     <div id="detail-overlay" class="fixed inset-0 bg-slate-950/80 z-[130] hidden transition-opacity">
-        <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)]">
+        <div id="detail-panel" class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-slate-900 rounded-t-[40px] border-t border-slate-700 p-8 panel-hidden shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] ios-scroll" style="max-height: 80vh;">
             <div id="detail-drag-zone" class="w-full flex justify-center py-6 -mt-8 mb-2 cursor-grab active:cursor-grabbing touch-none">
                 <div class="w-12 h-1.5 bg-slate-700 rounded-full"></div>
             </div>
@@ -260,7 +300,7 @@
     <div id="calendar-overlay" class="cal-hidden fixed inset-0 bg-slate-950/98 z-[115] flex flex-col max-w-lg mx-auto">
 
         <!-- Header: close | ‹ MONTH YEAR › | Today -->
-        <div class="bg-slate-950 border-b border-slate-800 px-3 py-2.5 flex items-center justify-between shrink-0">
+        <div id="calendar-header" class="bg-slate-950 border-b border-slate-800 px-3 py-2.5 flex items-center justify-between shrink-0">
             <button id="cal-close-btn" class="p-2 rounded-xl bg-slate-800 text-slate-300 active:scale-95 transition-transform shrink-0">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
@@ -286,7 +326,7 @@
         </div>
 
         <!-- Swipeable 3-slide month carousel -->
-        <div id="cal-swipe-wrapper" class="flex-1 overflow-hidden relative touch-pan-y">
+        <div id="cal-swipe-wrapper" class="flex-1 overflow-hidden relative" style="touch-action: pan-y;">
             <div id="cal-carousel" class="flex h-full" style="transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); will-change: transform;">
                 <div class="cal-month-slide flex-shrink-0 w-full h-full overflow-y-auto bg-slate-900" id="cal-slide-0">
                     <div class="cal-grid-inner grid grid-cols-7 gap-px bg-slate-800/60 p-px"></div>
@@ -303,7 +343,7 @@
         <!-- Day detail panel backdrop -->
         <div id="cal-day-backdrop" class="absolute inset-0 bg-slate-950/60 z-[9] opacity-0 pointer-events-none transition-opacity duration-300"></div>
 
-        <!-- Day detail panel (slides up on day tap) -->
+        <!-- Day detail panel -->
         <div id="cal-day-panel" class="absolute inset-x-0 bottom-0 bg-slate-900 rounded-t-[40px] border-t border-slate-700 shadow-[0_-20px_50px_-12px_rgba(0,0,0,0.5)] panel-hidden z-10" style="max-height: 62%;">
             <div id="cal-day-panel-handle" class="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing touch-none shrink-0">
                 <div class="w-10 h-1 bg-slate-700 rounded-full"></div>
@@ -317,7 +357,7 @@
                     Go to Day →
                 </button>
             </div>
-            <div id="cal-day-panel-events" class="overflow-y-auto px-4 py-3 space-y-2" style="max-height: calc(62vh - 90px); -webkit-overflow-scrolling: touch;"></div>
+            <div id="cal-day-panel-events" class="overflow-y-auto px-4 py-3 space-y-2 ios-scroll" style="max-height: calc(62vh - 90px);"></div>
         </div>
 
         <!-- Legend -->
@@ -325,10 +365,10 @@
     </div>
 
     <!-- ── Main App Container ────────────────────────────────────────────── -->
-    <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl h-screen flex flex-col border-x border-slate-800 overflow-hidden relative">
+    <div id="app-container" class="max-w-lg mx-auto bg-slate-900 shadow-2xl flex flex-col border-x border-slate-800 overflow-hidden relative">
 
         <!-- App Header -->
-        <header class="bg-slate-950 text-white p-4 sticky top-0 z-[50] border-b border-slate-800 shadow-lg shrink-0">
+        <header class="bg-slate-950 text-white px-4 pb-4 pt-4 border-b border-slate-800 shadow-lg shrink-0 sticky top-0">
             <div class="flex justify-between items-center">
                 <div>
                     <h1 class="text-xl font-black tracking-tight flex items-center gap-2">
@@ -346,9 +386,9 @@
         </header>
 
         <!-- ── View 1: Schedule ─────────────────────────────────────────── -->
-        <div id="schedule-tab-content" class="tab-content active flex-col flex-1 h-full overflow-hidden relative">
+        <div id="schedule-tab-content" class="tab-content active flex-col flex-1 h-full overflow-hidden relative" style="min-height: 0;">
             
-            <div id="ptr-indicator" class="absolute left-0 right-0 flex justify-center z-[5] pointer-events-none transition-all duration-300" style="top: 85px; transform: translateY(-50px); opacity: 0;">
+            <div id="ptr-indicator" class="absolute left-0 right-0 flex justify-center z-[5] pointer-events-none" style="transform: translateY(-50px); opacity: 0;">
                 <div class="bg-slate-800 text-blue-400 rounded-full px-4 py-2 shadow-lg border border-slate-700 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
                     <svg id="ptr-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
@@ -359,9 +399,8 @@
 
             <!-- Controls bar -->
             <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg shrink-0">
-                <!-- Row 1: Today | Calendar View -->
                 <div class="flex space-x-2">
-                    <button id="today-btn" class="flex-1 bg-blue-600 btn-glow-blue text-white font-black py-2.5 rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-[10px]">
+                    <button id="today-btn" class="flex-1 bg-blue-600 text-white font-black py-2.5 rounded-xl shadow-lg flex items-center justify-center hover:bg-blue-700 active:scale-95 transition-all uppercase tracking-widest text-[10px]">
                         Today
                     </button>
                     <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-violet-500 hover:bg-violet-900/20 transition-all cursor-pointer overflow-hidden group">
@@ -373,7 +412,6 @@
                         <button id="open-calendar-btn" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" aria-label="Open calendar view"></button>
                     </div>
                 </div>
-                <!-- Row 2: Dept filter | Add to Calendar -->
                 <div class="flex space-x-2">
                     <div class="relative flex-1 bg-slate-900 border border-slate-700 rounded-xl flex items-center justify-center px-3 hover:border-blue-500 transition-all cursor-pointer group">
                         <select id="dept-filter" class="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-20 bg-slate-950 text-white outline-none">
@@ -384,20 +422,27 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </div>
-                    <button id="add-to-calendar-btn" class="flex-[1.5] bg-emerald-600 btn-glow-green text-white font-black py-2.5 rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center uppercase tracking-widest text-[9px]">
+                    <button id="add-to-calendar-btn" class="flex-[1.5] bg-emerald-600 text-white font-black py-2.5 rounded-xl shadow-lg hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center uppercase tracking-widest text-[9px]">
                         Add to Calendar
                     </button>
                 </div>
             </div>
 
             <!-- Loading spinner -->
-            <div id="loading-indicator" class="text-center p-24 hidden absolute inset-0 z-50 bg-slate-900">
-                <div class="inline-block w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4 mt-20"></div>
-                <p class="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase">Generating</p>
+            <div id="loading-indicator" class="text-center p-24 hidden absolute inset-0 z-50 bg-slate-900 flex items-start justify-center pt-24">
+                <div>
+                    <div class="inline-block w-10 h-10 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin mb-4"></div>
+                    <p class="text-slate-500 font-black text-[10px] tracking-[0.3em] uppercase">Generating</p>
+                </div>
             </div>
 
-            <!-- Slides container -->
-            <div id="day-view-container" class="day-view flex-1 bg-slate-900 w-full relative"></div>
+            <!-- ANDROID View Mode (Hidden on iOS) -->
+            <div id="day-view-container" class="day-view flex-1 bg-slate-900 w-full relative hidden"></div>
+            
+            <!-- IOS View Mode (Hidden on Android) -->
+            <div class="day-view flex-1 hidden" id="day-view-wrapper">
+                <div id="day-track"></div>
+            </div>
 
             <!-- Week range footer -->
             <div class="bg-slate-950/80 backdrop-blur border-t border-slate-800 p-2 text-center shrink-0 z-20 absolute bottom-0 w-full pointer-events-none">
@@ -406,7 +451,7 @@
         </div>
 
         <!-- ── View 2: Topics Log ────────────────────────────────────────── -->
-        <div id="log-tab-content" class="tab-content flex-col flex-1 bg-slate-900 h-full overflow-hidden">
+        <div id="log-tab-content" class="tab-content flex-col flex-1 bg-slate-900 overflow-hidden" style="min-height: 0;">
             <div class="bg-slate-900 px-4 pt-4 pb-4 border-b border-slate-800 shrink-0 z-30">
                 <h2 class="text-2xl font-black text-white uppercase tracking-tighter mb-4">Topics Log</h2>
                 <div class="relative">
@@ -417,15 +462,15 @@
                     </svg>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto pb-20 px-4 space-y-3 custom-scrollbar overscroll-contain" id="log-scroll-area">
-                <div id="log-container"></div>
+            <div class="flex-1 overflow-y-auto pb-24 px-4 space-y-3 custom-scrollbar overscroll-contain ios-scroll" id="log-scroll-area" style="min-height: 0;">
+                <div id="log-container" class="pt-3"></div>
             </div>
         </div>
 
     </div><!-- /app-container -->
 
     <!-- ── Bottom Navigation ─────────────────────────────────────────────── -->
-    <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 z-50 bottom-nav-safe">
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-950 border-t border-slate-800 z-50">
         <div class="flex justify-around items-center max-w-lg mx-auto">
             <button id="nav-schedule" class="flex-1 py-1.5 flex flex-col items-center gap-1 group transition-colors text-blue-500">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 group-active:scale-95 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -443,22 +488,17 @@
         </div>
     </nav>
 
-    
+
 <script type="module">
-    // ═══════════════════════════════════════════════════════════════════════
-    // SCHEDULE DATA — term dates, timetable rules, clinical rotations
-    // ═══════════════════════════════════════════════════════════════════════
-    
-    // 1. ALL IMPORTS FIRST
+    // Determine OS based on unified script block in head
+    const isIOS = window.isIOSApp;
+
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-    import { initializeFirestore, persistentLocalCache, collection, doc, setDoc,getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { initializeFirestore, persistentLocalCache, collection, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging.js";
 
-    // 2. GLOBAL VARIABLES (Declared ONLY once)
-    let db; 
-    let auth; 
-    let messaging;
+    let db, auth, messaging;
     const VAPID_KEY = "BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo";
 
     const firebaseConfig = {
@@ -471,48 +511,31 @@
         measurementId: "G-KB7RQN5DD4"
     };
 
-    // 3. INITIALIZATION
     const app = initializeApp(firebaseConfig);
     const appId = "schedule-debeb";
-    
-    // Assign to the global variables we let'd above
     auth = getAuth(app);
     messaging = getMessaging(app);
-    
-    // Use the modern cache setting as requested by your console logs
-    db = initializeFirestore(app, {
-        localCache: persistentLocalCache()
-    });
-
-    // Setup the FCM object for your doSubscribe function
+    db = initializeFirestore(app, { localCache: persistentLocalCache() });
     window._fcm = { messaging, getToken, onMessage };
 
-    // 4. AUTHENTICATION & SUBSCRIPTION
     signInAnonymously(auth).then(async () => {
-        console.log("Logged in anonymously");
-        
-        // Ensure Service Worker is ready before subscribing
         const reg = await navigator.serviceWorker.ready;
         window._swReg = reg;
-        
-        if (typeof doSubscribe === 'function') {
-            doSubscribe(reg);
-        }
+        if (typeof doSubscribe === 'function') doSubscribe(reg);
     }).catch(err => console.error("Login failed", err));
 
-
     // ═══════════════════════════════════════════════════════════════════════
-    // SCHEDULE DATA — term dates, timetable rules, clinical rotations
+    // SCHEDULE DATA
     // ═══════════════════════════════════════════════════════════════════════
     const FIXED_HOLIDAYS = {
-    '2026-01-26': { name: 'Republic Day',        msg: '🇮🇳 Happy Republic Day!',        sub: 'Jai Hind — march on, cadet.' },
-    '2026-03-04': { name: 'Holi',                msg: '🎨 Happy Holi!',                 sub: 'May your day be as colourful as your future.' },
-    '2026-03-21': { name: 'Id-ul-Fitr',          msg: '🌙 Eid Mubarak!',               sub: 'Peace, joy and sevaiyan all around.' },
-    '2026-03-31': { name: 'Mahavir Jayanti',     msg: '🙏 Mahavir Jayanti',            sub: 'Live and let live.' },
-    '2026-04-03': { name: 'Good Friday',         msg: '✝️ Good Friday',                sub: 'A day of reflection and gratitude.' },
-    '2026-05-01': { name: 'Buddha Purnima',      msg: '☸️ Buddha Purnima',             sub: 'Peace begins with a single step.' },
-    '2026-05-27': { name: 'Id-ul-Zuha (Bakrid)', msg: '🌙 Eid ul-Adha Mubarak!',      sub: 'A blessed day of sacrifice and gratitude.' },
-};
+        '2026-01-26': { name: 'Republic Day',        msg: '🇮🇳 Happy Republic Day!',        sub: 'Jai Hind — march on, cadet.' },
+        '2026-03-04': { name: 'Holi',                msg: '🎨 Happy Holi!',                 sub: 'May your day be as colourful as your future.' },
+        '2026-03-21': { name: 'Id-ul-Fitr',          msg: '🌙 Eid Mubarak!',               sub: 'Peace, joy and sevaiyan all around.' },
+        '2026-03-31': { name: 'Mahavir Jayanti',     msg: '🙏 Mahavir Jayanti',            sub: 'Live and let live.' },
+        '2026-04-03': { name: 'Good Friday',         msg: '✝️ Good Friday',                sub: 'A day of reflection and gratitude.' },
+        '2026-05-01': { name: 'Buddha Purnima',      msg: '☸️ Buddha Purnima',             sub: 'Peace begins with a single step.' },
+        '2026-05-27': { name: 'Id-ul-Zuha (Bakrid)', msg: '🌙 Eid ul-Adha Mubarak!',      sub: 'A blessed day of sacrifice and gratitude.' },
+    };
     const termStartDate  = new Date('2026-01-12T00:00:00Z');
     const termEndDate    = new Date('2026-05-17T00:00:00Z');
     const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
@@ -520,26 +543,17 @@
     const scheduleRules = {
         "Monday": {
             theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "General Surgery" },
-            tutorials: {
-                "14:00-15:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" },
-                "15:00-16:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" }
-            },
+            tutorials: { "14:00-15:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }, "15:00-16:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" } },
             sdl: { "16:00-17:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Respiratory Medicine" } }
         },
         "Tuesday": {
             theory:    { "08:00-09:00": "General Medicine", "09:00-10:00": { 1: "Paediatrics", 2: "Paediatrics", 3: "SDL Paediatrics", 4: "SDL Paediatrics" } },
-            tutorials: {
-                "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" },
-                "15:00-16:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
-            },
+            tutorials: { "14:00-15:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }, "15:00-16:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" } },
             sdl: { "16:00-17:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Radiology" } }
         },
         "Wednesday": {
             theory:    { "08:00-09:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Ophthalmology" }, "09:00-10:00": "General Medicine" },
-            tutorials: {
-                "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
-                "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology" }
-            }
+            tutorials: { "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" }, "15:00-16:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Ophthalmology" } }
         },
         "Thursday": {
             theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "AETCOM (Med)", 2: "AETCOM (Med)", 3: "AETCOM (Surg)", 4: "AETCOM (OBG)" } },
@@ -548,83 +562,39 @@
         },
         "Friday": {
             theory:    { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "ENT", 2: "ENT", 3: "Ophthalmology", 4: "Anaesthesia" } },
-            tutorials: {
-                "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 4: "Orthopaedics" },
-                "15:00-16:00": { 1: "Orthopaedics", 2: "Orthopaedics" },
-                "16:00-17:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" }
-            },
+            tutorials: { "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 4: "Orthopaedics" }, "15:00-16:00": { 1: "Orthopaedics", 2: "Orthopaedics" }, "16:00-17:00": { "OBG": "A", "General Surgery": "B", "General Medicine": "C" } },
             sdl: { "16:00-17:00": { 3: ["Orthopaedics", "General Medicine"], 4: ["General Medicine"] } }
         },
         "Saturday": {
             theory:    { "08:00-09:00": { 1: "Dermatology", 2: "Dermatology", 3: "Psychiatry", 4: "Psychiatry" } },
             pandemic:  { "09:00-13:00": "Pandemic Module (Integrated)" },
-            tutorials: {
-                "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" },
-                "15:00-16:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" }
-            }
+            tutorials: { "14:00-15:00": { "OBG": "B", "General Surgery": "C", "General Medicine": "A" }, "15:00-16:00": { "OBG": "C", "General Surgery": "A", "General Medicine": "B" } }
         }
     };
 
     const clinicalRotationRules = [
-        { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" },
-        { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" },
-        { department: "Internal Medicine", batch: "C", startDate: "2026-03-09", endDate: "2026-03-29" },
-        { department: "Internal Medicine", batch: "D", startDate: "2026-03-30", endDate: "2026-04-19" },
-        { department: "Surgery",           batch: "A", startDate: "2026-02-02", endDate: "2026-02-22" },
-        { department: "Surgery",           batch: "B", startDate: "2026-03-09", endDate: "2026-03-29" },
-        { department: "Surgery",           batch: "C", startDate: "2026-03-30", endDate: "2026-04-19" },
-        { department: "Surgery",           batch: "D", startDate: "2026-01-12", endDate: "2026-02-01" },
-        { department: "Obs & Gynae",       batch: "A", startDate: "2026-03-09", endDate: "2026-03-29" },
-        { department: "Obs & Gynae",       batch: "B", startDate: "2026-03-30", endDate: "2026-04-19" },
-        { department: "Obs & Gynae",       batch: "C", startDate: "2026-01-12", endDate: "2026-02-01" },
-        { department: "Obs & Gynae",       batch: "D", startDate: "2026-02-02", endDate: "2026-02-22" },
-        { department: "Paediatrics",       batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" },
-        { department: "Paediatrics",       batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" },
-        { department: "Paediatrics",       batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" },
-        { department: "Paediatrics",       batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
-        { department: "Orthopaedics",      batch: "A", startDate: "2026-04-13", endDate: "2026-04-19" },
-        { department: "Orthopaedics",      batch: "B", startDate: "2026-01-26", endDate: "2026-02-01" },
-        { department: "Orthopaedics",      batch: "C", startDate: "2026-02-16", endDate: "2026-02-22" },
-        { department: "Orthopaedics",      batch: "D", startDate: "2026-03-23", endDate: "2026-03-29" },
-        { department: "Psychiatry",        batch: "A", startDate: "2026-04-20", endDate: "2026-04-26" },
-        { department: "Psychiatry",        batch: "B", startDate: "2026-04-27", endDate: "2026-05-03" },
-        { department: "Psychiatry",        batch: "C", startDate: "2026-05-04", endDate: "2026-05-10" },
-        { department: "Psychiatry",        batch: "D", startDate: "2026-05-11", endDate: "2026-05-17" },
-        { department: "Dermatology",       batch: "A", startDate: "2026-04-27", endDate: "2026-05-03" },
-        { department: "Dermatology",       batch: "B", startDate: "2026-05-04", endDate: "2026-05-10" },
-        { department: "Dermatology",       batch: "C", startDate: "2026-05-11", endDate: "2026-05-17" },
-        { department: "Dermatology",       batch: "D", startDate: "2026-04-20", endDate: "2026-04-26" },
-        { department: "Anaesthesia",       batch: "A", startDate: "2026-05-04", endDate: "2026-05-10" },
-        { department: "Anaesthesia",       batch: "B", startDate: "2026-05-11", endDate: "2026-05-17" },
-        { department: "Anaesthesia",       batch: "C", startDate: "2026-04-20", endDate: "2026-04-26" },
-        { department: "Anaesthesia",       batch: "D", startDate: "2026-04-27", endDate: "2026-05-03" },
-        { department: "Emergency Medicine",batch: "A", startDate: "2026-05-11", endDate: "2026-05-17" },
-        { department: "Emergency Medicine",batch: "B", startDate: "2026-04-20", endDate: "2026-04-26" },
-        { department: "Emergency Medicine",batch: "C", startDate: "2026-04-27", endDate: "2026-05-03" },
-        { department: "Emergency Medicine",batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
+        { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" }, { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" }, { department: "Internal Medicine", batch: "C", startDate: "2026-03-09", endDate: "2026-03-29" }, { department: "Internal Medicine", batch: "D", startDate: "2026-03-30", endDate: "2026-04-19" },
+        { department: "Surgery",           batch: "A", startDate: "2026-02-02", endDate: "2026-02-22" }, { department: "Surgery",           batch: "B", startDate: "2026-03-09", endDate: "2026-03-29" }, { department: "Surgery",           batch: "C", startDate: "2026-03-30", endDate: "2026-04-19" }, { department: "Surgery",           batch: "D", startDate: "2026-01-12", endDate: "2026-02-01" },
+        { department: "Obs & Gynae",       batch: "A", startDate: "2026-03-09", endDate: "2026-03-29" }, { department: "Obs & Gynae",       batch: "B", startDate: "2026-03-30", endDate: "2026-04-19" }, { department: "Obs & Gynae",       batch: "C", startDate: "2026-01-12", endDate: "2026-02-01" }, { department: "Obs & Gynae",       batch: "D", startDate: "2026-02-02", endDate: "2026-02-22" },
+        { department: "Paediatrics",       batch: "A", startDate: "2026-03-30", endDate: "2026-04-12" }, { department: "Paediatrics",       batch: "B", startDate: "2026-01-12", endDate: "2026-01-25" }, { department: "Paediatrics",       batch: "C", startDate: "2026-02-02", endDate: "2026-02-15" }, { department: "Paediatrics",       batch: "D", startDate: "2026-03-09", endDate: "2026-03-22" },
+        { department: "Orthopaedics",      batch: "A", startDate: "2026-04-13", endDate: "2026-04-19" }, { department: "Orthopaedics",      batch: "B", startDate: "2026-01-26", endDate: "2026-02-01" }, { department: "Orthopaedics",      batch: "C", startDate: "2026-02-16", endDate: "2026-02-22" }, { department: "Orthopaedics",      batch: "D", startDate: "2026-03-23", endDate: "2026-03-29" },
+        { department: "Psychiatry",        batch: "A", startDate: "2026-04-20", endDate: "2026-04-26" }, { department: "Psychiatry",        batch: "B", startDate: "2026-04-27", endDate: "2026-05-03" }, { department: "Psychiatry",        batch: "C", startDate: "2026-05-04", endDate: "2026-05-10" }, { department: "Psychiatry",        batch: "D", startDate: "2026-05-11", endDate: "2026-05-17" },
+        { department: "Dermatology",       batch: "A", startDate: "2026-04-27", endDate: "2026-05-03" }, { department: "Dermatology",       batch: "B", startDate: "2026-05-04", endDate: "2026-05-10" }, { department: "Dermatology",       batch: "C", startDate: "2026-05-11", endDate: "2026-05-17" }, { department: "Dermatology",       batch: "D", startDate: "2026-04-20", endDate: "2026-04-26" },
+        { department: "Anaesthesia",       batch: "A", startDate: "2026-05-04", endDate: "2026-05-10" }, { department: "Anaesthesia",       batch: "B", startDate: "2026-05-11", endDate: "2026-05-17" }, { department: "Anaesthesia",       batch: "C", startDate: "2026-04-20", endDate: "2026-04-26" }, { department: "Anaesthesia",       batch: "D", startDate: "2026-04-27", endDate: "2026-05-03" },
+        { department: "Emergency Medicine",batch: "A", startDate: "2026-05-11", endDate: "2026-05-17" }, { department: "Emergency Medicine",batch: "B", startDate: "2026-04-20", endDate: "2026-04-26" }, { department: "Emergency Medicine",batch: "C", startDate: "2026-04-27", endDate: "2026-05-03" }, { department: "Emergency Medicine",batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
     ];
 
     // ═══════════════════════════════════════════════════════════════════════
-    // HELPER UTILITIES
+    // HELPERS
     // ═══════════════════════════════════════════════════════════════════════
     const getNthWeekdayOfMonth = (date) => Math.ceil(date.getUTCDate() / 7);
-    const getTodayStr = () => {
-        const n = new Date();
-        return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
-    };
-    const getStartOfWeek = (date) => {
-        const d = new Date(date);
-        const day = d.getUTCDay();
-        d.setUTCDate(d.getUTCDate() - day + (day === 0 ? -6 : 1));
-        return d;
-    };
+    const getTodayStr = () => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`; };
+    const getStartOfWeek = (date) => { const d = new Date(date); const day = d.getUTCDay(); d.setUTCDate(d.getUTCDate() - day + (day === 0 ? -6 : 1)); return d; };
 
-    // Batch assignments by roll number
     const getClinicBatch  = (r) => r<=38?'A': r<=76?'B': r<=114?'C': r<=150?'D': null;
     const getGeneralBatch = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
     const getSubBatch     = (r) => r<=25?'A1': r<=50?'A2': r<=75?'B1': r<=100?'B2': r<=125?'C1': r<=150?'C2': null;
 
-    // Normalise department name variants to canonical form
     const normalizeDept = (dept) => {
         if (!dept) return dept;
         const d = String(dept).toUpperCase();
@@ -637,100 +607,251 @@
         return dept;
     };
 
-    // Tailwind border/bg/text classes for schedule cards
     const getDeptStyles = (dept) => {
         const map = {
-            "Internal Medicine":  "border-blue-500 bg-blue-900/30 text-blue-200",
-            "Obs & Gynae":        "border-rose-500 bg-rose-900/30 text-rose-200",
-            "Surgery":            "border-emerald-500 bg-emerald-900/30 text-emerald-200",
-            "Paediatrics":        "border-pink-400 bg-pink-900/30 text-pink-200",
-            "ENT":                "border-amber-500 bg-amber-900/30 text-amber-200",
-            "Ophthalmology":      "border-purple-500 bg-purple-900/30 text-purple-200",
-            "Orthopaedics":       "border-orange-500 bg-orange-900/30 text-orange-200",
-            "Dermatology":        "border-yellow-500 bg-yellow-900/30 text-yellow-200",
-            "Psychiatry":         "border-indigo-500 bg-indigo-900/30 text-indigo-200",
-            "Radiology":          "border-gray-500 bg-gray-900/30 text-gray-200",
-            "Anaesthesia":        "border-cyan-500 bg-cyan-900/30 text-cyan-200",
-            "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100",
-            "Electives":          "border-violet-700 bg-violet-900/40 text-violet-100",
-            "AETCOM":             "border-stone-500 bg-stone-800/40 text-stone-200"
+            "Internal Medicine":  "border-blue-500 bg-blue-900/30 text-blue-200", "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200",
+            "Surgery": "border-emerald-500 bg-emerald-900/30 text-emerald-200", "Paediatrics": "border-pink-400 bg-pink-900/30 text-pink-200",
+            "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200",
+            "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200",
+            "Psychiatry": "border-indigo-500 bg-indigo-900/30 text-indigo-200", "Radiology": "border-gray-500 bg-gray-900/30 text-gray-200",
+            "Anaesthesia": "border-cyan-500 bg-cyan-900/30 text-cyan-200", "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100",
+            "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200"
         };
         return map[dept] || "border-slate-600 bg-slate-800 text-slate-300";
     };
 
-    // CSS class for calendar chip by department
     const getChipClass = (dept) => {
         const map = {
-            "Internal Medicine":  "chip-medicine",
-            "Surgery":            "chip-surgery",
-            "Obs & Gynae":        "chip-obg",
-            "Paediatrics":        "chip-paeds",
-            "ENT":                "chip-ent",
-            "Orthopaedics":       "chip-ortho",
-            "Ophthalmology":      "chip-ophthal",
-            "Dermatology":        "chip-derm",
-            "Psychiatry":         "chip-psych",
-            "Anaesthesia":        "chip-anaes",
-            "Emergency Medicine": "chip-em",
-            "Electives":          "chip-elective",
-            "Radiology":          "chip-radiology"
+            "Internal Medicine": "chip-medicine", "Surgery": "chip-surgery", "Obs & Gynae": "chip-obg", "Paediatrics": "chip-paeds",
+            "ENT": "chip-ent", "Orthopaedics": "chip-ortho", "Ophthalmology": "chip-ophthal", "Dermatology": "chip-derm",
+            "Psychiatry": "chip-psych", "Anaesthesia": "chip-anaes", "Emergency Medicine": "chip-em", "Electives": "chip-elective", "Radiology": "chip-radiology"
         };
         return map[dept] || 'chip-default';
     };
 
-    // Hex bar colour for cal day panel events (direct style, no Tailwind purge risk)
     const DEPT_BAR_COLORS = {
-        "Internal Medicine":  "#2563eb",
-        "Surgery":            "#059669",
-        "Obs & Gynae":        "#e11d48",
-        "Paediatrics":        "#ec4899",
-        "ENT":                "#f59e0b",
-        "Orthopaedics":       "#f97316",
-        "Ophthalmology":      "#7c3aed",
-        "Dermatology":        "#eab308",
-        "Psychiatry":         "#4f46e5",
-        "Anaesthesia":        "#06b6d4",
-        "Emergency Medicine": "#dc2626",
-        "Electives":          "#7c3aed",
-        "Radiology":          "#64748b"
+        "Internal Medicine":  "#2563eb", "Surgery": "#059669", "Obs & Gynae": "#e11d48",
+        "Paediatrics": "#ec4899", "ENT": "#f59e0b", "Orthopaedics": "#f97316",
+        "Ophthalmology": "#7c3aed", "Dermatology": "#eab308", "Psychiatry": "#4f46e5",
+        "Anaesthesia": "#06b6d4", "Emergency Medicine": "#dc2626", "Electives": "#7c3aed", "Radiology": "#64748b"
     };
 
-    // Tailwind bg class for topics log dept colour bar
     const getDeptColorClass = (dept) => {
-        const map = {
-            "Surgery": "bg-emerald-500", "Internal Medicine": "bg-blue-500",
-            "Obs & Gynae": "bg-rose-500", "Paediatrics": "bg-pink-500",
-            "ENT": "bg-amber-500", "Ophthalmology": "bg-purple-500",
-            "Orthopaedics": "bg-orange-500", "Dermatology": "bg-yellow-500",
-            "Psychiatry": "bg-indigo-500", "Anaesthesia": "bg-cyan-500"
-        };
+        const map = { "Surgery": "bg-emerald-500", "Internal Medicine": "bg-blue-500", "Obs & Gynae": "bg-rose-500", "Paediatrics": "bg-pink-500", "ENT": "bg-amber-500", "Ophthalmology": "bg-purple-500", "Orthopaedics": "bg-orange-500", "Dermatology": "bg-yellow-500", "Psychiatry": "bg-indigo-500", "Anaesthesia": "bg-cyan-500" };
         return map[dept] || "bg-slate-500";
     };
 
-    const formatDate = (dateStr) =>
-        new Date(dateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+    const formatDate = (dateStr) => new Date(dateStr).toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+    const esc = (str) => str ? String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
 
     // ═══════════════════════════════════════════════════════════════════════
     // APP STATE
     // ═══════════════════════════════════════════════════════════════════════
-    // Read from localStorage, fall back to URL hash (e.g. #roll=42)
     let rollNo = localStorage.getItem('afmc_roll_no');
-    if (!rollNo) {
-        const hashMatch = location.hash.match(/roll=(\d+)/);
-        if (hashMatch) rollNo = hashMatch[1];
-    }
+    if (!rollNo) { const hashMatch = location.hash.match(/roll=(\d+)/); if (hashMatch) rollNo = hashMatch[1]; }
+    
     let personalizedSchedule = [];
     let currentFilter        = 'all';
     let currentlyVisibleDate = getTodayStr();
     let deferredPrompt;
     let logFuse              = null;
-    let cachedLogData        = [];
 
     // Calendar state
     let calCurrentYear    = new Date().getFullYear();
     let calCurrentMonth   = new Date().getMonth();
     let calIsAnimating    = false;
     let calDayPanelDateStr = null;
+
+    // iOS Only State
+    let slideIndex  = 0;  
+    let allSlides   = []; 
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // IOS SWIPE CAROUSEL (Exclusive for iOS branch)
+    // ═══════════════════════════════════════════════════════════════════════
+    function getSlideWidth() {
+        const wrapper = document.getElementById('day-view-wrapper');
+        return wrapper ? wrapper.offsetWidth : window.innerWidth;
+    }
+
+    function setTrackPosition(index, animated) {
+        const track = document.getElementById('day-track');
+        if (!track) return;
+        const x = -index * getSlideWidth();
+        track.style.transition = animated ? 'transform 0.3s cubic-bezier(0.4,0,0.2,1)' : 'none';
+        track.style.transform = `translateX(${x}px)`;
+    }
+
+    function goToSlide(index, animated = true) {
+        if (index < 0 || index >= allSlides.length) return;
+        slideIndex = index;
+        setTrackPosition(index, animated);
+        const ds = allSlides[index]?.dataset?.date;
+        if (ds) {
+            currentlyVisibleDate = ds;
+            updateWeekDisplay(ds);
+            updateDatePickerLabel(ds);
+        }
+    }
+
+    function goToDate(dateStr, animated = false) {
+        const idx = allSlides.findIndex(s => s.dataset.date === dateStr) ?? allSlides.findIndex(s => s.dataset.date >= dateStr);
+        if (idx >= 0) goToSlide(idx, animated);
+    }
+
+    function setupSwipeCarousel() {
+        const wrapper = document.getElementById('day-view-wrapper');
+        if (!wrapper) return;
+
+        let startX = 0, startY = 0, curX = 0;
+        let dragging = false, isHoriz = null, startSlide = 0;
+        const track = document.getElementById('day-track');
+        
+        // PTR state
+        let ptrStartY = 0, ptrPulling = false;
+        const ptrEl   = document.getElementById('ptr-indicator');
+        const ptrIcon = document.getElementById('ptr-icon');
+        const ptrText = document.getElementById('ptr-text');
+        const PTR_THRESHOLD = 70;
+
+        wrapper.addEventListener('touchstart', (e) => {
+            if (e.touches.length !== 1) return;
+            startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+            curX = startX; ptrStartY = startY; dragging = true; isHoriz = null;
+            startSlide = slideIndex; ptrPulling = false;
+            if (track) track.style.transition = 'none';
+        }, { passive: true });
+
+        wrapper.addEventListener('touchmove', (e) => {
+            if (!dragging || e.touches.length !== 1) return;
+            const dx = e.touches[0].clientX - startX; const dy = e.touches[0].clientY - startY;
+            curX = e.touches[0].clientX;
+            if (isHoriz === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) isHoriz = Math.abs(dx) > Math.abs(dy);
+
+            if (isHoriz) {
+                e.preventDefault();
+                const baseX = -startSlide * getSlideWidth();
+                if (track) track.style.transform = `translateX(${baseX + dx}px)`;
+            } else if (!isHoriz && dy > 0) {
+                const slide = allSlides[slideIndex];
+                if (slide && slide.scrollTop <= 0) {
+                    ptrPulling = true;
+                    const pull = Math.min(dy * 0.4, PTR_THRESHOLD + 20);
+                    ptrEl.style.transition = 'none';
+                    ptrEl.style.transform  = `translateY(${pull - 50}px)`;
+                    ptrEl.style.opacity    = String(Math.min(pull / 40, 1));
+                    ptrIcon.style.transform = pull >= PTR_THRESHOLD ? 'rotate(180deg)' : 'rotate(0deg)';
+                    ptrText.textContent     = pull >= PTR_THRESHOLD ? 'Release to refresh' : 'Pull to refresh';
+                }
+            }
+        }, { passive: false });
+
+        wrapper.addEventListener('touchend', (e) => {
+            if (!dragging) return;
+            dragging = false;
+
+            if (ptrPulling) {
+                const dy = (e.changedTouches[0]?.clientY ?? ptrStartY) - ptrStartY;
+                const pull = Math.min(dy * 0.4, PTR_THRESHOLD + 20);
+                ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+                if (pull >= PTR_THRESHOLD) {
+                    ptrText.textContent = 'Refreshing...'; ptrIcon.classList.add('animate-spin');
+                    ptrEl.style.transform = 'translateY(10px)';
+                    setTimeout(() => location.reload(), 400);
+                } else {
+                    ptrEl.style.transform = 'translateY(-50px)'; ptrEl.style.opacity = '0';
+                }
+                ptrPulling = false; return;
+            }
+
+            if (!isHoriz) return;
+            const dx = curX - startX; const threshold = getSlideWidth() * 0.25;
+
+            if (dx < -threshold && slideIndex < allSlides.length - 1) goToSlide(slideIndex + 1);
+            else if (dx > threshold && slideIndex > 0) goToSlide(slideIndex - 1);
+            else setTrackPosition(startSlide, true);
+        }, { passive: true });
+
+        window.addEventListener('resize', () => {
+            setTrackPosition(slideIndex, false);
+            if (track) {
+                const sw = getSlideWidth(); track.style.width = `${allSlides.length * sw}px`;
+                allSlides.forEach(s => { s.style.width = `${sw}px`; s.style.flexBasis = `${sw}px`; });
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ANDROID SCROLL & PTR (Exclusive for Android branch)
+    // ═══════════════════════════════════════════════════════════════════════
+    function scrollToSlideAndroid(slideElement, smooth = true) {
+        if (!slideElement) return;
+        const container = document.getElementById('day-view-container');
+        const targetLeft = slideElement.offsetLeft;
+        if (!smooth) { container.scrollLeft = targetLeft; return; }
+        const startLeft = container.scrollLeft; const delta = targetLeft - startLeft;
+        if (Math.abs(delta) < 2) return;
+        const duration = 320; const startTime = performance.now();
+        (function step(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            container.scrollLeft = startLeft + delta * (1 - Math.pow(1 - progress, 3));
+            if (progress < 1) requestAnimationFrame(step);
+        })(startTime);
+    }
+
+    function setupPullToRefreshAndroid() {
+        const container = document.getElementById('day-view-container');
+        const ptrEl = document.getElementById('ptr-indicator');
+        const ptrIcon = document.getElementById('ptr-icon');
+        const ptrText = document.getElementById('ptr-text');
+        
+        let startX = 0, startY = 0, currentY = 0;
+        let isPulling = false, isHorizontal = false;
+        const THRESHOLD = 70;
+    
+        container.addEventListener('touchstart', (e) => {
+            const activeSlide = e.target.closest('.day-slide');
+            if (!activeSlide || activeSlide.scrollTop > 0) return;
+            startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+            isPulling = true; isHorizontal = false; ptrEl.style.transition = 'none';
+        }, { passive: true });
+    
+        container.addEventListener('touchmove', (e) => {
+            if (!isPulling) return;
+            const dx = Math.abs(e.touches[0].clientX - startX);
+            currentY = e.touches[0].clientY; const dy = currentY - startY;
+            if (dx > 10 && dx > dy) isHorizontal = true;
+            if (isHorizontal || dy < 0) return;
+    
+            const pull = Math.min(dy * 0.4, THRESHOLD + 20);
+            ptrEl.style.transform = `translateY(${pull - 50}px)`;
+            ptrEl.style.opacity = Math.min(pull / 40, 1);
+            
+            ptrText.textContent = pull >= THRESHOLD ? 'Release to refresh' : 'Pull to refresh';
+            ptrIcon.style.transform = pull >= THRESHOLD ? 'rotate(180deg)' : 'rotate(0deg)';
+        }, { passive: true });
+    
+        container.addEventListener('touchend', () => {
+            if (!isPulling) return;
+            isPulling = false; const dy = currentY - startY;
+            
+            if (isHorizontal || dy < 0) {
+                ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+                ptrEl.style.transform = 'translateY(-50px)'; ptrEl.style.opacity = '0'; return;
+            }
+    
+            const pull = Math.min(dy * 0.4, THRESHOLD + 20);
+            ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+            
+            if (pull >= THRESHOLD) {
+                ptrText.textContent = 'Refreshing...'; ptrIcon.style.transform = 'rotate(0deg)';
+                ptrIcon.classList.add('animate-spin'); ptrEl.style.transform = `translateY(10px)`;
+                setTimeout(() => location.reload(), 400);
+            } else {
+                ptrEl.style.transform = 'translateY(-50px)'; ptrEl.style.opacity = '0';
+            }
+        });
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // INIT
@@ -741,18 +862,25 @@
     }
 
     async function initialize() {
+        // UI Container visibility logic
+        if (isIOS) {
+            document.getElementById('day-view-container').classList.add('hidden');
+            document.getElementById('day-view-wrapper').classList.remove('hidden');
+            document.getElementById('ptr-indicator').style.top = '0px'; // absolute from parent
+        } else {
+            document.getElementById('day-view-wrapper').classList.add('hidden');
+            document.getElementById('day-view-container').classList.remove('hidden');
+            const ptr = document.getElementById('ptr-indicator');
+            ptr.style.top = '85px';
+            ptr.classList.add('transition-all', 'duration-300');
+        }
+
         setupOnboardingListeners();
         setupPWAInstallLogic();
-
         window.addEventListener('offline', () => updateOfflineNotice('Viewing Offline Cache'));
         if (!navigator.onLine) updateOfflineNotice('Viewing Offline Cache');
 
-        if (!rollNo) {
-            document.getElementById('onboarding-overlay').classList.remove('hidden');
-            document.body.classList.add('modal-open');
-            return;
-        }
-        // Sync hash in case it was lost
+        if (!rollNo) { document.getElementById('onboarding-overlay').classList.remove('hidden'); return; }
         if (!location.hash.includes('roll=')) location.hash = `roll=${rollNo}`;
 
         document.getElementById('loading-indicator').classList.remove('hidden');
@@ -761,8 +889,7 @@
         const gBatch = getGeneralBatch(r);
         const cBatch = getClinicBatch(r);
         const sBatch = getSubBatch(r);
-        document.getElementById('user-info-display').textContent =
-            `Roll: ${rollNo} | Batch: ${sBatch} | Clinic: ${cBatch}`;
+        document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${sBatch} | Clinic: ${cBatch}`;
 
         let dynamicEvents = [];
         try {
@@ -775,22 +902,21 @@
             if (cache) {
                 try { dynamicEvents = JSON.parse(cache); updateOfflineNotice("Viewing Offline Cache"); }
                 catch { updateOfflineNotice("Offline: Generic Schedule"); }
-            } else {
-                updateOfflineNotice("Offline: Generic Schedule");
-            }
+            } else updateOfflineNotice("Offline: Generic Schedule");
         } finally {
             generateSchedule(gBatch, cBatch, sBatch, dynamicEvents);
             render();
             generateTopicsLog();
+            
+            if (isIOS) setupSwipeCarousel();
+            else setupPullToRefreshAndroid();
+            
             setupAppListeners();
-            setupPullToRefresh(); // <--- ADD THIS RIGHT HERE!
             updateDatePickerLabel(getTodayStr());
             document.getElementById('loading-indicator').classList.add('hidden');
             calCurrentMonth = new Date().getMonth();
             calCurrentYear  = new Date().getFullYear();
             checkUrlDeepLink();
-            // Set up push after app is loaded — runs in user session context
-            // Small delay so the schedule renders first before prompting
             setTimeout(() => setupPushSubscription(), 4000);
         }
     }
@@ -816,7 +942,6 @@
             const week       = getNthWeekdayOfMonth(current);
             const rules      = scheduleRules[dayName];
 
-            // Dynamic events relevant to this user on this day
             const myDynamic = dynamicEvents.filter(e => {
                 if (e.date !== ds) return false;
                 const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
@@ -824,54 +949,35 @@
                 if (e.isClinics || e.isClinic) return batches.includes(cBatch);
                 return batches.includes(gBatch) || batches.includes(sBatch);
             });
-
             myDynamic.forEach(e => {
                 const entry = { ...e, department: normalizeDept(e.department) };
                 if (!entry.topic || entry.topic.trim().toUpperCase() !== "NULL") data.push(entry);
             });
 
             const dynamicTimes    = new Set(myDynamic.map(e => e.startTime));
-            const isFixedHoliday = !!FIXED_HOLIDAYS[ds];
-            const isGlobalHoliday = isFixedHoliday || dynamicEvents.some(e =>
-                e.date === ds && e.isHoliday &&
-                (Array.isArray(e.batch) ? e.batch.includes("ALL") : e.batch == "ALL")
-            );
-            
+            const isFixedHoliday  = !!FIXED_HOLIDAYS[ds];
+            const isGlobalHoliday = isFixedHoliday || dynamicEvents.some(e => e.date === ds && e.isHoliday && (Array.isArray(e.batch) ? e.batch.includes("ALL") : e.batch == "ALL"));
+
             if (isFixedHoliday) {
                 const h = FIXED_HOLIDAYS[ds];
-                data.push({
-                    date: ds,
-                    isHoliday: true,
-                    isFixed: true,
-                    topic: h.name,
-                    holidayMsg: h.msg,
-                    holidaySub: h.sub,
-                    batch: ['ALL'],
-                    isDynamic: false
-                });
+                data.push({ date: ds, isHoliday: true, isFixed: true, topic: h.name, holidayMsg: h.msg, holidaySub: h.sub, batch: ['ALL'], isDynamic: false });
             }
+
             const isOverridden = (range) => dynamicTimes.has(range.split('-')[0]);
 
             if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
                 if (!isElective) {
-                    // Theory lectures
                     for (const [time, cfg] of Object.entries(rules.theory || {})) {
                         const topic = typeof cfg === 'string' ? cfg : cfg[week];
                         if (topic && !isOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
                     }
-                    // Pandemic module
                     if (rules.pandemic && !isOverridden("09:00")) {
-                        for (const [time, topic] of Object.entries(rules.pandemic))
-                            addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
+                        for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
                     }
-                    // Clinical rotations
                     clinicalRotationRules.forEach(rot => {
-                        const s = new Date(rot.startDate + 'T00:00:00Z');
-                        const e = new Date(rot.endDate   + 'T00:00:00Z');
-                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden("11:00"))
-                            addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
+                        const s = new Date(rot.startDate + 'T00:00:00Z'); const e = new Date(rot.endDate   + 'T00:00:00Z');
+                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden("11:00")) addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
                     });
-                    // Tutorials
                     for (const [time, cfg] of Object.entries(rules.tutorials || {})) {
                         if (typeof cfg === 'string') {
                             if (!isOverridden(time)) addEntry(data, ds, time, `${cfg} Tutorial`, cfg, "NLH Sushruta");
@@ -879,19 +985,15 @@
                             if (!isOverridden(time)) addEntry(data, ds, time, `${cfg[week]} Tutorial`, cfg[week], "NLH Sushruta");
                         } else {
                             for (const [topic, target] of Object.entries(cfg)) {
-                                if ((target === gBatch || (typeof target === 'number' && target === week)) && !isOverridden(time))
-                                    addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                if ((target === gBatch || (typeof target === 'number' && target === week)) && !isOverridden(time)) addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
                             }
                         }
                     }
-                    // SDL
                     for (const [time, cfg] of Object.entries(rules.sdl || {})) {
                         const topic = cfg[week];
-                        if (topic && !isOverridden(time))
-                            (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
+                        if (topic && !isOverridden(time)) (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
                     }
                 } else {
-                    // Elective period
                     if (!isOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
                 }
             }
@@ -900,7 +1002,6 @@
 
         personalizedSchedule = data;
 
-        // Populate dept filter dropdown
         const select = document.getElementById('dept-filter');
         const depts  = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
         select.innerHTML = '<option value="all">ALL DEPTS</option>';
@@ -912,99 +1013,133 @@
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // SCHEDULE RENDER (day slides)
+    // UNIFIED RENDER LOGIC
     // ═══════════════════════════════════════════════════════════════════════
-    const esc = (str) => str ? String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
-    
     function render() {
+        if (isIOS) renderIOS(); else renderAndroid();
+    }
+
+    function buildSlideContent(ds, isToday, curDate) {
+        let content = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
+            ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
+            ${curDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase()}
+        </h2>`;
+
+        const dayEvents = personalizedSchedule.filter(e => e.date === ds);
+        const filtered  = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
+        const sorted    = filtered.sort((a,b) => (a.startTime||'00:00').localeCompare(b.startTime||'00:00'));
+
+        if (sorted.length) {
+            const holiday = sorted.find(e => e.isHoliday);
+            if (holiday) {
+                const msg = holiday.holidayMsg || `🎉 ${esc(holiday.topic) || 'HOLIDAY'}`;
+                content += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center border-4 border-dotted border-amber-500/40 flex flex-col items-center gap-4">
+                    <div class="text-4xl">${msg.match(/^\p{Emoji}/u)?.[0] || '🎉'}</div>
+                    <div class="text-amber-300 font-black text-2xl tracking-tight">${esc(msg.replace(/^\p{Emoji}\s*/u,''))}</div>
+                    <div class="text-slate-400 font-bold text-sm uppercase tracking-widest">${esc(holiday.holidaySub || '')}</div>
+                </div>`;
+            } else {
+                content += sorted.map(e => {
+                    const idx = personalizedSchedule.indexOf(e);
+                    return `<div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden ${e.isDynamic ? (isIOS ? 'active:scale-[0.98] transition-transform cursor-pointer' : 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95') : ''}"
+                        ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${idx})"` : ''}>
+                        <div class="flex justify-between items-start gap-3 flex-nowrap">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                    <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${esc(e.topic)}</p>
+                                    ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
+                                </div>
+                                <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${esc(e.department)}</p>
+                            </div>
+                            <div class="text-right flex flex-col items-end shrink-0 ml-1">
+                                <div class="bg-blue-700 text-white px-4 py-2 rounded-2xl text-lg sm:text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none whitespace-nowrap">${e.startTime}</div>
+                                <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
+                            </div>
+                        </div>
+                        ${e.location ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest"><span>📍 ${esc(e.location)}</span></div>` : ''}
+                    </div>`;
+                }).join('');
+            }
+        } else {
+            const msg = curDate.getUTCDay() === 0 ? '🌞 SUNDAY' : 'REST DAY';
+            content += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${msg}</div>`;
+        }
+        return { content, hasItems: currentFilter === 'all' || sorted.length > 0 };
+    }
+
+    function renderAndroid() {
         const container = document.getElementById('day-view-container');
         container.innerHTML = '';
         const todayStr = getTodayStr();
         let cur = new Date(termStartDate);
 
         while (cur <= termEndDate) {
-            const ds            = cur.toISOString().split('T')[0];
-            const dayEvents     = personalizedSchedule.filter(e => e.date === ds);
-            const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
-
-            if (currentFilter === 'all' || filteredEvents.length > 0) {
+            const ds = cur.toISOString().split('T')[0];
+            const { content, hasItems } = buildSlideContent(ds, ds === todayStr, cur);
+            
+            if (hasItems) {
                 const slide = document.createElement('div');
                 slide.className = 'day-slide p-5 pb-24 overflow-y-auto';
                 slide.dataset.date = ds;
-                const isToday = ds === todayStr;
-
-                slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
-                    ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
-                    ${cur.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase()}
-                </h2>`;
-
-                const sorted = filteredEvents.sort((a,b) => (a.startTime||'00:00').localeCompare(b.startTime||'00:00'));
-
-                if (sorted.length) {
-                    const holiday = sorted.find(e => e.isHoliday);
-                    if (holiday) {
-                        const msg = holiday.holidayMsg || `🎉 ${esc(holiday.topic) || 'HOLIDAY'}`;
-                        const sub = holiday.holidaySub || '';
-                        slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center border-4 border-dotted border-amber-500/40 flex flex-col items-center gap-4">
-                            <div class="text-4xl">${msg.match(/^\p{Emoji}/u)?.[0] || '🎉'}</div>
-                            <div class="text-amber-300 font-black text-2xl tracking-tight">${esc(msg.replace(/^\p{Emoji}\s*/u,''))}</div>
-                            <div class="text-slate-400 font-bold text-sm uppercase tracking-widest">${esc(sub)}</div>
-                        </div>`;
-                    
-                    } else {
-                        slide.innerHTML += sorted.map(e => {
-                            const idx = personalizedSchedule.indexOf(e);
-                            return `
-                            <div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden transition-all transform ${e.isDynamic ? 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95' : ''}"
-                                ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${idx})"` : ''}>
-                                <div class="flex justify-between items-start gap-3 flex-nowrap">
-                                    <div class="flex-1 min-w-0">
-                                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                            <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${esc(e.topic)}</p>
-                                            ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
-                                        </div>
-                                        <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${esc(e.department)}</p>
-                                    </div>
-                                    <div class="text-right flex flex-col items-end shrink-0 ml-1">
-                                        <div class="bg-blue-700 text-white px-4 py-2 rounded-2xl text-lg sm:text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none whitespace-nowrap">${e.startTime}</div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
-                                    </div>
-                                </div>
-                                ${e.location ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest"><span>📍 ${esc(e.location)}</span></div>` : ''}
-                            </div>`;
-                        }).join('');
-                    }
-                } else {
-                    const msg = cur.getUTCDay() === 0 ? '🌞 SUNDAY' : 'REST DAY';
-                    slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${msg}</div>`;
-                }
-
+                slide.innerHTML = content;
                 container.appendChild(slide);
             }
             cur.setUTCDate(cur.getUTCDate() + 1);
         }
 
-        // IntersectionObserver to track visible date & update week label
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (!entry.isIntersecting) return;
-                const ds    = entry.target.dataset.date;
+                const ds = entry.target.dataset.date;
                 currentlyVisibleDate = ds;
-                const date  = new Date(ds + 'T00:00:00Z');
-                const start = getStartOfWeek(date);
-                const end   = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
-                document.getElementById('current-week-display').textContent =
-                    `${start.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})} - ${end.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})}, 2026`.toUpperCase();
+                updateWeekDisplay(ds);
             });
         }, { threshold: 0.5, root: container });
 
-        document.querySelectorAll('.day-slide').forEach(s => observer.observe(s));
+        document.querySelectorAll('#day-view-container .day-slide').forEach(s => observer.observe(s));
+        const slides = Array.from(document.querySelectorAll('#day-view-container .day-slide'));
+        scrollToSlideAndroid(slides.find(s => s.dataset.date >= todayStr) || slides[slides.length - 1], false);
+    }
 
-        // Scroll to today (or nearest future date)
-        const allSlides  = Array.from(document.querySelectorAll('.day-slide'));
-        const target     = allSlides.find(s => s.dataset.date >= todayStr);
-        const fallback   = allSlides[allSlides.length - 1];
-        scrollToSlide(target || fallback, false);
+    function renderIOS() {
+        const track = document.getElementById('day-track');
+        const todayStr = getTodayStr();
+        track.innerHTML = '';
+        allSlides = [];
+        const slideWidth = getSlideWidth();
+        let cur = new Date(termStartDate);
+
+        while (cur <= termEndDate) {
+            const ds = cur.toISOString().split('T')[0];
+            const { content, hasItems } = buildSlideContent(ds, ds === todayStr, cur);
+
+            if (hasItems) {
+                const slide = document.createElement('div');
+                slide.className = 'day-slide';
+                slide.dataset.date = ds;
+                slide.style.width = `${slideWidth}px`;
+                slide.style.flexBasis = `${slideWidth}px`;
+                slide.style.flexShrink = '0';
+                slide.innerHTML = content;
+                track.appendChild(slide);
+                allSlides.push(slide);
+            }
+            cur.setUTCDate(cur.getUTCDate() + 1);
+        }
+
+        track.style.width = `${allSlides.length * slideWidth}px`;
+        const todayIdx = allSlides.findIndex(s => s.dataset.date === todayStr) ?? allSlides.findIndex(s => s.dataset.date >= todayStr);
+        const targetIdx = todayIdx >= 0 ? todayIdx : allSlides.length - 1;
+        slideIndex = targetIdx;
+        setTrackPosition(targetIdx, false);
+        updateWeekDisplay(allSlides[targetIdx]?.dataset?.date || todayStr);
+    }
+
+    function updateWeekDisplay(dateStr) {
+        const date  = new Date(dateStr + 'T00:00:00Z');
+        const start = getStartOfWeek(date);
+        const end   = new Date(start); end.setUTCDate(start.getUTCDate() + 6);
+        document.getElementById('current-week-display').textContent = `${start.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})} - ${end.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})}, 2026`.toUpperCase();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1023,7 +1158,6 @@
             return true;
         });
 
-        cachedLogData = pastEvents;
         if (window.Fuse) logFuse = new Fuse(pastEvents, { keys: ['topic','department'], threshold: 0.3 });
 
         const grouped = pastEvents.reduce((acc, e) => {
@@ -1110,45 +1244,37 @@
         calCurrentMonth = d.getUTCMonth();
         renderAllCalSlides();
         const ov = document.getElementById('calendar-overlay');
-        ov.classList.remove('cal-hidden');
-        ov.classList.add('cal-visible');
+        ov.classList.remove('cal-hidden'); ov.classList.add('cal-visible');
     }
 
     function closeCalendar() {
         closeCalDayPanel();
         const ov = document.getElementById('calendar-overlay');
-        ov.classList.remove('cal-visible');
-        ov.classList.add('cal-hidden');
+        ov.classList.remove('cal-visible'); ov.classList.add('cal-hidden');
     }
 
     function offsetMonth(year, month, delta) {
         let m = month + delta, y = year;
-        while (m > 11) { m -= 12; y++; }
-        while (m < 0)  { m += 12; y--; }
+        while (m > 11) { m -= 12; y++; } while (m < 0)  { m += 12; y--; }
         return { year: y, month: m };
     }
 
     function renderMonthIntoSlide(slideIndex, year, month) {
         const slide = document.getElementById(`cal-slide-${slideIndex}`);
         const grid  = slide.querySelector('.cal-grid-inner');
-        grid.innerHTML = '';
-        slide.scrollTop = 0;
+        grid.innerHTML = ''; slide.scrollTop = 0;
 
-        const todayStr = getTodayStr();
-        const eventMap = {};
-        personalizedSchedule.forEach(e => {
-            (eventMap[e.date] = eventMap[e.date] || []).push(e);
-        });
+        const todayStr = getTodayStr(); const eventMap = {};
+        personalizedSchedule.forEach(e => { (eventMap[e.date] = eventMap[e.date] || []).push(e); });
 
-        const firstDay    = new Date(Date.UTC(year, month, 1));
-        const totalDays   = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+        const firstDay = new Date(Date.UTC(year, month, 1));
+        const totalDays = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
         const startOffset = (firstDay.getUTCDay() + 6) % 7;
         const legendDepts = new Set();
 
         for (let i = 0; i < startOffset; i++) {
             const d  = new Date(Date.UTC(year, month, 1 - startOffset + i));
-            const ds = d.toISOString().split('T')[0];
-            grid.appendChild(buildDayCell(ds, d.getUTCDate(), true, eventMap[ds]||[], todayStr, legendDepts));
+            grid.appendChild(buildDayCell(d.toISOString().split('T')[0], d.getUTCDate(), true, eventMap[d.toISOString().split('T')[0]]||[], todayStr, legendDepts));
         }
         for (let d = 1; d <= totalDays; d++) {
             const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
@@ -1158,8 +1284,7 @@
         if (remainder !== 0) {
             for (let i = 1; i <= 7 - remainder; i++) {
                 const d  = new Date(Date.UTC(year, month + 1, i));
-                const ds = d.toISOString().split('T')[0];
-                grid.appendChild(buildDayCell(ds, d.getUTCDate(), true, eventMap[ds]||[], todayStr, legendDepts));
+                grid.appendChild(buildDayCell(d.toISOString().split('T')[0], d.getUTCDate(), true, eventMap[d.toISOString().split('T')[0]]||[], todayStr, legendDepts));
             }
         }
         return legendDepts;
@@ -1168,63 +1293,41 @@
     function renderAllCalSlides() {
         const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
         document.getElementById('cal-month-label').textContent = `${MONTHS[calCurrentMonth]} ${calCurrentYear}`;
-
         const prev = offsetMonth(calCurrentYear, calCurrentMonth, -1);
         const next = offsetMonth(calCurrentYear, calCurrentMonth, +1);
         renderMonthIntoSlide(0, prev.year, prev.month);
         const legendDepts = renderMonthIntoSlide(1, calCurrentYear, calCurrentMonth);
         renderMonthIntoSlide(2, next.year, next.month);
-
         const carousel = document.getElementById('cal-carousel');
-        carousel.style.transition = 'none';
-        carousel.style.transform  = 'translateX(-100%)';
+        carousel.style.transition = 'none'; carousel.style.transform  = 'translateX(-100%)';
         renderCalLegend(legendDepts);
     }
 
     function commitMonthShift(direction) {
         if (calIsAnimating) return;
-        calIsAnimating = true;
-        closeCalDayPanel();
+        calIsAnimating = true; closeCalDayPanel();
         const carousel = document.getElementById('cal-carousel');
         carousel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
         carousel.style.transform  = direction === 1 ? 'translateX(-200%)' : 'translateX(0%)';
         carousel.addEventListener('transitionend', function handler() {
             carousel.removeEventListener('transitionend', handler);
-            const shifted   = offsetMonth(calCurrentYear, calCurrentMonth, direction);
-            calCurrentYear  = shifted.year;
-            calCurrentMonth = shifted.month;
-            renderAllCalSlides();
-            calIsAnimating = false;
+            const shifted = offsetMonth(calCurrentYear, calCurrentMonth, direction);
+            calCurrentYear = shifted.year; calCurrentMonth = shifted.month;
+            renderAllCalSlides(); calIsAnimating = false;
         }, { once: true });
     }
 
     function buildDayCell(dateStr, dayNum, isOtherMonth, events, todayStr, legendDepts) {
-        const cell       = document.createElement('div');
-        const isToday    = dateStr === todayStr;
-        const dow        = new Date(dateStr + 'T00:00:00Z').getUTCDay();
-        const isSunday   = dow === 0;
-        const inTerm     = dateStr >= '2026-01-12' && dateStr <= '2026-05-17';
-        const holiday    = events.find(e => e.isHoliday);
+        const cell = document.createElement('div');
+        const isToday = dateStr === todayStr, isSunday = new Date(dateStr + 'T00:00:00Z').getUTCDay() === 0;
+        const inTerm = dateStr >= '2026-01-12' && dateStr <= '2026-05-17', holiday = events.find(e => e.isHoliday);
 
-        cell.className = [
-            'cal-day-cell bg-slate-900 p-1.5 flex flex-col',
-            isOtherMonth ? 'other-month' : '',
-            isToday      ? 'today-cell'  : '',
-            isSunday     ? 'is-sunday'   : '',
-            holiday      ? 'is-holiday'  : ''
-        ].join(' ');
+        cell.className = `cal-day-cell bg-slate-900 p-1.5 flex flex-col ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today-cell' : ''} ${isSunday ? 'is-sunday' : ''} ${holiday ? 'is-holiday' : ''}`;
         cell.dataset.date = dateStr;
 
-        // Day number
         const numEl = document.createElement('div');
-        numEl.className = [
-            'cal-day-num text-[11px] font-black mb-1',
-            isSunday     ? 'text-amber-400' : 'text-slate-300',
-            isOtherMonth ? '!text-slate-600' : '',
-            isToday      ? '!text-white'    : ''
-        ].join(' ');
-        numEl.textContent = dayNum;
-        cell.appendChild(numEl);
+        numEl.className = `cal-day-num text-[11px] font-black mb-1 ${isSunday ? 'text-amber-400' : 'text-slate-300'} ${isOtherMonth ? '!text-slate-600' : ''} ${isToday ? '!text-white' : ''}`;
+        numEl.textContent = dayNum; cell.appendChild(numEl);
 
         if (holiday && !isOtherMonth) {
             legendDepts.add('__holiday__');
@@ -1233,291 +1336,156 @@
             banner.innerHTML = `<div class="text-base leading-none mb-0.5">🎉</div><span class="text-[8px] font-black text-amber-300 uppercase tracking-wide block leading-tight">${(holiday.topic||'Holiday').replace(/Holiday/i,'').trim()||'Holiday'}</span>`;
             cell.appendChild(banner);
         } else if (isSunday && !isOtherMonth) {
-            const sun = document.createElement('div');
-            sun.className = 'text-center text-base leading-none mb-1';
-            sun.textContent = '☀️';
-            cell.appendChild(sun);
+            const sun = document.createElement('div'); sun.className = 'text-center text-base leading-none mb-1'; sun.textContent = '☀️'; cell.appendChild(sun);
         } else if (inTerm && !isOtherMonth) {
             const sorted = [...events].sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
             sorted.slice(0, 4).forEach(e => {
-                const dept = e.department || 'Other';
-                legendDepts.add(dept);
-                const chip = document.createElement('span');
-                chip.className = `event-chip ${getChipClass(dept)}`;
+                const dept = e.department || 'Other'; legendDepts.add(dept);
+                const chip = document.createElement('span'); chip.className = `event-chip ${getChipClass(dept)}`;
                 chip.textContent = (e.topic || dept).replace(/Tutorial|SDL|Clinics/gi, '').trim() || dept;
                 cell.appendChild(chip);
             });
             if (sorted.length > 4) {
-                const more = document.createElement('span');
-                more.className = 'text-[8px] font-black text-slate-500 pl-0.5 mt-0.5';
-                more.textContent = `+${sorted.length - 4} more`;
-                cell.appendChild(more);
+                const more = document.createElement('span'); more.className = 'text-[8px] font-black text-slate-500 pl-0.5 mt-0.5';
+                more.textContent = `+${sorted.length - 4} more`; cell.appendChild(more);
             }
         }
-
-        cell.addEventListener('click', () => openCalDayPanel(dateStr, events));
+        cell.addEventListener(isIOS ? 'touchend' : 'click', () => openCalDayPanel(dateStr, events));
         return cell;
     }
 
     function renderCalLegend(deptSet) {
-        const el      = document.getElementById('cal-legend');
-        el.innerHTML  = '';
-        const chipMap = {
-            "Internal Medicine":  { cls: "chip-medicine", label: "Medicine"  },
-            "Surgery":            { cls: "chip-surgery",  label: "Surgery"   },
-            "Obs & Gynae":        { cls: "chip-obg",      label: "OBG"       },
-            "Paediatrics":        { cls: "chip-paeds",    label: "Paeds"     },
-            "ENT":                { cls: "chip-ent",      label: "ENT"       },
-            "Orthopaedics":       { cls: "chip-ortho",    label: "Ortho"     },
-            "Ophthalmology":      { cls: "chip-ophthal",  label: "Ophtha"    },
-            "Dermatology":        { cls: "chip-derm",     label: "Derm"      },
-            "Psychiatry":         { cls: "chip-psych",    label: "Psych"     },
-            "Anaesthesia":        { cls: "chip-anaes",    label: "Anaes"     },
-            "Emergency Medicine": { cls: "chip-em",       label: "EM"        },
-            "Radiology":          { cls: "chip-radiology",label: "Radio"     }
-        };
+        const el = document.getElementById('cal-legend'); el.innerHTML = '';
+        const chipMap = { "Internal Medicine": { cls: "chip-medicine", label: "Medicine" }, "Surgery": { cls: "chip-surgery", label: "Surgery" }, "Obs & Gynae": { cls: "chip-obg", label: "OBG" }, "Paediatrics": { cls: "chip-paeds", label: "Paeds" }, "ENT": { cls: "chip-ent", label: "ENT" }, "Orthopaedics": { cls: "chip-ortho", label: "Ortho" }, "Ophthalmology": { cls: "chip-ophthal", label: "Ophtha" }, "Dermatology": { cls: "chip-derm", label: "Derm" }, "Psychiatry": { cls: "chip-psych", label: "Psych" }, "Anaesthesia": { cls: "chip-anaes", label: "Anaes" }, "Emergency Medicine": { cls: "chip-em", label: "EM" }, "Radiology": { cls: "chip-radiology", label: "Radio" } };
         deptSet.forEach(dept => {
-            const info = chipMap[dept];
-            if (!info) return;
-            const item = document.createElement('div');
-            item.className = 'flex items-center gap-1';
+            const info = chipMap[dept]; if (!info) return;
+            const item = document.createElement('div'); item.className = 'flex items-center gap-1';
             item.innerHTML = `<span class="event-chip ${info.cls} text-[8px] px-1.5 py-0.5">${info.label}</span>`;
             el.appendChild(item);
         });
     }
 
-    // ── Swipe & Trackpad Navigation ─────────────────────────────────────
-    function setupCalSwipe() {
-        const wrapper  = document.getElementById('cal-swipe-wrapper');
+    function setupCalSwipeCommon() {
+        const wrapper = document.getElementById('cal-swipe-wrapper');
         const carousel = document.getElementById('cal-carousel');
-
-        // Touch
         let touchStartX = 0, touchStartY = 0, touchDeltaX = 0;
         let isSwiping = false, isVertical = false;
 
         wrapper.addEventListener('touchstart', (e) => {
             if (calIsAnimating) return;
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
+            touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
             touchDeltaX = 0; isSwiping = true; isVertical = false;
             carousel.style.transition = 'none';
         }, { passive: true });
 
         wrapper.addEventListener('touchmove', (e) => {
             if (!isSwiping || calIsAnimating) return;
-            const dx = e.touches[0].clientX - touchStartX;
-            const dy = e.touches[0].clientY - touchStartY;
-            if (!isVertical && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) { isVertical = true; }
+            const dx = e.touches[0].clientX - touchStartX; const dy = e.touches[0].clientY - touchStartY;
+            if (!isVertical && Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) isVertical = true;
             if (isVertical) return;
             if (Math.abs(dx) > 5) {
-                e.preventDefault();
-                touchDeltaX = dx;
-                carousel.style.transform = `translateX(calc(-100% + ${dx}px))`;
+                if (!isIOS) e.preventDefault();
+                touchDeltaX = dx; carousel.style.transform = `translateX(calc(-100% + ${dx}px))`;
             }
         }, { passive: false });
 
         wrapper.addEventListener('touchend', () => {
             if (!isSwiping || calIsAnimating || isVertical) { isSwiping = false; return; }
-            isSwiping = false;
-            const threshold = wrapper.offsetWidth * 0.25;
-            if      (touchDeltaX < -threshold) commitMonthShift(+1);
-            else if (touchDeltaX >  threshold) commitMonthShift(-1);
+            isSwiping = false; const threshold = wrapper.offsetWidth * 0.25;
+            if (touchDeltaX < -threshold) commitMonthShift(+1);
+            else if (touchDeltaX > threshold) commitMonthShift(-1);
             else { carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)'; carousel.style.transform = 'translateX(-100%)'; }
         }, { passive: true });
 
-        // Trackpad / mouse wheel
-        let wheelAccumX = 0, wheelAccumY = 0, wheelTimer = null;
-        const WHEEL_THRESHOLD = 60;
-
-        wrapper.addEventListener('wheel', (e) => {
-            if (calIsAnimating) return;
-            wheelAccumX += e.deltaX;
-            wheelAccumY += e.deltaY;
-            if (Math.abs(wheelAccumY) > Math.abs(wheelAccumX) * 1.5) { wheelAccumX = 0; wheelAccumY = 0; return; }
-            if (Math.abs(wheelAccumX) > 8) e.preventDefault();
-            const liveOffset = Math.max(-120, Math.min(120, -wheelAccumX));
-            carousel.style.transition = 'none';
-            carousel.style.transform  = `translateX(calc(-100% + ${liveOffset}px))`;
-            clearTimeout(wheelTimer);
-            wheelTimer = setTimeout(() => {
-                if (Math.abs(wheelAccumX) >= WHEEL_THRESHOLD) commitMonthShift(wheelAccumX > 0 ? +1 : -1);
-                else { carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)'; carousel.style.transform = 'translateX(-100%)'; }
-                wheelAccumX = 0; wheelAccumY = 0;
-            }, 80);
-        }, { passive: false });
+        if (!isIOS) {
+            let wheelAccumX = 0, wheelAccumY = 0, wheelTimer = null;
+            wrapper.addEventListener('wheel', (e) => {
+                if (calIsAnimating) return;
+                wheelAccumX += e.deltaX; wheelAccumY += e.deltaY;
+                if (Math.abs(wheelAccumY) > Math.abs(wheelAccumX) * 1.5) { wheelAccumX = 0; wheelAccumY = 0; return; }
+                if (Math.abs(wheelAccumX) > 8) e.preventDefault();
+                carousel.style.transition = 'none'; carousel.style.transform = `translateX(calc(-100% + ${Math.max(-120, Math.min(120, -wheelAccumX))}px))`;
+                clearTimeout(wheelTimer);
+                wheelTimer = setTimeout(() => {
+                    if (Math.abs(wheelAccumX) >= 60) commitMonthShift(wheelAccumX > 0 ? +1 : -1);
+                    else { carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)'; carousel.style.transform = 'translateX(-100%)'; }
+                    wheelAccumX = 0; wheelAccumY = 0;
+                }, 80);
+            }, { passive: false });
+        }
     }
 
-    // ── Cal Day Detail Panel ─────────────────────────────────────────────
     function openCalDayPanel(dateStr, events) {
         calDayPanelDateStr = dateStr;
-        const panel      = document.getElementById('cal-day-panel');
-        const dateLabel  = document.getElementById('cal-day-panel-date');
-        const countLabel = document.getElementById('cal-day-panel-count');
-        const eventsList = document.getElementById('cal-day-panel-events');
-
-        const d             = new Date(dateStr + 'T00:00:00Z');
-        const dayName       = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
-        const dateFmt       = d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+        const panel = document.getElementById('cal-day-panel'), dateLabel = document.getElementById('cal-day-panel-date'), countLabel = document.getElementById('cal-day-panel-count'), eventsList = document.getElementById('cal-day-panel-events');
+        const d = new Date(dateStr + 'T00:00:00Z'), dayName = d.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' }), dateFmt = d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
         dateLabel.textContent = `${dayName}, ${dateFmt}`;
 
         const allDayEvents = personalizedSchedule.filter(e => e.date === dateStr).sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
-        const holiday      = allDayEvents.find(e => e.isHoliday);
-        const isSunday     = d.getUTCDay() === 0;
+        const holiday = allDayEvents.find(e => e.isHoliday), isSunday = d.getUTCDay() === 0;
 
-        countLabel.textContent = holiday ? (holiday.topic||'Holiday')
-            : isSunday ? 'Sunday — Rest Day'
-            : allDayEvents.length === 0 ? 'No scheduled events'
-            : `${allDayEvents.length} event${allDayEvents.length > 1 ? 's' : ''}`;
-
+        countLabel.textContent = holiday ? (holiday.topic||'Holiday') : isSunday ? 'Sunday — Rest Day' : allDayEvents.length === 0 ? 'No scheduled events' : `${allDayEvents.length} event${allDayEvents.length > 1 ? 's' : ''}`;
         eventsList.innerHTML = '';
-        if (holiday) {
-            eventsList.innerHTML = `<div class="text-center py-8"><div class="text-4xl mb-3">🎉</div><p class="text-amber-300 font-black text-sm uppercase tracking-wide">${holiday.topic||'Holiday'}</p></div>`;
-        } else if (isSunday && !allDayEvents.length) {
-            eventsList.innerHTML = `<div class="text-center py-8"><div class="text-4xl mb-3">☀️</div><p class="text-slate-500 font-black text-sm uppercase tracking-wide">Sunday — Rest Day</p></div>`;
-        } else if (!allDayEvents.length) {
-            eventsList.innerHTML = `<div class="text-center py-8"><p class="text-slate-600 font-bold text-sm uppercase tracking-wide">No events scheduled</p></div>`;
-        } else {
+
+        if (holiday) eventsList.innerHTML = `<div class="text-center py-8"><div class="text-4xl mb-3">🎉</div><p class="text-amber-300 font-black text-sm uppercase tracking-wide">${holiday.topic||'Holiday'}</p></div>`;
+        else if (isSunday && !allDayEvents.length) eventsList.innerHTML = `<div class="text-center py-8"><div class="text-4xl mb-3">☀️</div><p class="text-slate-500 font-black text-sm uppercase tracking-wide">Sunday — Rest Day</p></div>`;
+        else if (!allDayEvents.length) eventsList.innerHTML = `<div class="text-center py-8"><p class="text-slate-600 font-bold text-sm uppercase tracking-wide">No events scheduled</p></div>`;
+        else {
             allDayEvents.forEach(e => {
-                const dept     = e.department || 'Other';
-                const barColor = DEPT_BAR_COLORS[dept] || '#475569';
-                const row      = document.createElement('div');
-                row.className  = 'flex items-start gap-3 py-2.5 border-b border-slate-800 last:border-0';
-                row.innerHTML  = `
-                    <div class="text-right shrink-0 w-12">
-                        <p class="text-white font-black text-sm leading-none">${e.startTime||'--'}</p>
-                        <p class="text-slate-600 text-[9px] font-bold mt-0.5">${e.endTime||''}</p>
-                    </div>
+                const dept = e.department || 'Other', barColor = DEPT_BAR_COLORS[dept] || '#475569';
+                const row = document.createElement('div'); row.className = 'flex items-start gap-3 py-2.5 border-b border-slate-800 last:border-0';
+                row.innerHTML = `
+                    <div class="text-right shrink-0 w-12"><p class="text-white font-black text-sm leading-none">${e.startTime||'--'}</p><p class="text-slate-600 text-[9px] font-bold mt-0.5">${e.endTime||''}</p></div>
                     <div class="w-0.5 self-stretch rounded-full shrink-0 mt-0.5" style="background-color:${barColor};"></div>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-white font-black text-sm leading-snug">${e.topic||'Untitled'}</p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${esc(dept)}</p>
-                        ${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${esc(e.location)}</p>` : ''}
-                    </div>`;
+                    <div class="flex-1 min-w-0"><p class="text-white font-black text-sm leading-snug">${e.topic||'Untitled'}</p><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${esc(dept)}</p>${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${esc(e.location)}</p>` : ''}</div>`;
                 eventsList.appendChild(row);
             });
         }
 
-        // Fade in backdrop
         const backdrop = document.getElementById('cal-day-backdrop');
-        backdrop.style.pointerEvents = 'auto';
-        setTimeout(() => { backdrop.style.opacity = '1'; }, 10);
-
-        // Slide up panel (same pattern as showDetails)
-        panel.style.transform = '';
-        panel.classList.replace('panel-visible', 'panel-hidden');
+        backdrop.style.pointerEvents = 'auto'; setTimeout(() => { backdrop.style.opacity = '1'; }, 10);
+        panel.style.transform = ''; panel.classList.replace('panel-visible', 'panel-hidden');
         setTimeout(() => { panel.classList.replace('panel-hidden', 'panel-visible'); }, 10);
     }
 
     function closeCalDayPanel() {
-        const panel    = document.getElementById('cal-day-panel');
-        const backdrop = document.getElementById('cal-day-backdrop');
+        const panel = document.getElementById('cal-day-panel'), backdrop = document.getElementById('cal-day-backdrop');
         if (!panel) return;
-        panel.style.transform = '';
-        panel.classList.replace('panel-visible', 'panel-hidden');
+        panel.style.transform = ''; panel.classList.replace('panel-visible', 'panel-hidden');
         if (backdrop) { backdrop.style.opacity = '0'; backdrop.style.pointerEvents = 'none'; }
         calDayPanelDateStr = null;
     }
 
-    function setupCalDayPanelListeners() {
-        // Go to Day button
-        document.getElementById('cal-day-panel-goto').addEventListener('click', () => {
-            if (!calDayPanelDateStr) return;
-            const ds = calDayPanelDateStr;
-            closeCalDayPanel(); closeCalendar(); switchView('schedule');
-            setTimeout(() => {
-                const slide = document.querySelector(`.day-slide[data-date="${ds}"]`)
-                           || Array.from(document.querySelectorAll('.day-slide')).find(s => s.dataset.date >= ds);
-                if (slide) { scrollToSlide(slide, true); updateDatePickerLabel(ds); }
-            }, 50);
-        });
-
-        // Drag to dismiss
-        const handle = document.getElementById('cal-day-panel-handle');
-        const panel  = document.getElementById('cal-day-panel');
-        let startY = 0, isDragging = false;
-        handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
-        handle.addEventListener('touchmove',  (e) => { if (!isDragging) return; const d = e.touches[0].clientY - startY; if (d > 0) panel.style.transform = `translateY(${d}px)`; }, { passive: true });
-        handle.addEventListener('touchend',   (e) => {
-            isDragging = false;
-            panel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
-            const d = e.changedTouches[0].clientY - startY;
-            if (d > 80) closeCalDayPanel(); else panel.style.transform = '';
-        }, { passive: true });
-
-        // Tap backdrop to dismiss
-        document.getElementById('cal-day-backdrop').addEventListener('click', closeCalDayPanel);
-    }
-
     // ═══════════════════════════════════════════════════════════════════════
-    // EVENT DETAIL PANEL (schedule view)
+    // EVENT DETAIL PANEL
     // ═══════════════════════════════════════════════════════════════════════
     window.showDetails = (date, index) => {
         const event = personalizedSchedule[index];
         if (!event || !event.isDynamic) return;
-        const content     = document.getElementById('detail-content');
-        const facultyName = event.instructor || event.faculty || 'Staff';
+        const content = document.getElementById('detail-content'), facultyName = event.instructor || event.faculty || 'Staff';
         content.innerHTML = `
             <div class="space-y-6">
-                <div>
-                    <p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p>
-                    <h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${esc(event.topic)}</h3>
-                </div>
+                <div><p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p><h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${esc(event.topic)}</h3></div>
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                        <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p>
-                        <p class="text-white font-black text-lg uppercase">${esc(facultyName)}</p>
-                    </div>
-                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                        <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p>
-                        <p class="text-white font-black text-lg uppercase">${esc(event.startTime)} - ${esc(event.endTime)}</p>
-                    </div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${esc(facultyName)}</p></div>
+                    <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p><p class="text-white font-black text-lg uppercase">${esc(event.startTime)} - ${esc(event.endTime)}</p></div>
                 </div>
-                ${event.location ? `
-                <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                    <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p>
-                    <p class="text-white font-black text-lg uppercase">📍 ${esc(event.location)}</p>
-                </div>` : ''}
+                ${event.location ? `<div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${esc(event.location)}</p></div>` : ''}
             </div>`;
         document.getElementById('detail-overlay').classList.remove('hidden');
-        setTimeout(() => {
-            document.getElementById('detail-panel').classList.replace('panel-hidden', 'panel-visible');
-        }, 10);
-        document.body.classList.add('modal-open');
+        setTimeout(() => { document.getElementById('detail-panel').classList.replace('panel-hidden', 'panel-visible'); }, 10);
+        if (!isIOS) document.body.classList.add('modal-open');
     };
 
     function closeDetail() {
         const panel = document.getElementById('detail-panel');
-        panel.style.transform = '';
-        panel.classList.replace('panel-visible', 'panel-hidden');
-        setTimeout(() => {
-            document.getElementById('detail-overlay').classList.add('hidden');
-            document.body.classList.remove('modal-open');
-        }, 300);
+        panel.style.transform = ''; panel.classList.replace('panel-visible', 'panel-hidden');
+        setTimeout(() => { document.getElementById('detail-overlay').classList.add('hidden'); if (!isIOS) document.body.classList.remove('modal-open'); }, 300);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // UI HELPERS
+    // UI HELPERS & LISTENERS
     // ═══════════════════════════════════════════════════════════════════════
-    function scrollToSlide(slideElement, smooth = true) {
-        if (!slideElement) return;
-        const container = document.getElementById('day-view-container');
-        const targetLeft = slideElement.offsetLeft;
-        if (!smooth) { container.scrollLeft = targetLeft; return; }
-        // Manual RAF animation — iOS Safari < 15 ignores behavior:'smooth'
-        const startLeft = container.scrollLeft;
-        const delta     = targetLeft - startLeft;
-        if (Math.abs(delta) < 2) return;
-        const duration  = 320;
-        const startTime = performance.now();
-        (function step(now) {
-            const elapsed  = now - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-            const ease     = 1 - Math.pow(1 - progress, 3); // ease-out cubic
-            container.scrollLeft = startLeft + delta * ease;
-            if (progress < 1) requestAnimationFrame(step);
-        })(startTime);
-    }
-
     function switchView(viewName) {
         const isSchedule = viewName === 'schedule';
         document.getElementById('schedule-tab-content').classList.toggle('active', isSchedule);
@@ -1533,473 +1501,255 @@
         if (el) el.textContent = new Date(dateStr + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // LISTENERS
-    // ═══════════════════════════════════════════════════════════════════════
     function setupOnboardingListeners() {
         document.getElementById('start-btn').onclick = () => {
             const val = parseInt(document.getElementById('init-roll-input').value);
             if (val >= 1 && val <= 150) {
-                localStorage.setItem('afmc_roll_no', val);
-                rollNo = val;
-                location.hash = `roll=${val}`;
+                localStorage.setItem('afmc_roll_no', val); rollNo = val; location.hash = `roll=${val}`;
                 document.getElementById('onboarding-overlay').classList.add('hidden');
-                document.body.classList.remove('modal-open');
+                if (!isIOS) document.body.classList.remove('modal-open');
                 initialize();
-            } else {
-                document.getElementById('onboarding-error').classList.remove('hidden');
-            }
+            } else document.getElementById('onboarding-error').classList.remove('hidden');
         };
     }
 
     function setupPWAInstallLogic() {
-        const banner     = document.getElementById('install-banner');
-        const installBtn = document.getElementById('install-btn');
-        const closeBtn   = document.getElementById('close-install-banner');
+        const banner = document.getElementById('install-banner'), installBtn = document.getElementById('install-btn'), closeBtn = document.getElementById('close-install-banner');
         const standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
         if (standalone) return;
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        
         if (isIOS) {
-            document.getElementById('install-text').innerHTML = "To install, tap <span class='text-white'>Share</span> and <span class='text-white'>'Add to Home Screen'</span>";
-            installBtn.classList.add('hidden');
-            banner.classList.add('visible');
+            document.getElementById('install-text').innerHTML = "Tap <span class='text-white'>Share</span> → <span class='text-white'>'Add to Home Screen'</span>";
+            installBtn.classList.add('hidden'); banner.classList.add('visible');
+        } else {
+            window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; banner.classList.add('visible'); });
+            installBtn.addEventListener('click', async () => {
+                if (!deferredPrompt) return;
+                deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt = null; banner.classList.remove('visible');
+            });
         }
-        window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredPrompt = e; banner.classList.add('visible'); });
-        installBtn.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            deferredPrompt = null;
-            banner.classList.remove('visible');
-        });
         closeBtn.addEventListener('click', () => banner.classList.remove('visible'));
     }
 
-    function setupPullToRefresh() {
-        const container = document.getElementById('day-view-container');
-        const ptrEl = document.getElementById('ptr-indicator');
-        const ptrIcon = document.getElementById('ptr-icon');
-        const ptrText = document.getElementById('ptr-text');
-        
-        let startX = 0, startY = 0, currentY = 0;
-        let isPulling = false, isHorizontal = false;
-        const THRESHOLD = 70;
-    
-        container.addEventListener('touchstart', (e) => {
-            // Only pull if we are at the very top of the current day slide
-            const activeSlide = e.target.closest('.day-slide');
-            if (!activeSlide || activeSlide.scrollTop > 0) return;
-            
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            isPulling = true;
-            isHorizontal = false;
-            ptrEl.style.transition = 'none';
-        }, { passive: true });
-    
-        container.addEventListener('touchmove', (e) => {
-            if (!isPulling) return;
-            
-            const currentX = e.touches[0].clientX;
-            currentY = e.touches[0].clientY;
-            const dx = Math.abs(currentX - startX);
-            const dy = currentY - startY;
-    
-            // Lock horizontal swipe so we don't reload when swiping between days
-            if (dx > 10 && dx > dy) isHorizontal = true;
-            if (isHorizontal || dy < 0) return;
-    
-            // Apply friction to the pull distance
-            const pull = Math.min(dy * 0.4, THRESHOLD + 20);
-            
-            ptrEl.style.transform = `translateY(${pull - 50}px)`;
-            ptrEl.style.opacity = Math.min(pull / 40, 1);
-            
-            if (pull >= THRESHOLD) {
-                ptrText.textContent = 'Release to refresh';
-                ptrIcon.style.transform = 'rotate(180deg)';
-            } else {
-                ptrText.textContent = 'Pull to refresh';
-                ptrIcon.style.transform = 'rotate(0deg)';
-            }
-        }, { passive: true });
-    
-        container.addEventListener('touchend', () => {
-            if (!isPulling) return;
-            isPulling = false;
-            const dy = currentY - startY;
-            
-            if (isHorizontal || dy < 0) {
-                ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
-                ptrEl.style.transform = 'translateY(-50px)';
-                ptrEl.style.opacity = '0';
-                return;
-            }
-    
-            const pull = Math.min(dy * 0.4, THRESHOLD + 20);
-            ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
-            
-            if (pull >= THRESHOLD) {
-                ptrText.textContent = 'Refreshing...';
-                ptrIcon.style.transform = 'rotate(0deg)';
-                ptrIcon.classList.add('animate-spin');
-                ptrEl.style.transform = `translateY(10px)`;
-                
-                // Reload the app completely after showing the spinner
-                setTimeout(() => location.reload(), 400);
-            } else {
-                // Did not pull far enough, slide back up
-                ptrEl.style.transform = 'translateY(-50px)';
-                ptrEl.style.opacity = '0';
-            }
-        });
-    }
-
     function setupAppListeners() {
-        // Navigation
         document.getElementById('nav-schedule').onclick = () => switchView('schedule');
         document.getElementById('nav-log').onclick      = () => switchView('log');
         document.getElementById('log-search').addEventListener('input', e => renderSearchResults(e.target.value));
-        document.getElementById('change-roll-btn').onclick = () => {
+        document.getElementById('change-roll-btn').onclick = () => { 
             localStorage.removeItem('afmc_roll_no'); 
-            // Clear the URL hash so it doesn't automatically log back in
-            history.replaceState(null, null, window.location.pathname); 
-            // Reload to cleanly reset the app state
+            try { history.replaceState(null, null, window.location.pathname); } catch (e) {} 
             location.reload(); 
         };
-        // Schedule controls
+
         document.getElementById('today-btn').onclick = () => {
             const todayStr = getTodayStr();
-            const slide    = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
-            if (slide) { scrollToSlide(slide); updateDatePickerLabel(todayStr); }
-        };
-        document.getElementById('dept-filter').onchange = (e) => {
-            currentFilter = e.target.value;
-            document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text;
-            render();
+            if (isIOS) {
+                const idx = allSlides.findIndex(s => s.dataset.date === todayStr); if (idx >= 0) goToSlide(idx);
+            } else {
+                const slide = document.querySelector(`.day-slide[data-date="${todayStr}"]`); if (slide) scrollToSlideAndroid(slide);
+            }
+            updateDatePickerLabel(todayStr);
         };
 
-        // Calendar
+        document.getElementById('dept-filter').onchange = (e) => {
+            currentFilter = e.target.value; document.getElementById('dept-filter-label').textContent = e.target.options[e.target.selectedIndex].text;
+            render(); if (isIOS) setupSwipeCarousel();
+        };
+
         document.getElementById('open-calendar-btn').onclick = openCalendar;
         document.getElementById('cal-close-btn').onclick     = closeCalendar;
         document.getElementById('cal-prev-btn').onclick      = () => commitMonthShift(-1);
         document.getElementById('cal-next-btn').onclick      = () => commitMonthShift(+1);
-        document.getElementById('cal-today-btn').onclick     = () => {
+        
+        document.getElementById('cal-today-btn').onclick = () => {
             closeCalDayPanel(); closeCalendar(); switchView('schedule');
             const todayStr = getTodayStr();
             setTimeout(() => {
-                const slide = document.querySelector(`.day-slide[data-date="${todayStr}"]`);
-                if (slide) { scrollToSlide(slide, true); updateDatePickerLabel(todayStr); }
+                if (isIOS) {
+                    const idx = allSlides.findIndex(s => s.dataset.date === todayStr); if (idx >= 0) goToSlide(idx);
+                } else {
+                    const slide = document.querySelector(`.day-slide[data-date="${todayStr}"]`); if (slide) scrollToSlideAndroid(slide, true);
+                }
+                updateDatePickerLabel(todayStr);
             }, 50);
         };
-        setupCalSwipe();
-        setupCalDayPanelListeners();
+        
+        setupCalSwipeCommon();
 
-        // Add to Calendar (ICS export for current week)
+        // cal-day-panel-goto listener mapped accordingly
+        document.getElementById('cal-day-panel-goto').addEventListener('click', () => {
+            if (!calDayPanelDateStr) return;
+            const ds = calDayPanelDateStr; closeCalDayPanel(); closeCalendar(); switchView('schedule');
+            setTimeout(() => {
+                if (isIOS) goToDate(ds);
+                else {
+                    const slide = document.querySelector(`.day-slide[data-date="${ds}"]`) || Array.from(document.querySelectorAll('.day-slide')).find(s => s.dataset.date >= ds);
+                    if (slide) { scrollToSlideAndroid(slide, true); updateDatePickerLabel(ds); }
+                }
+            }, 50);
+        });
+
+        // Drag to dismiss listeners
+        const handle = document.getElementById('cal-day-panel-handle'), panel = document.getElementById('cal-day-panel');
+        let startY = 0, isDragging = false;
+        handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
+        handle.addEventListener('touchmove',  (e) => { if (!isDragging) return; const d = e.touches[0].clientY - startY; if (d > 0) panel.style.transform = `translateY(${d}px)`; }, { passive: true });
+        handle.addEventListener('touchend',   (e) => {
+            isDragging = false; panel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+            if (e.changedTouches[0].clientY - startY > 80) closeCalDayPanel(); else panel.style.transform = '';
+        }, { passive: true });
+        document.getElementById('cal-day-backdrop').addEventListener('click', closeCalDayPanel);
+
+        // Export Calendar
         document.getElementById('add-to-calendar-btn').onclick = () => {
-            const toICS     = (date, time) => `${date.replace(/-/g,'')}T${time.replace(/:/g,'')}00`;
-            const visDate   = new Date(currentlyVisibleDate + 'T00:00:00Z');
-            const weekStart = getStartOfWeek(visDate);
-            const weekEnd   = new Date(weekStart); weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
-            const weekEvs   = personalizedSchedule.filter(e => {
-                const d = new Date(e.date + 'T00:00:00Z');
-                return d >= weekStart && d <= weekEnd;
-            });
+            const toICS = (date, time) => `${date.replace(/-/g,'')}T${time.replace(/:/g,'')}00`;
+            const visDate = new Date(currentlyVisibleDate + 'T00:00:00Z'), weekStart = getStartOfWeek(visDate), weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+            const weekEvs = personalizedSchedule.filter(e => { const d = new Date(e.date + 'T00:00:00Z'); return d >= weekStart && d <= weekEnd; });
             if (!weekEvs.length) return;
             const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-            weekEvs.forEach(e => ics.push(
-                'BEGIN:VEVENT',
-                `SUMMARY:${esc(e.topic)}`,
-                `DTSTART;TZID=Asia/Kolkata:${toICS(e.date, e.startTime)}`,
-                `DTEND;TZID=Asia/Kolkata:${toICS(e.date, e.endTime)}`,
-                `LOCATION:${e.location||''}`,
-                `DESCRIPTION:DEPT: ${esc(e.department)}`,
-                'END:VEVENT'
-            ));
+            weekEvs.forEach(e => ics.push('BEGIN:VEVENT', `SUMMARY:${esc(e.topic)}`, `DTSTART;TZID=Asia/Kolkata:${toICS(e.date, e.startTime)}`, `DTEND;TZID=Asia/Kolkata:${toICS(e.date, e.endTime)}`, `LOCATION:${e.location||''}`, `DESCRIPTION:DEPT: ${esc(e.department)}`, 'END:VEVENT'));
             ics.push('END:VCALENDAR');
-            const a = document.createElement('a');
-            a.href     = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' }));
-            a.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`;
-            a.click();
+            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); a.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`; a.click();
         };
 
-        // Detail panel (schedule view)
-        document.getElementById('close-detail').onclick              = closeDetail;
-        document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
-        const dragZone = document.getElementById('detail-drag-zone');
-        const panel    = document.getElementById('detail-panel');
-        let startY, isDragging = false;
-        dragZone.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
-        dragZone.addEventListener('touchmove',  (e) => { if (!isDragging) return; const d = e.touches[0].clientY - startY; if (d > 0) panel.style.transform = `translateY(${d}px)`; }, { passive: true });
+        // Detail panel drag
+        document.getElementById('close-detail').onclick = closeDetail; document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
+        const dragZone = document.getElementById('detail-drag-zone'), detailPanel = document.getElementById('detail-panel');
+        let detStartY, detIsDragging = false;
+        dragZone.addEventListener('touchstart', (e) => { detStartY = e.touches[0].clientY; detIsDragging = true; detailPanel.style.transition = 'none'; }, { passive: true });
+        dragZone.addEventListener('touchmove',  (e) => { if (!detIsDragging) return; const d = e.touches[0].clientY - detStartY; if (d > 0) detailPanel.style.transform = `translateY(${d}px)`; }, { passive: true });
         dragZone.addEventListener('touchend',   (e) => {
-            isDragging = false;
-            panel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
-            const d = e.changedTouches[0].clientY - startY;
-            if (d > 100) closeDetail();
-            else { panel.style.transform = ''; if (d < 10 && d > -10) closeDetail(); }
-        });
+            detIsDragging = false; detailPanel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
+            const d = e.changedTouches[0].clientY - detStartY;
+            if (d > 100) closeDetail(); else { detailPanel.style.transform = ''; if (d < 10 && d > -10) closeDetail(); }
+        }, { passive: true });
     }
 
     // ═══════════════════════════════════════════════════════════════════════
-    // PUSH NOTIFICATIONS
+    // PUSH NOTIFICATIONS & DEEP LINKING
     // ═══════════════════════════════════════════════════════════════════════
+    function isPushSupported() { return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window); }
 
-    // Check if push notifications are supported in this context.
-    // iOS Safari requires PWA mode (standalone) + iOS 16.4+.
-    function isPushSupported() {
-        if (!('Notification' in window)) return false;
-        if (!('serviceWorker' in navigator)) return false;
-        if (!('PushManager' in window)) return false;
-        return true;
-    }
-
-    // Show custom in-app prompt. The onAllow callback is wired directly
-    // to the button onclick so requestPermission() fires in a user gesture.
     function showPushPermissionPrompt(onAllow, onDismiss) {
         if (document.getElementById('push-permission-prompt')) return;
-
-        const isStandalone = window.navigator.standalone ||
-                             window.matchMedia('(display-mode: standalone)').matches;
+        const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
         const isDenied     = 'Notification' in window && Notification.permission === 'denied';
-
-        const prompt = document.createElement('div');
-        prompt.id = 'push-permission-prompt';
+        const prompt = document.createElement('div'); prompt.id = 'push-permission-prompt';
         prompt.className = 'fixed bottom-20 left-1/2 z-[200] max-w-sm w-[92%] bg-slate-800 border border-blue-500/30 rounded-2xl shadow-2xl p-4';
         prompt.style.cssText = 'opacity:0; transform: translateX(-50%) translateY(16px); transition: all 0.3s cubic-bezier(0.4,0,0.2,1);';
-
-        const settingsNote = isDenied
-            ? `<p class="text-[10px] text-amber-400/80 mt-2 leading-snug">⚠️ Notifications are blocked. Tapping Enable will show you how to allow them in your browser settings.</p>`
-            : '';
-
-        const pwaNote = isStandalone && /iPad|iPhone|iPod/.test(navigator.userAgent)
-            ? `<p class="text-[10px] text-slate-500 mt-2 leading-snug">Make sure notifications are enabled for this app in iOS Settings → Notifications.</p>`
-            : '';
-
+        const settingsNote = isDenied ? `<p class="text-[10px] text-amber-400/80 mt-2 leading-snug">⚠️ Notifications blocked. Tap Enable to see how to allow them.</p>` : '';
+        const pwaNote = isStandalone && isIOS ? `<p class="text-[10px] text-slate-500 mt-2 leading-snug">Enable in iOS Settings → Notifications → AFMC Schedule.</p>` : '';
         prompt.innerHTML = `
             <div class="flex items-start gap-3 mb-4">
                 <div class="w-10 h-10 bg-blue-600/20 rounded-xl flex items-center justify-center shrink-0 border border-blue-500/30">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                 </div>
-                <div class="flex-1">
-                    <p class="text-white font-black text-sm uppercase tracking-wide">Schedule Notifications</p>
-                    <p class="text-slate-400 text-[11px] mt-0.5 leading-snug">Get notified when the weekly schedule is uploaded or a class venue changes.</p>
-                    ${settingsNote}
-                    ${pwaNote}
-                </div>
+                <div class="flex-1"><p class="text-white font-black text-sm uppercase tracking-wide">Schedule Notifications</p><p class="text-slate-400 text-[11px] mt-0.5 leading-snug">Get notified when the weekly schedule is uploaded or a class changes.</p>${settingsNote}${pwaNote}</div>
             </div>
             <div class="flex gap-2">
-                <button id="push-allow-btn"   class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest py-2.5 rounded-xl active:scale-95 transition-all">Enable</button>
+                <button id="push-allow-btn" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs uppercase tracking-widest py-2.5 rounded-xl active:scale-95 transition-all">Enable</button>
                 <button id="push-dismiss-btn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-black text-xs uppercase tracking-widest py-2.5 rounded-xl active:scale-95 transition-all">Not Now</button>
             </div>`;
-
         document.body.appendChild(prompt);
         requestAnimationFrame(() => { prompt.style.opacity = '1'; prompt.style.transform = 'translateX(-50%) translateY(0)'; });
-
-        const hidePrompt = () => {
-            prompt.style.opacity = '0';
-            prompt.style.transform = 'translateX(-50%) translateY(16px)';
-            setTimeout(() => prompt.remove(), 300);
-        };
-
-        // CRITICAL: requestPermission() called directly inside onclick — preserves user gesture
-        // on iOS PWA and strict browsers. Must NOT be inside an async callback chain.
-        document.getElementById('push-allow-btn').onclick = () => {
-            hidePrompt();
-            onAllow(); // onAllow itself calls requestPermission synchronously
-        };
-        document.getElementById('push-dismiss-btn').onclick = () => {
-            hidePrompt();
-            onDismiss();
-        };
+        const hidePrompt = () => { prompt.style.opacity = '0'; prompt.style.transform = 'translateX(-50%) translateY(16px)'; setTimeout(() => prompt.remove(), 300); };
+        document.getElementById('push-allow-btn').onclick = () => { hidePrompt(); onAllow(); };
+        document.getElementById('push-dismiss-btn').onclick = () => { hidePrompt(); onDismiss(); };
     }
 
     async function setupPushSubscription() {
         try {
             if (!isPushSupported()) return;
-
             const permission = Notification.permission;
-
             if (permission === 'granted') {
-                // Already allowed — try to subscribe if FCM is configured
-                if (VAPID_KEY !== 'BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo' && window._fcm) {
-                    const reg = window._swReg || await navigator.serviceWorker.ready;
-                    await doSubscribe(reg);
-                }
-
+                if (window._fcm && VAPID_KEY !== 'BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo') { const reg = window._swReg || await navigator.serviceWorker.ready; await doSubscribe(reg); }
             } else if (permission === 'default') {
-                // Never asked — show custom prompt, then native dialog
-                // Permission prompt works independently of FCM/VAPID config
-                showPushPermissionPrompt(
-                    () => {
-                        // Fires synchronously inside onclick — user gesture preserved
-                        Notification.requestPermission().then(async result => {
-                            if (result === 'granted') {
-                                // Only subscribe to FCM if keys are configured
-                                if (VAPID_KEY !== 'BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo') {
-                                    // Wait for FCM to load if not yet ready
-                                    if (!window._fcm) await new Promise(r => setTimeout(r, 3000));
-                                    if (window._fcm) {
-                                        const reg = window._swReg || await navigator.serviceWorker.ready;
-                                        await doSubscribe(reg);
-                                    }
-                                }
-                            } else {
-                                localStorage.setItem('push_denied_at', Date.now().toString());
-                            }
-                        });
-                    },
-                    () => { /* Not Now — ask again next session */ }
-                );
-
+                showPushPermissionPrompt(() => {
+                    Notification.requestPermission().then(async result => {
+                        if (result === 'granted') {
+                            if (VAPID_KEY !== 'BICHqHWClv7ixGsaf1Sq3xW3N0oDU6Pf_LG8ShqR-voDg7G5JZM56khvDLnUuv2M52Wvwa_YTkUas8qubselsLo') { if (!window._fcm) await new Promise(r => setTimeout(r, 3000)); if (window._fcm) { const reg = window._swReg || await navigator.serviceWorker.ready; await doSubscribe(reg); } }
+                        } else localStorage.setItem('push_denied_at', Date.now().toString());
+                    });
+                }, () => {});
             } else if (permission === 'denied') {
-                const deniedAt = parseInt(localStorage.getItem('push_denied_at') || '0');
-                const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
-                if (Date.now() - deniedAt < TWO_DAYS) return;
-
+                if (Date.now() - parseInt(localStorage.getItem('push_denied_at') || '0') < 2 * 24 * 60 * 60 * 1000) return;
                 showPushPermissionPrompt(
-                    () => {
-                        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-                        const msg   = isIOS
-                            ? 'Go to iOS Settings → Notifications → AFMC Schedule → Allow Notifications'
-                            : 'Tap the 🔒 / ⓘ icon in your browser address bar → Notifications → Allow';
-                        showInAppToast('Enable in Settings', msg);
-                        localStorage.setItem('push_denied_at', Date.now().toString());
-                    },
+                    () => { showInAppToast('Enable in Settings', isIOS ? 'Go to iOS Settings → Notifications → AFMC Schedule → Allow' : 'Tap 🔒 in address bar → Notifications → Allow'); localStorage.setItem('push_denied_at', Date.now().toString()); },
                     () => { localStorage.setItem('push_denied_at', Date.now().toString()); }
                 );
             }
         } catch (e) { console.warn('[Push] Setup failed:', e); }
     }
 
-// Locate doSubscribe(swReg) and update the setDoc part:
-async function doSubscribe(swReg) {
-    try {
-        const { getToken, onMessage, messaging } = window._fcm;
-        const readyReg = await navigator.serviceWorker.ready;
-        
-        const token = await getToken(messaging, { 
-            vapidKey: VAPID_KEY, 
-            serviceWorkerRegistration: readyReg 
-        });
-
-        if (!token) return;
-
-        const r = parseInt(localStorage.getItem('afmc_roll_no') || '0');
-
-        // UPDATED: Ensure the path matches your Firebase Rules and Cloud Function exactly
-        // Use the token as the ID: doc(db, "PATH", token)
-        await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), {
-            token: token,
-            roll: r || null,
-            updatedAt: new Date().toISOString(),
-            userAgent: navigator.userAgent.substring(0, 100)
-        });
-
-        onMessage(messaging, (payload) => {
-            const { title, body } = payload.notification || {};
-            showInAppToast(title || 'Schedule Update', body || '');
-        });
-
-        console.log('[Push] Subscribed successfully');
-    } catch (e) { 
-        console.warn('[Push] doSubscribe failed:', e); 
+    async function doSubscribe(swReg) {
+        try {
+            const { getToken, onMessage, messaging } = window._fcm;
+            const token = await getToken(messaging, { vapidKey: VAPID_KEY, serviceWorkerRegistration: await navigator.serviceWorker.ready });
+            if (!token) return;
+            await setDoc(doc(db, `artifacts/schedule-debeb/public/data/push_tokens/${token}`), { token, roll: parseInt(localStorage.getItem('afmc_roll_no') || '0') || null, updatedAt: new Date().toISOString(), userAgent: navigator.userAgent.substring(0, 100) });
+            onMessage(messaging, (payload) => { showInAppToast(payload.notification?.title || 'Schedule Update', payload.notification?.body || ''); });
+        } catch (e) { console.warn('[Push] doSubscribe failed:', e); }
     }
-}
 
     function showInAppToast(title, body) {
-        const existing = document.getElementById('push-toast');
-        if (existing) existing.remove();
-        const toast = document.createElement('div');
-        toast.id        = 'push-toast';
+        const existing = document.getElementById('push-toast'); if (existing) existing.remove();
+        const toast = document.createElement('div'); toast.id = 'push-toast';
         toast.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[200] max-w-sm w-[90%] bg-slate-800 border border-blue-500/40 rounded-2xl shadow-2xl px-4 py-3 flex items-start gap-3 transition-all';
         toast.style.cssText = 'opacity:0; transform: translateX(-50%) translateY(-12px);';
-        toast.innerHTML = `
-            <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                </svg>
-            </div>
-            <div class="flex-1 min-w-0">
-                <p class="text-white font-black text-xs uppercase tracking-wide">${title}</p>
-                <p class="text-slate-400 text-[11px] mt-0.5 leading-snug">${body}</p>
-            </div>
-            <button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white shrink-0 p-1">✕</button>`;
+        toast.innerHTML = `<div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center shrink-0 mt-0.5"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg></div><div class="flex-1 min-w-0"><p class="text-white font-black text-xs uppercase tracking-wide">${title}</p><p class="text-slate-400 text-[11px] mt-0.5 leading-snug">${body}</p></div><button onclick="this.parentElement.remove()" class="text-slate-500 hover:text-white shrink-0 p-1">✕</button>`;
         document.body.appendChild(toast);
-        requestAnimationFrame(() => {
-            toast.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
-            toast.style.opacity    = '1';
-            toast.style.transform  = 'translateX(-50%) translateY(0)';
-        });
-        setTimeout(() => {
-            if (!toast.parentElement) return;
-            toast.style.opacity   = '0';
-            toast.style.transform = 'translateX(-50%) translateY(-12px)';
-            setTimeout(() => toast.remove(), 300);
-        }, 6000);
+        requestAnimationFrame(() => { toast.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)'; toast.style.opacity = '1'; toast.style.transform = 'translateX(-50%) translateY(0)'; });
+        setTimeout(() => { if (!toast.parentElement) return; toast.style.opacity = '0'; toast.style.transform = 'translateX(-50%) translateY(-12px)'; setTimeout(() => toast.remove(), 300); }, 6000);
     }
 
     function handleNotificationDeepLink({ notifType, eventDate, eventId }) {
-        switchView('schedule');
-        if (!eventDate) return;
+        switchView('schedule'); if (!eventDate) return;
         setTimeout(() => {
-            const slide = document.querySelector(`.day-slide[data-date="${eventDate}"]`)
-                       || Array.from(document.querySelectorAll('.day-slide')).find(s => s.dataset.date >= eventDate);
-            if (!slide) return;
-            scrollToSlide(slide, true);
-            updateDatePickerLabel(eventDate);
+            if (isIOS) { goToDate(eventDate); updateDatePickerLabel(eventDate); }
+            else {
+                const slide = document.querySelector(`.day-slide[data-date="${eventDate}"]`) || Array.from(document.querySelectorAll('.day-slide')).find(s => s.dataset.date >= eventDate);
+                if (slide) { scrollToSlideAndroid(slide, true); updateDatePickerLabel(eventDate); }
+            }
             if ((notifType === 'venue_change' || notifType === 'faculty_change') && eventId) {
-                setTimeout(() => {
-                    const idx = personalizedSchedule.findIndex(e => e.id === eventId);
-                    if (idx !== -1 && personalizedSchedule[idx].isDynamic) window.showDetails(eventDate, idx);
-                }, 400);
+                setTimeout(() => { const idx = personalizedSchedule.findIndex(e => e.id === eventId); if (idx !== -1 && personalizedSchedule[idx].isDynamic) window.showDetails(eventDate, idx); }, 400);
             }
         }, 100);
     }
 
     function checkUrlDeepLink() {
-        const params    = new URLSearchParams(window.location.search);
-        const eventDate = params.get('date');
-        const eventId   = params.get('eventId');
-        if (eventDate) {
-            handleNotificationDeepLink({ notifType: 'venue_change', eventDate, eventId });
-            window.history.replaceState({}, '', window.location.pathname);
+        const params = new URLSearchParams(window.location.search), eventDate = params.get('date'), eventId = params.get('eventId');
+        if (eventDate) { 
+            handleNotificationDeepLink({ notifType: 'venue_change', eventDate, eventId }); 
+            try { window.history.replaceState({}, '', window.location.pathname); } catch(e) {}
         }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
     // BOOT
     // ═══════════════════════════════════════════════════════════════════════
-// ... existing logic above ...
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // BOOT
-    // ═══════════════════════════════════════════════════════════════════════
     window.onload = initialize;
-
-    // Store SW registration globally so push subscription can be set up
-    // after the app initialises
     window._swReg = null;
 
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-        try {
-
-            const reg = await navigator.serviceWorker.register('./sw.js', { type: 'module' }); 
-            console.log('✅ Consolidated SW Registered');
-            window._swReg = reg;
-        } catch (err) {
-            console.error('❌ SW Registration Failed', err);
-        }
-    });
-}
-
-        navigator.serviceWorker.addEventListener('message', (event) => {
-            if (!event.data) return;
-            if (event.data.type === 'SW_UPDATED')         window.location.reload();
-            if (event.data.type === 'NOTIFICATION_CLICK') handleNotificationDeepLink(event.data);
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+            if (!window.location.protocol.startsWith('http')) {
+                console.warn('ServiceWorker registration skipped: Unsupported protocol (' + window.location.protocol + ').');
+                return;
+            }
+            try {
+                const reg = await navigator.serviceWorker.register('./sw.js', { type: 'module' });
+                console.log('✅ Consolidated SW Registered');
+                window._swReg = reg;
+            } catch (err) { console.error('❌ SW Registration Failed', err); }
         });
-        </script>
+    }
+
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (!event.data) return;
+        if (event.data.type === 'SW_UPDATED') window.location.reload();
+        if (event.data.type === 'NOTIFICATION_CLICK') handleNotificationDeepLink(event.data);
+    });
+
+</script>
 </body>
 </html>
