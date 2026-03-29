@@ -347,6 +347,15 @@
 
         <!-- ── View 1: Schedule ─────────────────────────────────────────── -->
         <div id="schedule-tab-content" class="tab-content active flex-col flex-1 h-full overflow-hidden relative">
+            
+            <div id="ptr-indicator" class="absolute left-0 right-0 flex justify-center z-[5] pointer-events-none transition-all duration-300" style="top: 85px; transform: translateY(-50px); opacity: 0;">
+                <div class="bg-slate-800 text-blue-400 rounded-full px-4 py-2 shadow-lg border border-slate-700 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                    <svg id="ptr-icon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+                    </svg>
+                    <span id="ptr-text">Pull to refresh</span>
+                </div>
+            </div>
 
             <!-- Controls bar -->
             <div class="p-3 bg-slate-950 border-b border-slate-800 space-y-2 z-10 shadow-lg shrink-0">
@@ -774,6 +783,7 @@
             render();
             generateTopicsLog();
             setupAppListeners();
+            setupPullToRefresh(); // <--- ADD THIS RIGHT HERE!
             updateDatePickerLabel(getTodayStr());
             document.getElementById('loading-indicator').classList.add('hidden');
             calCurrentMonth = new Date().getMonth();
@@ -1513,9 +1523,9 @@
         document.getElementById('schedule-tab-content').classList.toggle('active', isSchedule);
         document.getElementById('log-tab-content').classList.toggle('active', !isSchedule);
         document.getElementById('nav-schedule').classList.toggle('text-blue-500',  isSchedule);
-        document.getElementById('nav-schedule').classList.toggle('text-slate-500', !isSchedule);
+        document.getElementById('nav-schedule').classList.toggle('text-blue-500', !isSchedule);
         document.getElementById('nav-log').classList.toggle('text-blue-500',  !isSchedule);
-        document.getElementById('nav-log').classList.toggle('text-slate-500',  isSchedule);
+        document.getElementById('nav-log').classList.toggle('text-blue-500',  isSchedule);
     }
 
     function updateDatePickerLabel(dateStr) {
@@ -1563,6 +1573,86 @@
             banner.classList.remove('visible');
         });
         closeBtn.addEventListener('click', () => banner.classList.remove('visible'));
+    }
+
+    function setupPullToRefresh() {
+        const container = document.getElementById('day-view-container');
+        const ptrEl = document.getElementById('ptr-indicator');
+        const ptrIcon = document.getElementById('ptr-icon');
+        const ptrText = document.getElementById('ptr-text');
+        
+        let startX = 0, startY = 0, currentY = 0;
+        let isPulling = false, isHorizontal = false;
+        const THRESHOLD = 70;
+    
+        container.addEventListener('touchstart', (e) => {
+            // Only pull if we are at the very top of the current day slide
+            const activeSlide = e.target.closest('.day-slide');
+            if (!activeSlide || activeSlide.scrollTop > 0) return;
+            
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            isPulling = true;
+            isHorizontal = false;
+            ptrEl.style.transition = 'none';
+        }, { passive: true });
+    
+        container.addEventListener('touchmove', (e) => {
+            if (!isPulling) return;
+            
+            const currentX = e.touches[0].clientX;
+            currentY = e.touches[0].clientY;
+            const dx = Math.abs(currentX - startX);
+            const dy = currentY - startY;
+    
+            // Lock horizontal swipe so we don't reload when swiping between days
+            if (dx > 10 && dx > dy) isHorizontal = true;
+            if (isHorizontal || dy < 0) return;
+    
+            // Apply friction to the pull distance
+            const pull = Math.min(dy * 0.4, THRESHOLD + 20);
+            
+            ptrEl.style.transform = `translateY(${pull - 50}px)`;
+            ptrEl.style.opacity = Math.min(pull / 40, 1);
+            
+            if (pull >= THRESHOLD) {
+                ptrText.textContent = 'Release to refresh';
+                ptrIcon.style.transform = 'rotate(180deg)';
+            } else {
+                ptrText.textContent = 'Pull to refresh';
+                ptrIcon.style.transform = 'rotate(0deg)';
+            }
+        }, { passive: true });
+    
+        container.addEventListener('touchend', () => {
+            if (!isPulling) return;
+            isPulling = false;
+            const dy = currentY - startY;
+            
+            if (isHorizontal || dy < 0) {
+                ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+                ptrEl.style.transform = 'translateY(-50px)';
+                ptrEl.style.opacity = '0';
+                return;
+            }
+    
+            const pull = Math.min(dy * 0.4, THRESHOLD + 20);
+            ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+            
+            if (pull >= THRESHOLD) {
+                ptrText.textContent = 'Refreshing...';
+                ptrIcon.style.transform = 'rotate(0deg)';
+                ptrIcon.classList.add('animate-spin');
+                ptrEl.style.transform = `translateY(10px)`;
+                
+                // Reload the app completely after showing the spinner
+                setTimeout(() => location.reload(), 400);
+            } else {
+                // Did not pull far enough, slide back up
+                ptrEl.style.transform = 'translateY(-50px)';
+                ptrEl.style.opacity = '0';
+            }
+        });
     }
 
     function setupAppListeners() {
