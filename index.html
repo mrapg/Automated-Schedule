@@ -1623,16 +1623,20 @@
             const exportEndDate = new Date(exportStartDate);
             exportEndDate.setUTCDate(exportStartDate.getUTCDate() + 6);
         
-            // 4. Filter the personalizedSchedule (which already combines generic & specific events)
+            // 4. Filter the personalizedSchedule
             const weekEvs = personalizedSchedule.filter(e => {
                 const eventDate = new Date(e.date + 'T00:00:00Z');
-                return eventDate >= exportStartDate && eventDate <= exportEndDate;
+                
+                // Check 1: Is the event within our calculated 7-day window?
+                const isInRange = eventDate >= exportStartDate && eventDate <= exportEndDate;
+                if (!isInRange) return false;
+            
+                // Check 2: Is this day marked as a holiday? 
+                // We check both the global FIXED_HOLIDAYS and the specific event property
+                const isHoliday = (typeof FIXED_HOLIDAYS !== 'undefined' && FIXED_HOLIDAYS[e.date]) || e.isHoliday;
+                
+                return !isHoliday; // Only keep the event if it's NOT a holiday
             });
-        
-            if (!weekEvs.length) {
-                alert("No classes found for the week starting " + exportStartDate.toDateString());
-                return;
-            }
         
             // 5. Build the ICS File
             const ics = [
