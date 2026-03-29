@@ -1651,16 +1651,14 @@
                     // Skip hidden/null topics
                     if (!e.topic || e.topic.toUpperCase() === 'NULL' || e.topic.trim() === "") return;
             
-                    // 1. Check for a valid faculty name (Exclude 'Staff' or empty values)
+                    // 1. Identify specific faculty (Exclude 'Staff' or empty values)
                     const facultyName = e.faculty || e.instructor;
                     const hasSpecificFaculty = facultyName && 
                                                facultyName.toLowerCase() !== 'staff' && 
                                                facultyName.trim() !== "";
             
-                    // 2. Format the Summary: Only add "Faculty: ____" if a specific name exists
-                    const summary = hasSpecificFaculty 
-                        ? `${e.topic} (Faculty: ${facultyName})` 
-                        : e.topic;
+                    // 2. Summary: Just the topic (No bracketed faculty or updated tags)
+                    const summary = e.topic;
             
                     const start = e.startTime ? e.startTime.replace(':', '') : "0800";
                     const end = e.endTime ? e.endTime.replace(':', '') : "0900";
@@ -1670,7 +1668,14 @@
                     ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
                     ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
                     ics.push(`LOCATION:${e.location || 'AFMC'}`);
-                    ics.push(`DESCRIPTION:Dept: ${e.department}${hasSpecificFaculty ? '\\nFaculty: ' + facultyName : ''}${e.isDynamic ? ' (Updated)' : ''}`);
+                    
+                    // 3. Description: Mention Department and Faculty (if available) without (Updated) tag
+                    let description = `Dept: ${e.department}`;
+                    if (hasSpecificFaculty) {
+                        description += `\\nFaculty: ${facultyName}`;
+                    }
+                    
+                    ics.push(`DESCRIPTION:${description}`);
                     ics.push('END:VEVENT');
                 });
         
