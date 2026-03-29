@@ -1600,16 +1600,77 @@
         }, { passive: true });
         document.getElementById('cal-day-backdrop').addEventListener('click', closeCalDayPanel);
 
-        // Export Calendar
+        // Export Calendar - Intelligent Week Detection
         document.getElementById('add-to-calendar-btn').onclick = () => {
             const toICS = (date, time) => `${date.replace(/-/g,'')}T${time.replace(/:/g,'')}00`;
-            const visDate = new Date(currentlyVisibleDate + 'T00:00:00Z'), weekStart = getStartOfWeek(visDate), weekEnd = new Date(weekStart); weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
-            const weekEvs = personalizedSchedule.filter(e => { const d = new Date(e.date + 'T00:00:00Z'); return d >= weekStart && d <= weekEnd; });
-            if (!weekEvs.length) return;
-            const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-            weekEvs.forEach(e => ics.push('BEGIN:VEVENT', `SUMMARY:${esc(e.topic)}`, `DTSTART;TZID=Asia/Kolkata:${toICS(e.date, e.startTime)}`, `DTEND;TZID=Asia/Kolkata:${toICS(e.date, e.endTime)}`, `LOCATION:${e.location||''}`, `DESCRIPTION:DEPT: ${esc(e.department)}`, 'END:VEVENT'));
+            
+            // 1. Get the date currently being viewed in the app
+            const viewedDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
+            const dayOfWeek = viewedDate.getUTCDay(); // 0 = Sunday, 1 = Monday...
+        
+            // 2. Determine the start of the export range
+            // If it's Sunday (0), we move to the next day (Monday) to get the upcoming week.
+            // Otherwise, we find the Monday of the current week.
+            let exportStartDate = new Date(viewedDate);
+            if (dayOfWeek === 0) {
+                exportStartDate.setUTCDate(viewedDate.getUTCDate() + 1);
+            } else {
+                const diff = viewedDate.getUTCDate() - dayOfWeek + 1;
+                exportStartDate.setUTCDate(diff);
+            }
+        
+            // 3. Define the end of the 7-day range (the following Sunday)
+            const exportEndDate = new Date(exportStartDate);
+            exportEndDate.setUTCDate(exportStartDate.getUTCDate() + 6);
+        
+            // 4. Filter the personalizedSchedule (which already combines generic & specific events)
+            const weekEvs = personalizedSchedule.filter(e => {
+                const eventDate = new Date(e.date + 'T00:00:00Z');
+                return eventDate >= exportStartDate && eventDate <= exportEndDate;
+            });
+        
+            if (!weekEvs.length) {
+                alert("No classes found for the week starting " + exportStartDate.toDateString());
+                return;
+            }
+        
+            // 5. Build the ICS File
+            const ics = [
+                'BEGIN:VCALENDAR',
+                'VERSION:2.0',
+                'PRODID:-//AFMC//Schedule//EN',
+                'CALSCALE:GREGORIAN',
+                'METHOD:PUBLISH'
+            ];
+        
+            weekEvs.forEach(e => {
+                // Skip hidden/null topics
+                if (!e.topic || e.topic.toUpperCase() === 'NULL') return;
+        
+                // Clean time formats (HH:mm to HHmm)
+                const start = e.startTime ? e.startTime.replace(':', '') : "0800";
+                const end = e.endTime ? e.endTime.replace(':', '') : "0900";
+                
+                ics.push('BEGIN:VEVENT');
+                ics.push(`SUMMARY:${e.topic}`);
+                ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
+                ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
+                ics.push(`LOCATION:${e.location || 'AFMC'}`);
+                ics.push(`DESCRIPTION:Dept: ${e.department}${e.isDynamic ? ' (Updated Session)' : ''}`);
+                ics.push('END:VEVENT');
+            });
+        
             ics.push('END:VCALENDAR');
-            const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([ics.join('\r\n')], { type: 'text/calendar' })); a.download = `AFMC_Schedule_Week_${currentlyVisibleDate}.ics`; a.click();
+        
+            // 6. Trigger Download
+            const blob = new Blob([ics.join('\r\n')], { type: 'text/calendar' });
+            const a = document.createElement('a');
+            const dateLabel = exportStartDate.toISOString().split('T')[0];
+            a.href = URL.createObjectURL(blob);
+            a.download = `AFMC_Week_Starting_${dateLabel}.ics`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         };
 
         // Detail panel drag
