@@ -1650,17 +1650,23 @@
             weekEvs.forEach(e => {
                 // Skip hidden/null topics
                 if (!e.topic || e.topic.toUpperCase() === 'NULL') return;
-        
-                // Clean time formats (HH:mm to HHmm)
+            
+                // 1. Identify the instructor/faculty name
+                const faculty = e.instructor || e.faculty || 'Staff';
+                
+                // 2. Format the Summary to include "Lecture by"
+                const summary = `${e.topic} (Lecture by ${faculty})`;
+            
                 const start = e.startTime ? e.startTime.replace(':', '') : "0800";
                 const end = e.endTime ? e.endTime.replace(':', '') : "0900";
                 
                 ics.push('BEGIN:VEVENT');
-                ics.push(`SUMMARY:${e.topic}`);
+                ics.push(`SUMMARY:${summary}`); // Updated to show faculty
                 ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
                 ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
                 ics.push(`LOCATION:${e.location || 'AFMC'}`);
-                ics.push(`DESCRIPTION:Dept: ${e.department}${e.isDynamic ? ' (Updated Session)' : ''}`);
+                // Optional: Also put the faculty in the description for better visibility in mobile apps
+                ics.push(`DESCRIPTION:Dept: ${e.department}\\nInstructor: ${faculty}${e.isDynamic ? ' (Updated)' : ''}`);
                 ics.push('END:VEVENT');
             });
         
