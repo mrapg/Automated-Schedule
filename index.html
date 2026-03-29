@@ -1570,8 +1570,13 @@
         document.getElementById('nav-schedule').onclick = () => switchView('schedule');
         document.getElementById('nav-log').onclick      = () => switchView('log');
         document.getElementById('log-search').addEventListener('input', e => renderSearchResults(e.target.value));
-        document.getElementById('change-roll-btn').onclick = () => { localStorage.removeItem('afmc_roll_no'); location.reload(); };
-
+        document.getElementById('change-roll-btn').onclick = () => {
+            localStorage.removeItem('afmc_roll_no'); 
+            // Clear the URL hash so it doesn't automatically log back in
+            history.replaceState(null, null, window.location.pathname); 
+            // Reload to cleanly reset the app state
+            location.reload(); 
+        };
         // Schedule controls
         document.getElementById('today-btn').onclick = () => {
             const todayStr = getTodayStr();
