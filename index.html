@@ -495,6 +495,15 @@
     // ═══════════════════════════════════════════════════════════════════════
     // SCHEDULE DATA — term dates, timetable rules, clinical rotations
     // ═══════════════════════════════════════════════════════════════════════
+    const FIXED_HOLIDAYS = {
+    '2026-01-26': { name: 'Republic Day',        msg: '🇮🇳 Happy Republic Day!',        sub: 'Jai Hind — march on, cadet.' },
+    '2026-03-04': { name: 'Holi',                msg: '🎨 Happy Holi!',                 sub: 'May your day be as colourful as your future.' },
+    '2026-03-21': { name: 'Id-ul-Fitr',          msg: '🌙 Eid Mubarak!',               sub: 'Peace, joy and sevaiyan all around.' },
+    '2026-03-31': { name: 'Mahavir Jayanti',     msg: '🙏 Mahavir Jayanti',            sub: 'Live and let live.' },
+    '2026-04-03': { name: 'Good Friday',         msg: '✝️ Good Friday',                sub: 'A day of reflection and gratitude.' },
+    '2026-05-01': { name: 'Buddha Purnima',      msg: '☸️ Buddha Purnima',             sub: 'Peace begins with a single step.' },
+    '2026-05-27': { name: 'Id-ul-Zuha (Bakrid)', msg: '🌙 Eid ul-Adha Mubarak!',      sub: 'A blessed day of sacrifice and gratitude.' },
+};
     const termStartDate  = new Date('2026-01-12T00:00:00Z');
     const termEndDate    = new Date('2026-05-17T00:00:00Z');
     const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
@@ -812,10 +821,25 @@
             });
 
             const dynamicTimes    = new Set(myDynamic.map(e => e.startTime));
-            const isGlobalHoliday = dynamicEvents.some(e =>
+            const isFixedHoliday = !!FIXED_HOLIDAYS[ds];
+            const isGlobalHoliday = isFixedHoliday || dynamicEvents.some(e =>
                 e.date === ds && e.isHoliday &&
                 (Array.isArray(e.batch) ? e.batch.includes("ALL") : e.batch == "ALL")
             );
+            
+            if (isFixedHoliday) {
+                const h = FIXED_HOLIDAYS[ds];
+                data.push({
+                    date: ds,
+                    isHoliday: true,
+                    isFixed: true,
+                    topic: h.name,
+                    holidayMsg: h.msg,
+                    holidaySub: h.sub,
+                    batch: ['ALL'],
+                    isDynamic: false
+                });
+            }
             const isOverridden = (range) => dynamicTimes.has(range.split('-')[0]);
 
             if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
@@ -880,6 +904,8 @@
     // ═══════════════════════════════════════════════════════════════════════
     // SCHEDULE RENDER (day slides)
     // ═══════════════════════════════════════════════════════════════════════
+    const esc = (str) => str ? String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : '';
+    
     function render() {
         const container = document.getElementById('day-view-container');
         container.innerHTML = '';
@@ -907,7 +933,14 @@
                 if (sorted.length) {
                     const holiday = sorted.find(e => e.isHoliday);
                     if (holiday) {
-                        slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${holiday.topic || 'HOLIDAY'}</div>`;
+                        const msg = holiday.holidayMsg || `🎉 ${esc(holiday.topic) || 'HOLIDAY'}`;
+                        const sub = holiday.holidaySub || '';
+                        slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center border-4 border-dotted border-amber-500/40 flex flex-col items-center gap-4">
+                            <div class="text-4xl">${msg.match(/^\p{Emoji}/u)?.[0] || '🎉'}</div>
+                            <div class="text-amber-300 font-black text-2xl tracking-tight">${esc(msg.replace(/^\p{Emoji}\s*/u,''))}</div>
+                            <div class="text-slate-400 font-bold text-sm uppercase tracking-widest">${esc(sub)}</div>
+                        </div>`;
+                    
                     } else {
                         slide.innerHTML += sorted.map(e => {
                             const idx = personalizedSchedule.indexOf(e);
@@ -917,17 +950,17 @@
                                 <div class="flex justify-between items-start gap-3 flex-nowrap">
                                     <div class="flex-1 min-w-0">
                                         <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                                            <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${e.topic}</p>
+                                            <p class="font-black text-slate-50 leading-[1.1] text-2xl uppercase tracking-tighter line-clamp-2">${esc(e.topic)}</p>
                                             ${e.isDynamic ? '<span class="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded font-black tracking-widest uppercase shrink-0">Details</span>' : ''}
                                         </div>
-                                        <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${e.department}</p>
+                                        <p class="text-[10px] opacity-70 uppercase font-black tracking-widest truncate">${esc(e.department)}</p>
                                     </div>
                                     <div class="text-right flex flex-col items-end shrink-0 ml-1">
                                         <div class="bg-blue-700 text-white px-4 py-2 rounded-2xl text-lg sm:text-xl font-black shadow-xl shadow-slate-900/40 mb-1.5 leading-none whitespace-nowrap">${e.startTime}</div>
                                         <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
                                     </div>
                                 </div>
-                                ${e.location ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest"><span>📍 ${e.location}</span></div>` : ''}
+                                ${e.location ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest"><span>📍 ${esc(e.location)}</span></div>` : ''}
                             </div>`;
                         }).join('');
                     }
@@ -1016,7 +1049,7 @@
                         <div class="flex items-center gap-3">
                             <div class="w-2 h-8 rounded-full ${getDeptColorClass(dept)}"></div>
                             <div>
-                                <h3 class="font-black text-white text-sm uppercase tracking-wide leading-none">${dept}</h3>
+                                <h3 class="font-black text-white text-sm uppercase tracking-wide leading-none">${esc(dept)}</h3>
                                 <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">${count} Topics Completed</p>
                             </div>
                         </div>
@@ -1028,7 +1061,7 @@
                         ${uniqueTopics.map(e => `
                             <div class="p-3 bg-slate-800 rounded-lg flex items-center gap-3 border border-slate-700/50 ml-2">
                                 <div class="flex-1">
-                                    <p class="text-xs font-bold text-slate-200 leading-snug uppercase tracking-tight">${e.topic}</p>
+                                    <p class="text-xs font-bold text-slate-200 leading-snug uppercase tracking-tight">${esc(e.topic)}</p>
                                     <p class="text-[9px] font-bold uppercase tracking-widest text-slate-500 mt-1">${e.dates.sort().reverse().map(formatDate).join(' • ')}</p>
                                 </div>
                             </div>`).join('')}
@@ -1050,8 +1083,8 @@
             container.innerHTML += `
                 <div class="p-4 bg-slate-800 rounded-xl mb-3 border border-slate-700 flex flex-col gap-1">
                     <div class="flex justify-between items-start">
-                        <p class="text-sm font-black text-white uppercase tracking-tight leading-snug">${e.topic}</p>
-                        <span class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 whitespace-nowrap">${e.department}</span>
+                        <p class="text-sm font-black text-white uppercase tracking-tight leading-snug">${esc(e.topic)}</p>
+                        <span class="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded bg-slate-700 text-slate-300 whitespace-nowrap">${esc(e.department)}</span>
                     </div>
                     <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">${formatDate(e.date)} • ${e.startTime}</p>
                 </div>`;
@@ -1347,8 +1380,8 @@
                     <div class="w-0.5 self-stretch rounded-full shrink-0 mt-0.5" style="background-color:${barColor};"></div>
                     <div class="flex-1 min-w-0">
                         <p class="text-white font-black text-sm leading-snug">${e.topic||'Untitled'}</p>
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${dept}</p>
-                        ${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${e.location}</p>` : ''}
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${esc(dept)}</p>
+                        ${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${esc(e.location)}</p>` : ''}
                     </div>`;
                 eventsList.appendChild(row);
             });
@@ -1417,22 +1450,22 @@
             <div class="space-y-6">
                 <div>
                     <p class="text-[10px] text-blue-500 font-black tracking-widest uppercase mb-1">Session Topic</p>
-                    <h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${event.topic}</h3>
+                    <h3 class="text-3xl font-black text-white leading-tight uppercase tracking-tighter">${esc(event.topic)}</h3>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
                         <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p>
-                        <p class="text-white font-black text-lg uppercase">${facultyName}</p>
+                        <p class="text-white font-black text-lg uppercase">${esc(facultyName)}</p>
                     </div>
                     <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
                         <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p>
-                        <p class="text-white font-black text-lg uppercase">${event.startTime} - ${event.endTime}</p>
+                        <p class="text-white font-black text-lg uppercase">${esc(event.startTime)} - ${esc(event.endTime)}</p>
                     </div>
                 </div>
                 ${event.location ? `
                 <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
                     <p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p>
-                    <p class="text-white font-black text-lg uppercase">📍 ${event.location}</p>
+                    <p class="text-white font-black text-lg uppercase">📍 ${esc(event.location)}</p>
                 </div>` : ''}
             </div>`;
         document.getElementById('detail-overlay').classList.remove('hidden');
@@ -1581,11 +1614,11 @@
             const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//AFMC//Schedule//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
             weekEvs.forEach(e => ics.push(
                 'BEGIN:VEVENT',
-                `SUMMARY:${e.topic}`,
+                `SUMMARY:${esc(e.topic)}`,
                 `DTSTART;TZID=Asia/Kolkata:${toICS(e.date, e.startTime)}`,
                 `DTEND;TZID=Asia/Kolkata:${toICS(e.date, e.endTime)}`,
                 `LOCATION:${e.location||''}`,
-                `DESCRIPTION:DEPT: ${e.department}`,
+                `DESCRIPTION:DEPT: ${esc(e.department)}`,
                 'END:VEVENT'
             ));
             ics.push('END:VCALENDAR');
