@@ -49,44 +49,34 @@
         
         /* ── Day Slide Carousel (horizontal swipe) ───────────────────────── */
         .day-view {
-            /* Keep horizontal scrolling intact */
             scroll-snap-type: x mandatory;
             flex: 1;
-            display: flex;
+            min-height: 0;
             overflow-x: auto;
             overflow-y: hidden;
+            display: flex;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-x pan-y;
         }
         
-        .day-view::-webkit-scrollbar { 
-            display: none; 
-        }
+        .day-view::-webkit-scrollbar { display: none; }
         
         .day-slide {
-            /* The slide itself becomes a rigid, non-scrolling wrapper */
             scroll-snap-align: start;
             flex: 0 0 100%;
+            min-width: 0;
             width: 100%;
-            
-            /* CRITICAL: establishes absolute boundary for the inner div */
-            position: relative; 
-            height: 100%; 
-            overflow: hidden; 
-        }
-        
-        /* NEW: The inner content does the actual vertical scrolling */
-        .day-slide-inner {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            height: 100%;
+            max-height: 100%;
             overflow-y: auto;
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
+            touch-action: pan-y;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
         }
-                
+        
         .day-slide::-webkit-scrollbar,
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .day-slide::-webkit-scrollbar-thumb,
@@ -930,19 +920,15 @@
             const filteredEvents = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
 
             if (currentFilter === 'all' || filteredEvents.length > 0) {
-                            const slide = document.createElement('div');
-                            // Removed padding and overflow-y-auto from the outer container
-                            slide.className = 'day-slide'; 
-                            slide.dataset.date = ds;
-                            const isToday = ds === todayStr;
-            
-                            // Start the slide.innerHTML with the new inner wrapper!
-                            // We moved the padding (p-5 pb-24) into this wrapper.
-                            slide.innerHTML = `<div class="day-slide-inner p-5 pb-24">
-                                <h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
-                                    ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
-                                    ${cur.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase()}
-                                </h2>`;
+                const slide = document.createElement('div');
+                slide.className = 'day-slide p-5 pb-24 overflow-y-auto';
+                slide.dataset.date = ds;
+                const isToday = ds === todayStr;
+
+                slide.innerHTML = `<h2 class="text-4xl font-black mb-8 flex items-center ${isToday ? 'text-blue-400 border-l-8 border-blue-600 pl-5' : 'text-slate-100'} tracking-tighter">
+                    ${isToday ? '<span class="w-3 h-3 bg-blue-500 rounded-full mr-4 live-dot"></span>' : ''}
+                    ${cur.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase()}
+                </h2>`;
 
                 const sorted = filteredEvents.sort((a,b) => (a.startTime||'00:00').localeCompare(b.startTime||'00:00'));
 
@@ -984,8 +970,7 @@
                     const msg = cur.getUTCDay() === 0 ? '🌞 SUNDAY' : 'REST DAY';
                     slide.innerHTML += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center text-slate-600 font-black text-sm border-4 border-dotted border-slate-700 uppercase tracking-[0.2em]">${msg}</div>`;
                 }
-                slide.innerHTML += `</div>`;
-                
+
                 container.appendChild(slide);
             }
             cur.setUTCDate(cur.getUTCDate() + 1);
