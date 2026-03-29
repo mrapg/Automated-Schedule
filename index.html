@@ -726,6 +726,9 @@
         setupOnboardingListeners();
         setupPWAInstallLogic();
 
+        window.addEventListener('offline', () => updateOfflineNotice('Viewing Offline Cache'));
+        if (!navigator.onLine) updateOfflineNotice('Viewing Offline Cache');
+
         if (!rollNo) {
             document.getElementById('onboarding-overlay').classList.remove('hidden');
             document.body.classList.add('modal-open');
