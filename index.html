@@ -57,7 +57,9 @@
             display: flex;
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
-            touch-action: pan-x pan-y;
+            touch-action: pan-x;
+            overscroll-behavior-x: contain;
+            overscroll-behavior-y: none;
         }
         
         .day-view::-webkit-scrollbar { display: none; }
@@ -73,6 +75,7 @@
             overflow-x: hidden;
             -webkit-overflow-scrolling: touch;
             touch-action: pan-y;
+            overscroll-behavior-y: contain;
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
         }
@@ -1525,6 +1528,57 @@
         if (el) el.textContent = new Date(dateStr + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' }).toUpperCase();
     }
 
+    function setupDaySwipe() {
+        const container = document.getElementById('day-view-container');
+        if (!container || container.dataset.swipeInit === '1') return;
+        container.dataset.swipeInit = '1';
+
+        let startX = 0, startY = 0;
+        let startScrollLeft = 0;
+        let isDragging = false, lockAxis = null;
+
+        container.addEventListener('touchstart', (e) => {
+            if (!e.touches || e.touches.length !== 1) return;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            startScrollLeft = container.scrollLeft;
+            isDragging = true;
+            lockAxis = null;
+        }, { passive: true });
+
+        container.addEventListener('touchmove', (e) => {
+            if (!isDragging || !e.touches || e.touches.length !== 1) return;
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+
+            if (!lockAxis) {
+                if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return;
+                lockAxis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+            }
+            if (lockAxis !== 'x') return;
+
+            e.preventDefault();
+            container.scrollLeft = startScrollLeft - dx;
+        }, { passive: false });
+
+        container.addEventListener('touchend', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            if (lockAxis !== 'x') return;
+
+            const slideWidth = container.clientWidth || 1;
+            const index = Math.round(container.scrollLeft / slideWidth);
+            const clamped = Math.max(0, Math.min(index, container.children.length - 1));
+            const target = container.children[clamped];
+            if (target) scrollToSlide(target, true);
+        }, { passive: true });
+
+        container.addEventListener('touchcancel', () => {
+            isDragging = false;
+            lockAxis = null;
+        }, { passive: true });
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // LISTENERS
     // ═══════════════════════════════════════════════════════════════════════
@@ -1568,6 +1622,8 @@
     }
 
     function setupAppListeners() {
+        setupDaySwipe();
+
         // Navigation
         document.getElementById('nav-schedule').onclick = () => switchView('schedule');
         document.getElementById('nav-log').onclick      = () => switchView('log');
