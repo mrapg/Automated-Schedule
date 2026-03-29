@@ -695,7 +695,12 @@
     // ═══════════════════════════════════════════════════════════════════════
     // APP STATE
     // ═══════════════════════════════════════════════════════════════════════
-    let rollNo               = localStorage.getItem('afmc_roll_no');
+    // Read from localStorage, fall back to URL hash (e.g. #roll=42)
+    let rollNo = localStorage.getItem('afmc_roll_no');
+    if (!rollNo) {
+        const hashMatch = location.hash.match(/roll=(\d+)/);
+        if (hashMatch) rollNo = hashMatch[1];
+    }
     let personalizedSchedule = [];
     let currentFilter        = 'all';
     let currentlyVisibleDate = getTodayStr();
@@ -726,6 +731,8 @@
             document.body.classList.add('modal-open');
             return;
         }
+        // Sync hash in case it was lost
+        if (!location.hash.includes('roll=')) location.hash = `roll=${rollNo}`;
 
         document.getElementById('loading-indicator').classList.remove('hidden');
 
@@ -1489,6 +1496,7 @@
             if (val >= 1 && val <= 150) {
                 localStorage.setItem('afmc_roll_no', val);
                 rollNo = val;
+                location.hash = `roll=${val}`;
                 document.getElementById('onboarding-overlay').classList.add('hidden');
                 document.body.classList.remove('modal-open');
                 initialize();
