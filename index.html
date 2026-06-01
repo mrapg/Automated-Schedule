@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>AFMC VII Term Schedule</title>
+    <title>AFMC VII & VIII Term Schedule</title>
     <meta name="theme-color" content="#0f172a">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-180.png">
@@ -222,6 +222,7 @@
         .chip-psych { background: #312e81; color: #c7d2fe; } .chip-anaes { background: #164e63; color: #a5f3fc; }
         .chip-em { background: #7f1d1d; color: #fca5a5; } .chip-elective { background: #4c1d95; color: #e9d5ff; }
         .chip-holiday { background: #14532d; color: #86efac; } .chip-radiology { background: #1f2937; color: #d1d5db; }
+        .chip-resp { background: #134e4a; color: #99f6e4; } .chip-termbreak { background: #1e3a5f; color: #93c5fd; }
         .chip-default { background: #1e293b; color: #94a3b8; }
 
         .cal-month-slide { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -273,8 +274,9 @@
                 </div>
             </div>
             <h2 class="text-3xl font-black text-white mb-2 tracking-tight uppercase">Welcome, Cadet</h2>
-            <p class="text-slate-400 mb-2 font-medium leading-relaxed uppercase text-[10px] tracking-widest text-blue-400">VII Term Duration</p>
-            <p class="text-white mb-8 font-black text-lg">12 JAN - 17 MAY 2026</p>
+            <p class="text-slate-400 mb-2 font-medium leading-relaxed uppercase text-[10px] tracking-widest text-blue-400">Active Terms — I3 Batch</p>
+            <p class="text-white mb-1 font-black text-base">VII: 12 JAN – 17 MAY 2026</p>
+            <p class="text-white mb-8 font-black text-base">VIII: 01 JUN – 18 OCT 2026</p>
             <div class="relative mb-8">
                 <input type="number" id="init-roll-input" placeholder="001" min="1" max="150"
                     class="w-full p-5 bg-slate-800 border-2 border-slate-700 rounded-2xl text-center text-4xl font-black focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none text-white transition-all placeholder-slate-600">
@@ -528,17 +530,27 @@
     // SCHEDULE DATA
     // ═══════════════════════════════════════════════════════════════════════
     const FIXED_HOLIDAYS = {
-        '2026-01-26': { name: 'Republic Day',        msg: '🇮🇳 Happy Republic Day!',        sub: 'Jai Hind — march on, cadet.' },
-        '2026-03-04': { name: 'Holi',                msg: '🎨 Happy Holi!',                 sub: 'May your day be as colourful as your future.' },
-        '2026-03-21': { name: 'Id-ul-Fitr',          msg: '🌙 Eid Mubarak!',               sub: 'Peace, joy and sevaiyan all around.' },
-        '2026-03-31': { name: 'Mahavir Jayanti',     msg: '🙏 Mahavir Jayanti',            sub: 'Live and let live.' },
-        '2026-04-03': { name: 'Good Friday',         msg: '✝️ Good Friday',                sub: 'A day of reflection and gratitude.' },
-        '2026-05-01': { name: 'Buddha Purnima',      msg: '☸️ Buddha Purnima',             sub: 'Peace begins with a single step.' },
-        '2026-05-27': { name: 'Id-ul-Zuha (Bakrid)', msg: '🌙 Eid ul-Adha Mubarak!',      sub: 'A blessed day of sacrifice and gratitude.' },
+        // ── VII Term Holidays ──────────────────────────────────────────────
+        '2026-01-26': { name: 'Republic Day',         msg: '🇮🇳 Happy Republic Day!',       sub: 'Jai Hind — march on, cadet.' },
+        '2026-03-04': { name: 'Holi',                 msg: '🎨 Happy Holi!',                sub: 'May your day be as colourful as your future.' },
+        '2026-03-21': { name: 'Id-ul-Fitr',           msg: '🌙 Eid Mubarak!',              sub: 'Peace, joy and sevaiyan all around.' },
+        '2026-03-31': { name: 'Mahavir Jayanti',      msg: '🙏 Mahavir Jayanti',           sub: 'Live and let live.' },
+        '2026-04-03': { name: 'Good Friday',          msg: '✝️ Good Friday',               sub: 'A day of reflection and gratitude.' },
+        '2026-05-01': { name: 'Buddha Purnima',       msg: '☸️ Buddha Purnima',            sub: 'Peace begins with a single step.' },
+        // ── VIII Term Holidays (01 Jun – 18 Oct 2026) ──────────────────────
+        '2026-06-17': { name: 'Id-ul-Zuha (Bakrid)',  msg: '🌙 Eid ul-Adha Mubarak!',     sub: 'A blessed day of sacrifice and gratitude.' },
+        '2026-07-17': { name: 'Muharram',             msg: '🌙 Muharram',                  sub: 'A day of remembrance and reflection.' },
+        '2026-08-15': { name: 'Independence Day',     msg: '🇮🇳 Happy Independence Day!',  sub: 'Jai Hind — 79 years of freedom.' },
+        '2026-08-27': { name: 'Janmashtami',          msg: '🦚 Happy Janmashtami!',        sub: 'May Lord Krishna guide your path.' },
+        '2026-10-02': { name: 'Gandhi Jayanti',       msg: '🕊️ Gandhi Jayanti',           sub: 'Be the change you wish to see.' },
     };
-    const termStartDate  = new Date('2026-01-12T00:00:00Z');
-    const termEndDate    = new Date('2026-05-17T00:00:00Z');
-    const electivePeriod = { start: '2026-02-23', end: '2026-03-08' };
+    const termStartDate  = new Date('2026-01-12T00:00:00Z'); // VII Term Start
+    const termEndDate    = new Date('2026-10-18T00:00:00Z'); // VIII Term End (extended)
+    const termVIIEndDate  = new Date('2026-05-17T00:00:00Z');
+    const termVIIIStart   = new Date('2026-06-01T00:00:00Z');
+    const termBreakStart  = new Date('2026-05-18T00:00:00Z'); // Break: 18 May – 31 May
+    const termBreakEnd    = new Date('2026-05-31T00:00:00Z');
+    const electivePeriod  = { start: '2026-02-23', end: '2026-03-08' }; // VII Term electives
 
     const scheduleRules = {
         "Monday": {
@@ -572,6 +584,47 @@
         }
     };
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // VIII TERM WEEKLY SCHEDULE RULES  (01 JUN – 18 OCT 2026)
+    // Source: Block Weekly Training Programme (Theory/Tutorial/SDL)
+    // VIII Term (I3 Batch) WEF 01 Jun 2026 – 18 Oct 2026 (20 Wks)
+    // # = Nth week of the month  |  LH = NLH Sushruta
+    // ═══════════════════════════════════════════════════════════════════════
+    const scheduleRulesVIII = {
+        "Monday": {
+            theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "ENT" },
+            tutorials: { "14:00-15:00": "General Surgery", "15:00-16:00": "General Medicine" }
+        },
+        "Tuesday": {
+            theory:    { "08:00-09:00": "General Medicine", "09:00-10:00": "Paediatrics" },
+            tutorials: { "14:00-15:00": "Obstetrics & Gynaecology" },
+            sdl:       { "15:00-16:00": { 1: "General Medicine", 2: "General Surgery", 3: "Obstetrics & Gynaecology" } }
+        },
+        "Wednesday": {
+            theory:    { "08:00-09:00": "General Surgery", "09:00-10:00": "General Medicine" },
+            tutorials: { "14:00-15:00": "General Medicine" },
+            aetcom:    { "15:00-16:00": { 1: "General Medicine", 2: "General Surgery", 3: "Obstetrics & Gynaecology", 4: "ENT", 5: "Ophthalmology" } }
+        },
+        "Thursday": {
+            theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "General Medicine", 2: "General Medicine", 3: "Paediatrics", 4: "Paediatrics", 5: "Paediatrics" } },
+            tutorials: { "14:00-15:00": "Obstetrics & Gynaecology", "15:00-16:00": "Paediatrics" }
+        },
+        "Friday": {
+            theory:    { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "General Surgery", 2: "General Surgery", 3: "Ophthalmology", 4: "Ophthalmology", 5: "Ophthalmology" } },
+            tutorials: {
+                "14:00-15:00": { 1: "Orthopaedics", 2: "Orthopaedics", 3: "Orthopaedics", 4: "Orthopaedics", 5: "AETCOM Paediatrics" },
+                "15:00-16:00": { 1: "General Surgery", 2: "General Surgery", 3: "ENT", 4: "ENT", 5: "Ophthalmology" }
+            }
+        },
+        "Saturday": {
+            theory: {
+                "08:00-09:00": { 1: "Psychiatry", 2: "Psychiatry", 3: "Obstetrics & Gynaecology", 4: "Obstetrics & Gynaecology", 5: "Respiratory Medicine" },
+                "09:00-10:00": { 1: "Dermatology", 2: "Dermatology", 3: "Radiology", 4: "Anaesthesia" }
+            },
+            tutorials: { "14:00-15:00": "General Surgery" }
+        }
+    };
+
     const clinicalRotationRules = [
         { department: "Internal Medicine", batch: "A", startDate: "2026-01-12", endDate: "2026-02-01" }, { department: "Internal Medicine", batch: "B", startDate: "2026-02-02", endDate: "2026-02-22" }, { department: "Internal Medicine", batch: "C", startDate: "2026-03-09", endDate: "2026-03-29" }, { department: "Internal Medicine", batch: "D", startDate: "2026-03-30", endDate: "2026-04-19" },
         { department: "Surgery",           batch: "A", startDate: "2026-02-02", endDate: "2026-02-22" }, { department: "Surgery",           batch: "B", startDate: "2026-03-09", endDate: "2026-03-29" }, { department: "Surgery",           batch: "C", startDate: "2026-03-30", endDate: "2026-04-19" }, { department: "Surgery",           batch: "D", startDate: "2026-01-12", endDate: "2026-02-01" },
@@ -582,6 +635,66 @@
         { department: "Dermatology",       batch: "A", startDate: "2026-04-27", endDate: "2026-05-03" }, { department: "Dermatology",       batch: "B", startDate: "2026-05-04", endDate: "2026-05-10" }, { department: "Dermatology",       batch: "C", startDate: "2026-05-11", endDate: "2026-05-17" }, { department: "Dermatology",       batch: "D", startDate: "2026-04-20", endDate: "2026-04-26" },
         { department: "Anaesthesia",       batch: "A", startDate: "2026-05-04", endDate: "2026-05-10" }, { department: "Anaesthesia",       batch: "B", startDate: "2026-05-11", endDate: "2026-05-17" }, { department: "Anaesthesia",       batch: "C", startDate: "2026-04-20", endDate: "2026-04-26" }, { department: "Anaesthesia",       batch: "D", startDate: "2026-04-27", endDate: "2026-05-03" },
         { department: "Emergency Medicine",batch: "A", startDate: "2026-05-11", endDate: "2026-05-17" }, { department: "Emergency Medicine",batch: "B", startDate: "2026-04-20", endDate: "2026-04-26" }, { department: "Emergency Medicine",batch: "C", startDate: "2026-04-27", endDate: "2026-05-03" }, { department: "Emergency Medicine",batch: "D", startDate: "2026-05-04", endDate: "2026-05-10" }
+    ];
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // VIII TERM CLINICAL ROTATION RULES  (01 JUN – 18 OCT 2026)
+    // Source: IIIRD MBBS (Part-II) Block Weekly Training Programme
+    // (Electives & Clinics) VIII Term (I3 Batch)
+    // Batch A: Roll 01–38 | B: 39–76 | C: 77–114 | D: 115–150
+    // All Clinics at CH (SC), AICTS & MH Kirkee
+    // ═══════════════════════════════════════════════════════════════════════
+    const clinicalRotationRulesVIII = [
+        // Gen Medicine — 3 weeks
+        { department: "Internal Medicine",   batch: "A", startDate: "2026-06-01", endDate: "2026-06-21" },
+        { department: "Internal Medicine",   batch: "B", startDate: "2026-06-22", endDate: "2026-07-12" },
+        { department: "Internal Medicine",   batch: "C", startDate: "2026-07-13", endDate: "2026-08-02" },
+        { department: "Internal Medicine",   batch: "D", startDate: "2026-08-03", endDate: "2026-08-23" },
+        // Gen Surgery — 3 weeks
+        { department: "Surgery",             batch: "A", startDate: "2026-06-22", endDate: "2026-07-12" },
+        { department: "Surgery",             batch: "B", startDate: "2026-07-13", endDate: "2026-08-02" },
+        { department: "Surgery",             batch: "C", startDate: "2026-08-03", endDate: "2026-08-23" },
+        { department: "Surgery",             batch: "D", startDate: "2026-06-01", endDate: "2026-06-21" },
+        // Obst & Gynae — 3 weeks
+        { department: "Obs & Gynae",         batch: "A", startDate: "2026-07-13", endDate: "2026-08-02" },
+        { department: "Obs & Gynae",         batch: "B", startDate: "2026-08-03", endDate: "2026-08-23" },
+        { department: "Obs & Gynae",         batch: "C", startDate: "2026-06-01", endDate: "2026-06-21" },
+        { department: "Obs & Gynae",         batch: "D", startDate: "2026-06-22", endDate: "2026-07-12" },
+        // Paediatrics — 2 weeks
+        { department: "Paediatrics",         batch: "A", startDate: "2026-08-03", endDate: "2026-08-16" },
+        { department: "Paediatrics",         batch: "B", startDate: "2026-06-01", endDate: "2026-06-14" },
+        { department: "Paediatrics",         batch: "C", startDate: "2026-06-22", endDate: "2026-07-05" },
+        { department: "Paediatrics",         batch: "D", startDate: "2026-07-13", endDate: "2026-07-26" },
+        // Respiratory Medicine — 1 week
+        { department: "Respiratory Medicine",batch: "A", startDate: "2026-08-17", endDate: "2026-08-23" },
+        { department: "Respiratory Medicine",batch: "B", startDate: "2026-06-15", endDate: "2026-06-21" },
+        { department: "Respiratory Medicine",batch: "C", startDate: "2026-07-06", endDate: "2026-07-12" },
+        { department: "Respiratory Medicine",batch: "D", startDate: "2026-07-27", endDate: "2026-08-02" },
+        // Ophthalmology — 2 weeks
+        { department: "Ophthalmology",       batch: "A", startDate: "2026-08-24", endDate: "2026-09-06" },
+        { department: "Ophthalmology",       batch: "B", startDate: "2026-09-07", endDate: "2026-09-20" },
+        { department: "Ophthalmology",       batch: "C", startDate: "2026-09-21", endDate: "2026-10-04" },
+        { department: "Ophthalmology",       batch: "D", startDate: "2026-10-05", endDate: "2026-10-18" },
+        // ENT — 2 weeks
+        { department: "ENT",                 batch: "A", startDate: "2026-09-07", endDate: "2026-09-20" },
+        { department: "ENT",                 batch: "B", startDate: "2026-09-21", endDate: "2026-10-04" },
+        { department: "ENT",                 batch: "C", startDate: "2026-10-05", endDate: "2026-10-18" },
+        { department: "ENT",                 batch: "D", startDate: "2026-08-24", endDate: "2026-09-06" },
+        // Orthopaedics — 2 weeks
+        { department: "Orthopaedics",        batch: "A", startDate: "2026-09-21", endDate: "2026-10-04" },
+        { department: "Orthopaedics",        batch: "B", startDate: "2026-10-05", endDate: "2026-10-18" },
+        { department: "Orthopaedics",        batch: "C", startDate: "2026-08-24", endDate: "2026-09-06" },
+        { department: "Orthopaedics",        batch: "D", startDate: "2026-09-07", endDate: "2026-09-20" },
+        // Psychiatry — 1 week
+        { department: "Psychiatry",          batch: "A", startDate: "2026-10-05", endDate: "2026-10-11" },
+        { department: "Psychiatry",          batch: "B", startDate: "2026-08-24", endDate: "2026-08-30" },
+        { department: "Psychiatry",          batch: "C", startDate: "2026-09-07", endDate: "2026-09-13" },
+        { department: "Psychiatry",          batch: "D", startDate: "2026-09-21", endDate: "2026-09-27" },
+        // Dermatology — 1 week
+        { department: "Dermatology",         batch: "A", startDate: "2026-10-12", endDate: "2026-10-18" },
+        { department: "Dermatology",         batch: "B", startDate: "2026-08-31", endDate: "2026-09-06" },
+        { department: "Dermatology",         batch: "C", startDate: "2026-09-14", endDate: "2026-09-20" },
+        { department: "Dermatology",         batch: "D", startDate: "2026-09-28", endDate: "2026-10-04" },
     ];
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -603,41 +716,88 @@
         if (d.includes("SURGERY") || d === "AETCOM (SURG)") return "Surgery";
         if (d.includes("OBSTETRICS") || d.includes("GYNAECOLOGY") || d.includes("GYNECOLOGY") || d.includes("OBG") || d.includes("AETCOM (OBG)")) return "Obs & Gynae";
         if (d.includes("ANAESTH") || d.includes("ANESTH")) return "Anaesthesia";
+        if (d.includes("RESPIRATORY") || d.includes("RESP MED") || d.includes("RESP. MED")) return "Respiratory Medicine";
         if (d.includes("RADIO")) return "Radiology";
+        if (d.includes("TERM BREAK")) return "Term Break";
         return dept;
     };
 
     const getDeptStyles = (dept) => {
         const map = {
-            "Internal Medicine":  "border-blue-500 bg-blue-900/30 text-blue-200", "Obs & Gynae": "border-rose-500 bg-rose-900/30 text-rose-200",
-            "Surgery": "border-emerald-500 bg-emerald-900/30 text-emerald-200", "Paediatrics": "border-pink-400 bg-pink-900/30 text-pink-200",
-            "ENT": "border-amber-500 bg-amber-900/30 text-amber-200", "Ophthalmology": "border-purple-500 bg-purple-900/30 text-purple-200",
-            "Orthopaedics": "border-orange-500 bg-orange-900/30 text-orange-200", "Dermatology": "border-yellow-500 bg-yellow-900/30 text-yellow-200",
-            "Psychiatry": "border-indigo-500 bg-indigo-900/30 text-indigo-200", "Radiology": "border-gray-500 bg-gray-900/30 text-gray-200",
-            "Anaesthesia": "border-cyan-500 bg-cyan-900/30 text-cyan-200", "Emergency Medicine": "border-red-700 bg-red-900/40 text-red-100",
-            "Electives": "border-violet-700 bg-violet-900/40 text-violet-100", "AETCOM": "border-stone-500 bg-stone-800/40 text-stone-200"
+            "Internal Medicine":    "border-blue-500 bg-blue-900/30 text-blue-200",
+            "Obs & Gynae":          "border-rose-500 bg-rose-900/30 text-rose-200",
+            "Surgery":              "border-emerald-500 bg-emerald-900/30 text-emerald-200",
+            "Paediatrics":          "border-pink-400 bg-pink-900/30 text-pink-200",
+            "ENT":                  "border-amber-500 bg-amber-900/30 text-amber-200",
+            "Ophthalmology":        "border-purple-500 bg-purple-900/30 text-purple-200",
+            "Orthopaedics":         "border-orange-500 bg-orange-900/30 text-orange-200",
+            "Dermatology":          "border-yellow-500 bg-yellow-900/30 text-yellow-200",
+            "Psychiatry":           "border-indigo-500 bg-indigo-900/30 text-indigo-200",
+            "Radiology":            "border-gray-500 bg-gray-900/30 text-gray-200",
+            "Anaesthesia":          "border-cyan-500 bg-cyan-900/30 text-cyan-200",
+            "Emergency Medicine":   "border-red-700 bg-red-900/40 text-red-100",
+            "Electives":            "border-violet-700 bg-violet-900/40 text-violet-100",
+            "AETCOM":               "border-stone-500 bg-stone-800/40 text-stone-200",
+            "Respiratory Medicine": "border-teal-500 bg-teal-900/30 text-teal-200",
+            "Term Break":           "border-blue-400 bg-blue-900/20 text-blue-300"
         };
         return map[dept] || "border-slate-600 bg-slate-800 text-slate-300";
     };
 
     const getChipClass = (dept) => {
         const map = {
-            "Internal Medicine": "chip-medicine", "Surgery": "chip-surgery", "Obs & Gynae": "chip-obg", "Paediatrics": "chip-paeds",
-            "ENT": "chip-ent", "Orthopaedics": "chip-ortho", "Ophthalmology": "chip-ophthal", "Dermatology": "chip-derm",
-            "Psychiatry": "chip-psych", "Anaesthesia": "chip-anaes", "Emergency Medicine": "chip-em", "Electives": "chip-elective", "Radiology": "chip-radiology"
+            "Internal Medicine":    "chip-medicine",
+            "Surgery":              "chip-surgery",
+            "Obs & Gynae":          "chip-obg",
+            "Paediatrics":          "chip-paeds",
+            "ENT":                  "chip-ent",
+            "Orthopaedics":         "chip-ortho",
+            "Ophthalmology":        "chip-ophthal",
+            "Dermatology":          "chip-derm",
+            "Psychiatry":           "chip-psych",
+            "Anaesthesia":          "chip-anaes",
+            "Emergency Medicine":   "chip-em",
+            "Electives":            "chip-elective",
+            "Radiology":            "chip-radiology",
+            "Respiratory Medicine": "chip-resp",
+            "Term Break":           "chip-termbreak"
         };
         return map[dept] || 'chip-default';
     };
 
     const DEPT_BAR_COLORS = {
-        "Internal Medicine":  "#2563eb", "Surgery": "#059669", "Obs & Gynae": "#e11d48",
-        "Paediatrics": "#ec4899", "ENT": "#f59e0b", "Orthopaedics": "#f97316",
-        "Ophthalmology": "#7c3aed", "Dermatology": "#eab308", "Psychiatry": "#4f46e5",
-        "Anaesthesia": "#06b6d4", "Emergency Medicine": "#dc2626", "Electives": "#7c3aed", "Radiology": "#64748b"
+        "Internal Medicine":    "#2563eb",
+        "Surgery":              "#059669",
+        "Obs & Gynae":          "#e11d48",
+        "Paediatrics":          "#ec4899",
+        "ENT":                  "#f59e0b",
+        "Orthopaedics":         "#f97316",
+        "Ophthalmology":        "#7c3aed",
+        "Dermatology":          "#eab308",
+        "Psychiatry":           "#4f46e5",
+        "Anaesthesia":          "#06b6d4",
+        "Emergency Medicine":   "#dc2626",
+        "Electives":            "#7c3aed",
+        "Radiology":            "#64748b",
+        "Respiratory Medicine": "#0d9488",
+        "Term Break":           "#3b82f6"
     };
 
     const getDeptColorClass = (dept) => {
-        const map = { "Surgery": "bg-emerald-500", "Internal Medicine": "bg-blue-500", "Obs & Gynae": "bg-rose-500", "Paediatrics": "bg-pink-500", "ENT": "bg-amber-500", "Ophthalmology": "bg-purple-500", "Orthopaedics": "bg-orange-500", "Dermatology": "bg-yellow-500", "Psychiatry": "bg-indigo-500", "Anaesthesia": "bg-cyan-500" };
+        const map = {
+            "Surgery":              "bg-emerald-500",
+            "Internal Medicine":    "bg-blue-500",
+            "Obs & Gynae":          "bg-rose-500",
+            "Paediatrics":          "bg-pink-500",
+            "ENT":                  "bg-amber-500",
+            "Ophthalmology":        "bg-purple-500",
+            "Orthopaedics":         "bg-orange-500",
+            "Dermatology":          "bg-yellow-500",
+            "Psychiatry":           "bg-indigo-500",
+            "Anaesthesia":          "bg-cyan-500",
+            "Respiratory Medicine": "bg-teal-500",
+            "Term Break":           "bg-blue-400"
+        };
         return map[dept] || "bg-slate-500";
     };
 
@@ -930,18 +1090,23 @@
     }
 
     function generateSchedule(gBatch, cBatch, sBatch, dynamicEvents = []) {
-        const data   = [];
-        let current  = new Date(termStartDate);
-        const eStart = new Date(electivePeriod.start + 'T00:00:00Z');
-        const eEnd   = new Date(electivePeriod.end   + 'T00:00:00Z');
+        const data    = [];
+        let current   = new Date(termStartDate);
+        // VII Term elective period
+        const eStart  = new Date(electivePeriod.start + 'T00:00:00Z');
+        const eEnd    = new Date(electivePeriod.end   + 'T00:00:00Z');
 
         while (current <= termEndDate) {
-            const dayName    = current.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
-            const ds         = current.toISOString().split('T')[0];
-            const isElective = current >= eStart && current <= eEnd;
-            const week       = getNthWeekdayOfMonth(current);
-            const rules      = scheduleRules[dayName];
+            const dayName     = current.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
+            const ds          = current.toISOString().split('T')[0];
+            const isVIIITerm  = current >= termVIIIStart;               // 01 Jun 2026 onwards
+            const isTermBreak = current >= termBreakStart && current <= termBreakEnd; // 18–31 May 2026
+            const isElective  = !isVIIITerm && !isTermBreak && current >= eStart && current <= eEnd;
+            const week        = getNthWeekdayOfMonth(current);
+            // Select the correct weekly schedule rules
+            const rules       = isVIIITerm ? scheduleRulesVIII[dayName] : scheduleRules[dayName];
 
+            // ── Dynamic events from Firestore (apply to both terms) ──────────
             const myDynamic = dynamicEvents.filter(e => {
                 if (e.date !== ds) return false;
                 const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
@@ -965,35 +1130,64 @@
 
             const isOverridden = (range) => dynamicTimes.has(range.split('-')[0]);
 
-            if (dayName !== "Sunday" && rules && !isGlobalHoliday) {
+            // ── Term Break: 18 May – 31 May 2026 ────────────────────────────
+            if (isTermBreak && !isGlobalHoliday && dayName !== "Sunday") {
+                data.push({ date: ds, isTermBreak: true, topic: "Term Break", department: "Term Break", startTime: "08:00", endTime: "17:00", location: "AFMC", isDynamic: false });
+                current.setUTCDate(current.getUTCDate() + 1);
+                continue;
+            }
+
+            // ── Regular schedule ─────────────────────────────────────────────
+            if (dayName !== "Sunday" && rules && !isGlobalHoliday && !isTermBreak) {
                 if (!isElective) {
+                    // Theory lectures (both terms)
                     for (const [time, cfg] of Object.entries(rules.theory || {})) {
                         const topic = typeof cfg === 'string' ? cfg : cfg[week];
                         if (topic && !isOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
                     }
-                    if (rules.pandemic && !isOverridden("09:00")) {
+                    // Pandemic module (VII Term only — Saturday)
+                    if (!isVIIITerm && rules.pandemic && !isOverridden("09:00")) {
                         for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
                     }
-                    clinicalRotationRules.forEach(rot => {
-                        const s = new Date(rot.startDate + 'T00:00:00Z'); const e = new Date(rot.endDate   + 'T00:00:00Z');
-                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden("11:00")) addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, "OPD/Ward");
+                    // Clinical rotation clinics (11:00–13:00)
+                    // VII term: OPD/Ward  |  VIII term: CH(SC)/AICTS/MH Kirkee
+                    const rotRules  = isVIIITerm ? clinicalRotationRulesVIII : clinicalRotationRules;
+                    const clinicLoc = isVIIITerm ? "CH (SC) / AICTS / MH Kirkee" : "OPD/Ward";
+                    rotRules.forEach(rot => {
+                        const s = new Date(rot.startDate + 'T00:00:00Z');
+                        const e = new Date(rot.endDate   + 'T00:00:00Z');
+                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden("11:00")) {
+                            addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, clinicLoc);
+                        }
                     });
+                    // Tutorials
                     for (const [time, cfg] of Object.entries(rules.tutorials || {})) {
                         if (typeof cfg === 'string') {
                             if (!isOverridden(time)) addEntry(data, ds, time, `${cfg} Tutorial`, cfg, "NLH Sushruta");
-                        } else if (cfg[week] && !Object.values(cfg).some(v => v === 'A' || v === 'B' || v === 'C')) {
+                        } else if (cfg[week] !== undefined && !Object.values(cfg).some(v => v === 'A' || v === 'B' || v === 'C')) {
+                            // Week-of-month based tutorial
                             if (!isOverridden(time)) addEntry(data, ds, time, `${cfg[week]} Tutorial`, cfg[week], "NLH Sushruta");
                         } else {
+                            // Batch-specific or group-based tutorial
                             for (const [topic, target] of Object.entries(cfg)) {
-                                if ((target === gBatch || (typeof target === 'number' && target === week)) && !isOverridden(time)) addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                if ((target === gBatch || (typeof target === 'number' && target === week)) && !isOverridden(time)) {
+                                    addEntry(data, ds, time, `${topic} Tutorial`, topic, "Tutorial Room");
+                                }
                             }
                         }
                     }
+                    // SDL (week-of-month based)
                     for (const [time, cfg] of Object.entries(rules.sdl || {})) {
                         const topic = cfg[week];
-                        if (topic && !isOverridden(time)) (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL ${t}`, t, "Library/Dept"));
+                        if (topic && !isOverridden(time)) (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL – ${t}`, t, "Library/Dept"));
+                    }
+                    // AETCOM (VIII term — Wednesday week-of-month based)
+                    for (const [time, cfg] of Object.entries(rules.aetcom || {})) {
+                        const topic = typeof cfg === 'string' ? cfg : cfg[week];
+                        if (topic && !isOverridden(time)) addEntry(data, ds, time, `AETCOM – ${topic}`, topic, "NLH Sushruta");
                     }
                 } else {
+                    // VII Term elective rotation
                     if (!isOverridden("11:00")) addEntry(data, ds, "11:00-13:00", "Elective Rotation", "Electives", "Clinical Dept");
                 }
             }
@@ -1003,7 +1197,7 @@
         personalizedSchedule = data;
 
         const select = document.getElementById('dept-filter');
-        const depts  = [...new Set(data.map(e => e.department).filter(Boolean))].sort();
+        const depts  = [...new Set(data.map(e => e.department).filter(d => d && d !== 'Term Break'))].sort();
         select.innerHTML = '<option value="all">ALL DEPTS</option>';
         depts.forEach(d => {
             const opt = document.createElement('option');
@@ -1030,13 +1224,21 @@
         const sorted    = filtered.sort((a,b) => (a.startTime||'00:00').localeCompare(b.startTime||'00:00'));
 
         if (sorted.length) {
-            const holiday = sorted.find(e => e.isHoliday);
+            const holiday   = sorted.find(e => e.isHoliday);
+            const termBreak = sorted.find(e => e.isTermBreak);
             if (holiday) {
                 const msg = holiday.holidayMsg || `🎉 ${esc(holiday.topic) || 'HOLIDAY'}`;
                 content += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center border-4 border-dotted border-amber-500/40 flex flex-col items-center gap-4">
                     <div class="text-4xl">${msg.match(/^\p{Emoji}/u)?.[0] || '🎉'}</div>
                     <div class="text-amber-300 font-black text-2xl tracking-tight">${esc(msg.replace(/^\p{Emoji}\s*/u,''))}</div>
                     <div class="text-slate-400 font-bold text-sm uppercase tracking-widest">${esc(holiday.holidaySub || '')}</div>
+                </div>`;
+            } else if (termBreak) {
+                content += `<div class="bg-slate-800/50 p-16 rounded-[40px] text-center border-4 border-dotted border-blue-500/40 flex flex-col items-center gap-4">
+                    <div class="text-5xl">🏖️</div>
+                    <div class="text-blue-300 font-black text-2xl tracking-tight">TERM BREAK</div>
+                    <div class="text-slate-400 font-bold text-sm uppercase tracking-widest">17 MAY – 31 MAY 2026</div>
+                    <div class="text-slate-500 font-bold text-xs uppercase tracking-widest">VIII Term begins 01 Jun 2026</div>
                 </div>`;
             } else {
                 content += sorted.map(e => {
@@ -1329,7 +1531,10 @@
     function buildDayCell(dateStr, dayNum, isOtherMonth, events, todayStr, legendDepts) {
         const cell = document.createElement('div');
         const isToday = dateStr === todayStr, isSunday = new Date(dateStr + 'T00:00:00Z').getUTCDay() === 0;
-        const inTerm = dateStr >= '2026-01-12' && dateStr <= '2026-05-17', holiday = events.find(e => e.isHoliday);
+        // inTerm covers both VII term, term break, and VIII term
+        const inTerm = (dateStr >= '2026-01-12' && dateStr <= '2026-10-18'), holiday = events.find(e => e.isHoliday);
+        const isTermBreakDay = dateStr >= '2026-05-18' && dateStr <= '2026-05-31';
+        const termBreakEv = events.find(e => e.isTermBreak);
 
         cell.className = `cal-day-cell bg-slate-900 p-1.5 flex flex-col ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today-cell' : ''} ${isSunday ? 'is-sunday' : ''} ${holiday ? 'is-holiday' : ''}`;
         cell.dataset.date = dateStr;
@@ -1344,14 +1549,20 @@
             banner.className = 'rounded bg-amber-400/20 border border-amber-400/40 px-1 py-1 text-center mb-1';
             banner.innerHTML = `<div class="text-base leading-none mb-0.5">🎉</div><span class="text-[8px] font-black text-amber-300 uppercase tracking-wide block leading-tight">${(holiday.topic||'Holiday').replace(/Holiday/i,'').trim()||'Holiday'}</span>`;
             cell.appendChild(banner);
+        } else if (termBreakEv && !isOtherMonth) {
+            // Term break indicator in calendar
+            const banner = document.createElement('div');
+            banner.className = 'rounded bg-blue-500/20 border border-blue-400/40 px-1 py-1 text-center mb-1';
+            banner.innerHTML = `<div class="text-base leading-none mb-0.5">🏖️</div><span class="text-[8px] font-black text-blue-300 uppercase tracking-wide block leading-tight">Break</span>`;
+            cell.appendChild(banner);
         } else if (isSunday && !isOtherMonth) {
             const sun = document.createElement('div'); sun.className = 'text-center text-base leading-none mb-1'; sun.textContent = '☀️'; cell.appendChild(sun);
-        } else if (inTerm && !isOtherMonth) {
+        } else if (inTerm && !isOtherMonth && !isTermBreakDay) {
             const sorted = [...events].sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
             sorted.slice(0, 4).forEach(e => {
                 const dept = e.department || 'Other'; legendDepts.add(dept);
                 const chip = document.createElement('span'); chip.className = `event-chip ${getChipClass(dept)}`;
-                chip.textContent = (e.topic || dept).replace(/Tutorial|SDL|Clinics/gi, '').trim() || dept;
+                chip.textContent = (e.topic || dept).replace(/Tutorial|SDL|Clinics|AETCOM/gi, '').replace(/–/g,'').trim() || dept;
                 cell.appendChild(chip);
             });
             if (sorted.length > 4) {
