@@ -191,14 +191,14 @@
         .tab-content { display: none; opacity: 0; transition: opacity 0.2s ease-in-out; }
         .tab-content.active { display: flex; opacity: 1; height: 100%; min-height: 0; }
 
-        #detail-panel { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); will-change: transform; }
+        #detail-panel, #cal-day-panel { transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); will-change: transform; }
         .panel-hidden { transform: translateY(100%); }
         .panel-visible { transform: translateY(0); }
 
-        #install-banner { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); max-height: 0; opacity: 0; overflow: hidden; }
+        #install-banner { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); max-height: 0; opacity: 0; overflow: hidden; }
         #install-banner.visible { max-height: 150px; opacity: 1; padding: 1rem; }
 
-        #calendar-overlay { transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+        #calendar-overlay { transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.3s cubic-bezier(0.16, 1, 0.3, 1); will-change: transform, opacity; }
         #calendar-overlay.cal-hidden { opacity: 0; pointer-events: none; transform: translateY(-8px); }
         #calendar-overlay.cal-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
@@ -593,21 +593,29 @@
     const scheduleRulesVIII = {
         "Monday": {
             theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "ENT" },
-            tutorials: { "14:00-15:00": "General Surgery", "15:00-16:00": "General Medicine" }
+            tutorials: {
+                "14:00-15:00": { "General Medicine": "A", "General Surgery": "B", "Obstetrics & Gynaecology": "C" },
+                "15:00-16:00": { "General Medicine": "B", "General Surgery": "C", "Obstetrics & Gynaecology": "A" }
+            }
         },
         "Tuesday": {
             theory:    { "08:00-09:00": "General Medicine", "09:00-10:00": "Paediatrics" },
-            tutorials: { "14:00-15:00": "Obstetrics & Gynaecology" },
-            sdl:       { "15:00-16:00": { 1: "General Medicine", 2: "General Surgery", 3: "Obstetrics & Gynaecology" } }
+            tutorials: {
+                "14:00-15:00": { "General Medicine": "C", "General Surgery": "A", "Obstetrics & Gynaecology": "B" },
+                "15:00-16:00": { "General Medicine": "A", "General Surgery": "B", "Obstetrics & Gynaecology": "C" }
+            }
         },
         "Wednesday": {
             theory:    { "08:00-09:00": "General Surgery", "09:00-10:00": "General Medicine" },
-            tutorials: { "14:00-15:00": "General Medicine" },
+            tutorials: { "14:00-15:00": { "General Medicine": "B", "General Surgery": "C", "Obstetrics & Gynaecology": "A" } },
             aetcom:    { "15:00-16:00": { 1: "General Medicine", 2: "General Surgery", 3: "Obstetrics & Gynaecology", 4: "ENT", 5: "Ophthalmology" } }
         },
         "Thursday": {
             theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": { 1: "General Medicine", 2: "General Medicine", 3: "Paediatrics", 4: "Paediatrics", 5: "Paediatrics" } },
-            tutorials: { "14:00-15:00": "Obstetrics & Gynaecology", "15:00-16:00": "Paediatrics" }
+            tutorials: {
+                "14:00-15:00": { "General Medicine": "C", "General Surgery": "B", "Obstetrics & Gynaecology": "A" },
+                "15:00-16:00": "Paediatrics"
+            }
         },
         "Friday": {
             theory:    { "08:00-09:00": "General Surgery", "09:00-10:00": { 1: "General Surgery", 2: "General Surgery", 3: "Ophthalmology", 4: "Ophthalmology", 5: "Ophthalmology" } },
@@ -621,7 +629,7 @@
                 "08:00-09:00": { 1: "Psychiatry", 2: "Psychiatry", 3: "Obstetrics & Gynaecology", 4: "Obstetrics & Gynaecology", 5: "Respiratory Medicine" },
                 "09:00-10:00": { 1: "Dermatology", 2: "Dermatology", 3: "Radiology", 4: "Anaesthesia" }
             },
-            tutorials: { "14:00-15:00": "General Surgery" }
+            sdl: { "14:00-15:00": { 1: "General Medicine", 2: "General Surgery", 3: "Obstetrics & Gynaecology" } }
         }
     };
 
@@ -838,7 +846,7 @@
         const track = document.getElementById('day-track');
         if (!track) return;
         const x = -index * getSlideWidth();
-        track.style.transition = animated ? 'transform 0.3s cubic-bezier(0.4,0,0.2,1)' : 'none';
+        track.style.transition = animated ? 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)' : 'none';
         track.style.transform = `translateX(${x}px)`;
     }
 
@@ -865,6 +873,7 @@
 
         let startX = 0, startY = 0, curX = 0;
         let dragging = false, isHoriz = null, startSlide = 0;
+        let startTime = 0;
         const track = document.getElementById('day-track');
         
         // PTR state
@@ -879,6 +888,7 @@
             startX = e.touches[0].clientX; startY = e.touches[0].clientY;
             curX = startX; ptrStartY = startY; dragging = true; isHoriz = null;
             startSlide = slideIndex; ptrPulling = false;
+            startTime = performance.now();
             if (track) track.style.transition = 'none';
         }, { passive: true });
 
@@ -890,8 +900,13 @@
 
             if (isHoriz) {
                 e.preventDefault();
+                let activeDx = dx;
+                // Rubber band effect at boundaries
+                if ((startSlide === 0 && dx > 0) || (startSlide === allSlides.length - 1 && dx < 0)) {
+                    activeDx = dx * 0.35;
+                }
                 const baseX = -startSlide * getSlideWidth();
-                if (track) track.style.transform = `translateX(${baseX + dx}px)`;
+                if (track) track.style.transform = `translateX(${baseX + activeDx}px)`;
             } else if (!isHoriz && dy > 0) {
                 const slide = allSlides[slideIndex];
                 if (slide && slide.scrollTop <= 0) {
@@ -913,7 +928,7 @@
             if (ptrPulling) {
                 const dy = (e.changedTouches[0]?.clientY ?? ptrStartY) - ptrStartY;
                 const pull = Math.min(dy * 0.4, PTR_THRESHOLD + 20);
-                ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
+                ptrEl.style.transition = 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
                 if (pull >= PTR_THRESHOLD) {
                     ptrText.textContent = 'Refreshing...'; ptrIcon.classList.add('animate-spin');
                     ptrEl.style.transform = 'translateY(10px)';
@@ -925,11 +940,15 @@
             }
 
             if (!isHoriz) return;
-            const dx = curX - startX; const threshold = getSlideWidth() * 0.25;
+            const dx = curX - startX;
+            const duration = performance.now() - startTime;
+            const velocity = dx / duration;
+            const threshold = getSlideWidth() * 0.25;
+            const isFlick = Math.abs(velocity) > 0.3 && Math.abs(dx) > 30;
 
-            if (dx < -threshold && slideIndex < allSlides.length - 1) goToSlide(slideIndex + 1);
-            else if (dx > threshold && slideIndex > 0) goToSlide(slideIndex - 1);
-            else setTrackPosition(startSlide, true);
+            if ((dx < -threshold || (isFlick && velocity < 0)) && slideIndex < allSlides.length - 1) goToSlide(slideIndex + 1);
+            else if ((dx > threshold || (isFlick && velocity > 0)) && slideIndex > 0) goToSlide(slideIndex - 1);
+            else goToSlide(startSlide);
         }, { passive: true });
 
         window.addEventListener('resize', () => {
@@ -951,10 +970,13 @@
         if (!smooth) { container.scrollLeft = targetLeft; return; }
         const startLeft = container.scrollLeft; const delta = targetLeft - startLeft;
         if (Math.abs(delta) < 2) return;
-        const duration = 320; const startTime = performance.now();
+        // Dynamic duration based on travel distance to prevent speed jank
+        const duration = Math.min(450, Math.max(280, Math.abs(delta) * 0.6));
+        const startTime = performance.now();
         (function step(now) {
             const progress = Math.min((now - startTime) / duration, 1);
-            container.scrollLeft = startLeft + delta * (1 - Math.pow(1 - progress, 3));
+            // Ease Out Quintic curve for ultra-smooth deceleration
+            container.scrollLeft = startLeft + delta * (1 - Math.pow(1 - progress, 5));
             if (progress < 1) requestAnimationFrame(step);
         })(startTime);
     }
@@ -1149,15 +1171,17 @@
                     if (!isVIIITerm && rules.pandemic && !isOverridden("09:00")) {
                         for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
                     }
-                    // Clinical rotation clinics (11:00–13:00)
+                    // Clinical rotation clinics (11:00–13:00 or 10:00-13:00)
                     // VII term: OPD/Ward  |  VIII term: CH(SC)/AICTS/MH Kirkee
-                    const rotRules  = isVIIITerm ? clinicalRotationRulesVIII : clinicalRotationRules;
-                    const clinicLoc = isVIIITerm ? "CH (SC) / AICTS / MH Kirkee" : "OPD/Ward";
+                    const rotRules   = isVIIITerm ? clinicalRotationRulesVIII : clinicalRotationRules;
+                    const clinicLoc  = isVIIITerm ? "CH (SC) / AICTS / MH Kirkee" : "OPD/Ward";
+                    const clinicTime = isVIIITerm ? "10:00-13:00" : "11:00-13:00";
+                    const clinicHour = isVIIITerm ? "10:00" : "11:00";
                     rotRules.forEach(rot => {
                         const s = new Date(rot.startDate + 'T00:00:00Z');
                         const e = new Date(rot.endDate   + 'T00:00:00Z');
-                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden("11:00")) {
-                            addEntry(data, ds, "11:00-13:00", `${rot.department} Clinics`, rot.department, clinicLoc);
+                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden(clinicHour)) {
+                            addEntry(data, ds, clinicTime, `${rot.department} Clinics`, rot.department, clinicLoc);
                         }
                     });
                     // Tutorials
@@ -1588,13 +1612,14 @@
     function setupCalSwipeCommon() {
         const wrapper = document.getElementById('cal-swipe-wrapper');
         const carousel = document.getElementById('cal-carousel');
-        let touchStartX = 0, touchStartY = 0, touchDeltaX = 0;
+        let touchStartX = 0, touchStartY = 0, touchDeltaX = 0, touchStartTime = 0;
         let isSwiping = false, isVertical = false;
 
         wrapper.addEventListener('touchstart', (e) => {
             if (calIsAnimating) return;
             touchStartX = e.touches[0].clientX; touchStartY = e.touches[0].clientY;
             touchDeltaX = 0; isSwiping = true; isVertical = false;
+            touchStartTime = performance.now();
             carousel.style.transition = 'none';
         }, { passive: true });
 
@@ -1611,10 +1636,16 @@
 
         wrapper.addEventListener('touchend', () => {
             if (!isSwiping || calIsAnimating || isVertical) { isSwiping = false; return; }
-            isSwiping = false; const threshold = wrapper.offsetWidth * 0.25;
-            if (touchDeltaX < -threshold) commitMonthShift(+1);
-            else if (touchDeltaX > threshold) commitMonthShift(-1);
-            else { carousel.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)'; carousel.style.transform = 'translateX(-100%)'; }
+            isSwiping = false;
+            const dx = touchDeltaX;
+            const duration = performance.now() - touchStartTime;
+            const velocity = dx / duration;
+            const threshold = wrapper.offsetWidth * 0.25;
+            const isFlick = Math.abs(velocity) > 0.3 && Math.abs(dx) > 30;
+
+            if (dx < -threshold || (isFlick && velocity < 0)) commitMonthShift(+1);
+            else if (dx > threshold || (isFlick && velocity > 0)) commitMonthShift(-1);
+            else { carousel.style.transition = 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)'; carousel.style.transform = 'translateX(-100%)'; }
         }, { passive: true });
 
         if (!isIOS) {
@@ -1811,12 +1842,18 @@
 
         // Drag to dismiss listeners
         const handle = document.getElementById('cal-day-panel-handle'), panel = document.getElementById('cal-day-panel');
-        let startY = 0, isDragging = false;
-        handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; panel.style.transition = 'none'; }, { passive: true });
+        let startY = 0, isDragging = false, dragStartTime = 0;
+        handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; dragStartTime = performance.now(); panel.style.transition = 'none'; }, { passive: true });
         handle.addEventListener('touchmove',  (e) => { if (!isDragging) return; const d = e.touches[0].clientY - startY; if (d > 0) panel.style.transform = `translateY(${d}px)`; }, { passive: true });
         handle.addEventListener('touchend',   (e) => {
-            isDragging = false; panel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
-            if (e.changedTouches[0].clientY - startY > 80) closeCalDayPanel(); else panel.style.transform = '';
+            isDragging = false;
+            const dy = e.changedTouches[0].clientY - startY;
+            const duration = performance.now() - dragStartTime;
+            const velocity = dy / duration;
+            const isFlickDown = velocity > 0.4 && dy > 30;
+
+            panel.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+            if (dy > 80 || isFlickDown) closeCalDayPanel(); else panel.style.transform = '';
         }, { passive: true });
         document.getElementById('cal-day-backdrop').addEventListener('click', closeCalDayPanel);
 
@@ -1915,13 +1952,22 @@
         // Detail panel drag
         document.getElementById('close-detail').onclick = closeDetail; document.getElementById('detail-overlay').onclick = (e) => { if (e.target.id === 'detail-overlay') closeDetail(); };
         const dragZone = document.getElementById('detail-drag-zone'), detailPanel = document.getElementById('detail-panel');
-        let detStartY, detIsDragging = false;
-        dragZone.addEventListener('touchstart', (e) => { detStartY = e.touches[0].clientY; detIsDragging = true; detailPanel.style.transition = 'none'; }, { passive: true });
+        let detStartY, detIsDragging = false, detStartTime = 0;
+        dragZone.addEventListener('touchstart', (e) => { detStartY = e.touches[0].clientY; detIsDragging = true; detStartTime = performance.now(); detailPanel.style.transition = 'none'; }, { passive: true });
         dragZone.addEventListener('touchmove',  (e) => { if (!detIsDragging) return; const d = e.touches[0].clientY - detStartY; if (d > 0) detailPanel.style.transform = `translateY(${d}px)`; }, { passive: true });
         dragZone.addEventListener('touchend',   (e) => {
-            detIsDragging = false; detailPanel.style.transition = 'transform 0.3s cubic-bezier(0.4,0,0.2,1)';
-            const d = e.changedTouches[0].clientY - detStartY;
-            if (d > 100) closeDetail(); else { detailPanel.style.transform = ''; if (d < 10 && d > -10) closeDetail(); }
+            detIsDragging = false;
+            const dy = e.changedTouches[0].clientY - detStartY;
+            const duration = performance.now() - detStartTime;
+            const velocity = dy / duration;
+            const isFlickDown = velocity > 0.4 && dy > 30;
+
+            detailPanel.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+            if (dy > 100 || isFlickDown) closeDetail(); 
+            else { 
+                detailPanel.style.transform = ''; 
+                if (dy < 10 && dy > -10) closeDetail(); 
+            }
         }, { passive: true });
     }
 
