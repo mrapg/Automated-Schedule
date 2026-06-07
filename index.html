@@ -170,8 +170,18 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
         .ios-scroll { overflow-y: scroll; -webkit-overflow-scrolling: touch; }
 
-        .card-shadow  { box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); }
+        .card-shadow  { box-shadow: 0 8px 30px rgba(0,0,0,0.3), 0 1px 1px rgba(255,255,255,0.05) inset; }
         .modal-open   { overflow: hidden; }
+        .clickable-card {
+            cursor: pointer;
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, box-shadow 0.25s ease;
+            will-change: transform;
+        }
+        .clickable-card:active {
+            transform: scale(0.97) translateY(1px);
+            background-color: #334155 !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
         .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         
         nav { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
@@ -853,6 +863,7 @@
     function goToSlide(index, animated = true) {
         if (index < 0 || index >= allSlides.length) return;
         slideIndex = index;
+        lazyLoadIOS(index);
         setTrackPosition(index, animated);
         const ds = allSlides[index]?.dataset?.date;
         if (ds) {
@@ -882,6 +893,7 @@
         const ptrIcon = document.getElementById('ptr-icon');
         const ptrText = document.getElementById('ptr-text');
         const PTR_THRESHOLD = 70;
+        const PTR_MIN_ENGAGE = 12; // Minimum vertical drag before PTR activates (prevents tap false-positives)
 
         wrapper.addEventListener('touchstart', (e) => {
             if (e.touches.length !== 1) return;
@@ -907,7 +919,7 @@
                 }
                 const baseX = -startSlide * getSlideWidth();
                 if (track) track.style.transform = `translateX(${baseX + activeDx}px)`;
-            } else if (!isHoriz && dy > 0) {
+            } else if (!isHoriz && dy > PTR_MIN_ENGAGE) {
                 const slide = allSlides[slideIndex];
                 if (slide && slide.scrollTop <= 0) {
                     ptrPulling = true;
@@ -966,6 +978,11 @@
     function scrollToSlideAndroid(slideElement, smooth = true) {
         if (!slideElement) return;
         const container = document.getElementById('day-view-container');
+        const slides = Array.from(container.querySelectorAll('.day-slide'));
+        const idx = slides.indexOf(slideElement);
+        if (idx !== -1) {
+            lazyLoadAndroid(slides, idx);
+        }
         const targetLeft = slideElement.offsetLeft;
         if (!smooth) { container.scrollLeft = targetLeft; return; }
         const startLeft = container.scrollLeft; const delta = targetLeft - startLeft;
@@ -990,11 +1007,13 @@
         let startX = 0, startY = 0, currentY = 0;
         let isPulling = false, isHorizontal = false;
         const THRESHOLD = 70;
+        const PTR_MIN_ENGAGE = 12; // Minimum vertical drag before PTR activates
     
         container.addEventListener('touchstart', (e) => {
             const activeSlide = e.target.closest('.day-slide');
             if (!activeSlide || activeSlide.scrollTop > 0) return;
             startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+            currentY = startY;
             isPulling = true; isHorizontal = false; ptrEl.style.transition = 'none';
         }, { passive: true });
     
@@ -1003,7 +1022,7 @@
             const dx = Math.abs(e.touches[0].clientX - startX);
             currentY = e.touches[0].clientY; const dy = currentY - startY;
             if (dx > 10 && dx > dy) isHorizontal = true;
-            if (isHorizontal || dy < 0) return;
+            if (isHorizontal || dy < PTR_MIN_ENGAGE) return;
     
             const pull = Math.min(dy * 0.4, THRESHOLD + 20);
             ptrEl.style.transform = `translateY(${pull - 50}px)`;
@@ -1017,7 +1036,7 @@
             if (!isPulling) return;
             isPulling = false; const dy = currentY - startY;
             
-            if (isHorizontal || dy < 0) {
+            if (isHorizontal || dy < PTR_MIN_ENGAGE) {
                 ptrEl.style.transition = 'all 0.3s cubic-bezier(0.4,0,0.2,1)';
                 ptrEl.style.transform = 'translateY(-50px)'; ptrEl.style.opacity = '0'; return;
             }
@@ -1267,8 +1286,8 @@
             } else {
                 content += sorted.map(e => {
                     const idx = personalizedSchedule.indexOf(e);
-                    return `<div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden ${e.isDynamic ? (isIOS ? 'active:scale-[0.98] transition-transform cursor-pointer' : 'clickable-card cursor-pointer hover:bg-slate-700 active:scale-95') : ''}"
-                        ${e.isDynamic ? `onclick="window.showDetails('${ds}', ${idx})"` : ''}>
+                    return `<div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden ${e.isDynamic ? 'clickable-card' : ''}"
+                        ${e.isDynamic ? `data-event-date="${ds}" data-event-idx="${idx}"` : ''}>
                         <div class="flex justify-between items-start gap-3 flex-nowrap">
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -1293,6 +1312,23 @@
         return { content, hasItems: currentFilter === 'all' || sorted.length > 0 };
     }
 
+    function lazyLoadAndroid(slides, activeIndex) {
+        slides.forEach((slide, idx) => {
+            const shouldBeLoaded = Math.abs(idx - activeIndex) <= 2;
+            const isLoaded = slide.dataset.loaded === 'true';
+            if (shouldBeLoaded && !isLoaded) {
+                const ds = slide.dataset.date;
+                const d = new Date(ds + 'T00:00:00Z');
+                const { content } = buildSlideContent(ds, ds === getTodayStr(), d);
+                slide.innerHTML = content;
+                slide.dataset.loaded = 'true';
+            } else if (!shouldBeLoaded && isLoaded) {
+                slide.innerHTML = '';
+                slide.dataset.loaded = 'false';
+            }
+        });
+    }
+
     function renderAndroid() {
         const container = document.getElementById('day-view-container');
         container.innerHTML = '';
@@ -1301,30 +1337,55 @@
 
         while (cur <= termEndDate) {
             const ds = cur.toISOString().split('T')[0];
-            const { content, hasItems } = buildSlideContent(ds, ds === todayStr, cur);
+            const dayEvents = personalizedSchedule.filter(e => e.date === ds);
+            const filtered  = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
+            const hasItems  = currentFilter === 'all' || filtered.length > 0;
             
             if (hasItems) {
                 const slide = document.createElement('div');
                 slide.className = 'day-slide p-5 pb-24 overflow-y-auto';
                 slide.dataset.date = ds;
-                slide.innerHTML = content;
                 container.appendChild(slide);
             }
             cur.setUTCDate(cur.getUTCDate() + 1);
         }
 
+        const slides = Array.from(document.querySelectorAll('#day-view-container .day-slide'));
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (!entry.isIntersecting) return;
                 const ds = entry.target.dataset.date;
                 currentlyVisibleDate = ds;
                 updateWeekDisplay(ds);
+                const activeIdx = slides.indexOf(entry.target);
+                if (activeIdx !== -1) lazyLoadAndroid(slides, activeIdx);
             });
         }, { threshold: 0.5, root: container });
 
-        document.querySelectorAll('#day-view-container .day-slide').forEach(s => observer.observe(s));
-        const slides = Array.from(document.querySelectorAll('#day-view-container .day-slide'));
-        scrollToSlideAndroid(slides.find(s => s.dataset.date >= todayStr) || slides[slides.length - 1], false);
+        slides.forEach(s => observer.observe(s));
+        const targetSlide = slides.find(s => s.dataset.date >= todayStr) || slides[slides.length - 1];
+        if (targetSlide) {
+            const activeIdx = slides.indexOf(targetSlide);
+            lazyLoadAndroid(slides, activeIdx);
+            scrollToSlideAndroid(targetSlide, false);
+        }
+    }
+
+    function lazyLoadIOS(activeIndex) {
+        allSlides.forEach((slide, idx) => {
+            const shouldBeLoaded = Math.abs(idx - activeIndex) <= 2;
+            const isLoaded = slide.dataset.loaded === 'true';
+            if (shouldBeLoaded && !isLoaded) {
+                const ds = slide.dataset.date;
+                const d = new Date(ds + 'T00:00:00Z');
+                const { content } = buildSlideContent(ds, ds === getTodayStr(), d);
+                slide.innerHTML = content;
+                slide.dataset.loaded = 'true';
+            } else if (!shouldBeLoaded && isLoaded) {
+                slide.innerHTML = '';
+                slide.dataset.loaded = 'false';
+            }
+        });
     }
 
     function renderIOS() {
@@ -1337,7 +1398,9 @@
 
         while (cur <= termEndDate) {
             const ds = cur.toISOString().split('T')[0];
-            const { content, hasItems } = buildSlideContent(ds, ds === todayStr, cur);
+            const dayEvents = personalizedSchedule.filter(e => e.date === ds);
+            const filtered  = currentFilter === 'all' ? dayEvents : dayEvents.filter(e => e.department === currentFilter);
+            const hasItems  = currentFilter === 'all' || filtered.length > 0;
 
             if (hasItems) {
                 const slide = document.createElement('div');
@@ -1346,7 +1409,6 @@
                 slide.style.width = `${slideWidth}px`;
                 slide.style.flexBasis = `${slideWidth}px`;
                 slide.style.flexShrink = '0';
-                slide.innerHTML = content;
                 track.appendChild(slide);
                 allSlides.push(slide);
             }
@@ -1357,6 +1419,8 @@
         const todayIdx = allSlides.findIndex(s => s.dataset.date === todayStr) ?? allSlides.findIndex(s => s.dataset.date >= todayStr);
         const targetIdx = todayIdx >= 0 ? todayIdx : allSlides.length - 1;
         slideIndex = targetIdx;
+        
+        lazyLoadIOS(targetIdx);
         setTrackPosition(targetIdx, false);
         updateWeekDisplay(allSlides[targetIdx]?.dataset?.date || todayStr);
     }
@@ -1723,15 +1787,26 @@
                 </div>
                 ${event.location ? `<div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${esc(event.location)}</p></div>` : ''}
             </div>`;
+        // Save Android scroll position before showing overlay
+        if (!isIOS) {
+            const container = document.getElementById('day-view-container');
+            window._savedScrollLeft = container ? container.scrollLeft : 0;
+        }
         document.getElementById('detail-overlay').classList.remove('hidden');
         setTimeout(() => { document.getElementById('detail-panel').classList.replace('panel-hidden', 'panel-visible'); }, 10);
-        if (!isIOS) document.body.classList.add('modal-open');
     };
 
     function closeDetail() {
         const panel = document.getElementById('detail-panel');
         panel.style.transform = ''; panel.classList.replace('panel-visible', 'panel-hidden');
-        setTimeout(() => { document.getElementById('detail-overlay').classList.add('hidden'); if (!isIOS) document.body.classList.remove('modal-open'); }, 300);
+        setTimeout(() => {
+            document.getElementById('detail-overlay').classList.add('hidden');
+            // Restore Android scroll position after hiding overlay
+            if (!isIOS && window._savedScrollLeft !== undefined) {
+                const container = document.getElementById('day-view-container');
+                if (container) container.scrollLeft = window._savedScrollLeft;
+            }
+        }, 300);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1783,6 +1858,21 @@
     }
 
     function setupAppListeners() {
+        // Card click delegation for dynamic details modal
+        const handleCardClick = (e) => {
+            const card = e.target.closest('[data-event-idx]');
+            if (!card) return;
+            const date = card.getAttribute('data-event-date');
+            const idx = parseInt(card.getAttribute('data-event-idx'), 10);
+            if (date && !isNaN(idx)) {
+                window.showDetails(date, idx);
+            }
+        };
+        const wrapper = document.getElementById('day-view-wrapper');
+        const container = document.getElementById('day-view-container');
+        if (wrapper) wrapper.addEventListener('click', handleCardClick);
+        if (container) container.addEventListener('click', handleCardClick);
+
         document.getElementById('nav-schedule').onclick = () => switchView('schedule');
         document.getElementById('nav-log').onclick      = () => switchView('log');
         document.getElementById('log-search').addEventListener('input', e => renderSearchResults(e.target.value));
