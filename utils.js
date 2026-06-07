@@ -56,23 +56,23 @@ export const getDeptStyles = (dept) => {
 };
 
 /**
- * Unit A: 1-38, Unit B: 39-76, Unit C: 77-114, Unit D: 115-148.
+ * Unit A: 1-38, Unit B: 39-76, Unit C: 77-114, Unit D: 115-150.
  */
 export const getClinicBatch = (r) => {
     if (r >= 1 && r <= 38) return 'A'; 
     if (r >= 39 && r <= 76) return 'B'; 
     if (r >= 77 && r <= 114) return 'C'; 
-    if (r >= 115 && r <= 148) return 'D';
+    if (r >= 115 && r <= 150) return 'D';
     return null;
 };
 
 /**
- * Batch A: 1-50, Batch B: 51-100, Batch C: 101-148.
+ * Batch A: 1-50, Batch B: 51-100, Batch C: 101-150.
  */
 export const getGeneralBatch = (r) => {
     if (r >= 1 && r <= 50) return 'A'; 
     if (r >= 51 && r <= 100) return 'B'; 
-    if (r >= 101 && r <= 148) return 'C';
+    if (r >= 101 && r <= 150) return 'C';
     return null;
 };
 
