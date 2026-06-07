@@ -724,7 +724,6 @@
 
     const getClinicBatch  = (r) => r<=38?'A': r<=76?'B': r<=114?'C': r<=150?'D': null;
     const getGeneralBatch = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
-    const getSubBatch     = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
 
     const normalizeDept = (dept) => {
         if (!dept) return dept;
@@ -1089,8 +1088,7 @@
         const r      = parseInt(rollNo);
         const gBatch = getGeneralBatch(r);
         const cBatch = getClinicBatch(r);
-        const sBatch = getSubBatch(r);
-        document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch: ${sBatch} | Clinic: ${cBatch}`;
+        document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Non-Clinical Batch: ${gBatch} | Clinic Batch: ${cBatch}`;
 
         let dynamicEvents = [];
         try {
@@ -1105,7 +1103,7 @@
                 catch { updateOfflineNotice("Offline: Generic Schedule"); }
             } else updateOfflineNotice("Offline: Generic Schedule");
         } finally {
-            generateSchedule(gBatch, cBatch, sBatch, dynamicEvents);
+            generateSchedule(gBatch, cBatch, dynamicEvents);
             render();
             generateTopicsLog();
             
@@ -1130,7 +1128,7 @@
         data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
     }
 
-    function generateSchedule(gBatch, cBatch, sBatch, dynamicEvents = []) {
+    function generateSchedule(gBatch, cBatch, dynamicEvents = []) {
         const data    = [];
         let current   = new Date(termStartDate);
         // VII Term elective period
@@ -1152,15 +1150,28 @@
                 if (e.date !== ds) return false;
                 const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
                 if (batches.includes("ALL")) return true;
+                
                 const isTutorialOrSdl = e.topic && (
                     e.topic.toLowerCase().includes("tutorial") || 
+                    e.topic.toLowerCase().includes("tut") ||
                     e.topic.toLowerCase().includes("sdl") || 
                     e.topic.toLowerCase().includes("lecture") ||
-                    e.topic.toLowerCase().includes("class")
+                    e.topic.toLowerCase().includes("class") ||
+                    e.topic.toLowerCase().includes("theory") ||
+                    e.topic.toLowerCase().includes("aetcom")
                 );
-                const isClinicalEvent = (e.isClinics || e.isClinic) && !isTutorialOrSdl;
+                
+                const isClinicalEvent = (e.isClinics || e.isClinic || 
+                    (e.topic && (
+                        e.topic.toLowerCase().includes("clinic") || 
+                        e.topic.toLowerCase().includes("ward") || 
+                        e.topic.toLowerCase().includes("posting") || 
+                        e.topic.toLowerCase().includes("rotation")
+                    ))
+                ) && !isTutorialOrSdl;
+                
                 if (isClinicalEvent) return batches.includes(cBatch);
-                return batches.includes(gBatch) || batches.includes(sBatch);
+                return batches.includes(gBatch);
             });
             myDynamic.forEach(e => {
                 const entry = { ...e, department: normalizeDept(e.department) };
