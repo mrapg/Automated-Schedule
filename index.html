@@ -724,7 +724,7 @@
 
     const getClinicBatch  = (r) => r<=38?'A': r<=76?'B': r<=114?'C': r<=150?'D': null;
     const getGeneralBatch = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
-    const getSubBatch     = (r) => r<=25?'A1': r<=50?'A2': r<=75?'B1': r<=100?'B2': r<=125?'C1': r<=150?'C2': null;
+    const getSubBatch     = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
 
     const normalizeDept = (dept) => {
         if (!dept) return dept;
@@ -1152,7 +1152,14 @@
                 if (e.date !== ds) return false;
                 const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
                 if (batches.includes("ALL")) return true;
-                if (e.isClinics || e.isClinic) return batches.includes(cBatch);
+                const isTutorialOrSdl = e.topic && (
+                    e.topic.toLowerCase().includes("tutorial") || 
+                    e.topic.toLowerCase().includes("sdl") || 
+                    e.topic.toLowerCase().includes("lecture") ||
+                    e.topic.toLowerCase().includes("class")
+                );
+                const isClinicalEvent = (e.isClinics || e.isClinic) && !isTutorialOrSdl;
+                if (isClinicalEvent) return batches.includes(cBatch);
                 return batches.includes(gBatch) || batches.includes(sBatch);
             });
             myDynamic.forEach(e => {
