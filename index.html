@@ -2009,7 +2009,12 @@
                     const start = e.startTime ? e.startTime.replace(':', '') : "0800";
                     const end = e.endTime ? e.endTime.replace(':', '') : "0900";
                     
+                    const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                    const uid = `${e.date.replace(/-/g,'')}T${start}00-${e.department.replace(/\\s+/g, '')}@afmc.schedule`;
+
                     ics.push('BEGIN:VEVENT');
+                    ics.push(`UID:${uid}`);
+                    ics.push(`DTSTAMP:${dtstamp}`);
                     ics.push(`SUMMARY:${summary}`);
                     ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
                     ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
@@ -2028,11 +2033,27 @@
             ics.push('END:VCALENDAR');
         
             // 6. Trigger Download
-            const blob = new Blob([ics.join('\r\n')], { type: 'text/calendar' });
-            const a = document.createElement('a');
+            const icsContent = ics.join('\r\n');
             const dateLabel = exportStartDate.toISOString().split('T')[0];
+            const fileName = `AFMC_Week_Starting_${dateLabel}.ics`;
+            
+            // Try Web Share API first (crucial for iOS PWAs where blob downloads fail silently)
+            if (navigator.canShare && navigator.share) {
+                const file = new File([icsContent], fileName, { type: 'text/calendar' });
+                if (navigator.canShare({ files: [file] })) {
+                    navigator.share({
+                        files: [file],
+                        title: 'AFMC Schedule',
+                    }).catch(e => console.warn('Share failed:', e));
+                    return;
+                }
+            }
+            
+            // Fallback for desktop/Android
+            const blob = new Blob([icsContent], { type: 'text/calendar' });
+            const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `AFMC_Week_Starting_${dateLabel}.ics`;
+            a.download = fileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
