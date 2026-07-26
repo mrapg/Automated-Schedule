@@ -2036,27 +2036,25 @@
             const icsContent = ics.join('\r\n');
             const dateLabel = exportStartDate.toISOString().split('T')[0];
             const fileName = `AFMC_Week_Starting_${dateLabel}.ics`;
+            const mimeType = 'text/calendar;charset=utf-8';
             
-            // Try Web Share API first (crucial for iOS PWAs where blob downloads fail silently)
-            if (navigator.canShare && navigator.share) {
-                const file = new File([icsContent], fileName, { type: 'text/calendar' });
-                if (navigator.canShare({ files: [file] })) {
-                    navigator.share({
-                        files: [file],
-                        title: 'AFMC Schedule',
-                    }).catch(e => console.warn('Share failed:', e));
-                    return;
-                }
+            if (isIOS) {
+                // Bulletproof method for iOS PWAs (Standalone mode)
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    window.location.href = e.target.result;
+                };
+                reader.readAsDataURL(new Blob([icsContent], { type: mimeType }));
+            } else {
+                // Standard method for Desktop / Android
+                const blob = new Blob([icsContent], { type: mimeType });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = fileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
-            
-            // Fallback for desktop/Android
-            const blob = new Blob([icsContent], { type: 'text/calendar' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = fileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
         };
 
         // Detail panel drag
