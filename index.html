@@ -1947,113 +1947,118 @@
 
         // Export Calendar - Intelligent Week Detection
         document.getElementById('add-to-calendar-btn').onclick = () => {
-            // 1. Get the date currently being viewed in the app
-            const viewedDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
-            const dayOfWeek = viewedDate.getUTCDay(); // 0 = Sunday, 1 = Monday...
-        
-            // 2. Determine the start of the export range
-            // If it's Sunday (0), we move to the next day (Monday) to get the upcoming week.
-            // Otherwise, we find the Monday of the current week.
-            // Uses relative subtraction to safely handle month boundaries.
-            let exportStartDate = new Date(viewedDate);
-            if (dayOfWeek === 0) {
-                exportStartDate.setUTCDate(exportStartDate.getUTCDate() + 1);
-            } else {
-                exportStartDate.setUTCDate(exportStartDate.getUTCDate() - (dayOfWeek - 1));
-            }
-        
-            // 3. Define the end of the 7-day range (the following Sunday)
-            const exportEndDate = new Date(exportStartDate);
-            exportEndDate.setUTCDate(exportStartDate.getUTCDate() + 6);
-        
-            // 4. Filter the personalizedSchedule
-            const weekEvs = personalizedSchedule.filter(e => {
-                const eventDate = new Date(e.date + 'T00:00:00Z');
+            try {
+                // 1. Get the date currently being viewed in the app
+                const viewedDate = new Date(currentlyVisibleDate + 'T00:00:00Z');
+                const dayOfWeek = viewedDate.getUTCDay(); // 0 = Sunday, 1 = Monday...
+            
+                // 2. Determine the start of the export range
+                // If it's Sunday (0), we move to the next day (Monday) to get the upcoming week.
+                // Otherwise, we find the Monday of the current week.
+                // Uses relative subtraction to safely handle month boundaries.
+                let exportStartDate = new Date(viewedDate);
+                if (dayOfWeek === 0) {
+                    exportStartDate.setUTCDate(exportStartDate.getUTCDate() + 1);
+                } else {
+                    exportStartDate.setUTCDate(exportStartDate.getUTCDate() - (dayOfWeek - 1));
+                }
+            
+                // 3. Define the end of the 7-day range (the following Sunday)
+                const exportEndDate = new Date(exportStartDate);
+                exportEndDate.setUTCDate(exportStartDate.getUTCDate() + 6);
+            
+                // 4. Filter the personalizedSchedule
+                const weekEvs = personalizedSchedule.filter(e => {
+                    const eventDate = new Date(e.date + 'T00:00:00Z');
+                    
+                    // Check 1: Is the event within our calculated 7-day window?
+                    const isInRange = eventDate >= exportStartDate && eventDate <= exportEndDate;
+                    if (!isInRange) return false;
                 
-                // Check 1: Is the event within our calculated 7-day window?
-                const isInRange = eventDate >= exportStartDate && eventDate <= exportEndDate;
-                if (!isInRange) return false;
-            
-                // Check 2: Is this day marked as a holiday?
-                return !e.isHoliday; // Only keep the event if it's NOT a holiday
-            });
-
-            // Guard: if no events found for this week, notify the user
-            if (weekEvs.length === 0) {
-                alert('No events found for this week to export.');
-                return;
-            }
-        
-            // 5. Build the ICS File
-            const ics = [
-                'BEGIN:VCALENDAR',
-                'VERSION:2.0',
-                'PRODID:-//AFMC//Schedule//EN',
-                'CALSCALE:GREGORIAN',
-                'METHOD:PUBLISH'
-            ];
-        
-            weekEvs.forEach(e => {
-                    // Skip hidden/null topics
-                    if (!e.topic || e.topic.toUpperCase() === 'NULL' || e.topic.trim() === "") return;
-            
-                    // 1. Identify specific faculty (Exclude 'Staff' or empty values)
-                    const facultyName = e.faculty || e.instructor;
-                    const hasSpecificFaculty = facultyName && 
-                                               facultyName.toLowerCase() !== 'staff' && 
-                                               facultyName.trim() !== "";
-            
-                    // 2. Summary: Just the topic (No bracketed faculty or updated tags)
-                    const summary = e.topic;
-            
-                    const start = e.startTime ? e.startTime.replace(':', '') : "0800";
-                    const end = e.endTime ? e.endTime.replace(':', '') : "0900";
-                    
-                    const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-                    const uid = `${e.date.replace(/-/g,'')}T${start}00-${e.department.replace(/\\s+/g, '')}@afmc.schedule`;
-
-                    ics.push('BEGIN:VEVENT');
-                    ics.push(`UID:${uid}`);
-                    ics.push(`DTSTAMP:${dtstamp}`);
-                    ics.push(`SUMMARY:${summary}`);
-                    ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
-                    ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
-                    ics.push(`LOCATION:${e.location || 'AFMC'}`);
-                    
-                    // 3. Description: Mention Department and Faculty (if available)
-                    let description = `Dept: ${e.department}`;
-                    if (hasSpecificFaculty) {
-                        description += `\\nFaculty: ${facultyName}`;
-                    }
-                    
-                    ics.push(`DESCRIPTION:${description}`);
-                    ics.push('END:VEVENT');
+                    // Check 2: Is this day marked as a holiday?
+                    return !e.isHoliday; // Only keep the event if it's NOT a holiday
                 });
-        
-            ics.push('END:VCALENDAR');
-        
-            // 6. Trigger Download
-            const icsContent = ics.join('\r\n');
-            const dateLabel = exportStartDate.toISOString().split('T')[0];
-            const fileName = `AFMC_Week_Starting_${dateLabel}.ics`;
-            const mimeType = 'text/calendar;charset=utf-8';
+
+                // Guard: if no events found for this week, notify the user
+                if (weekEvs.length === 0) {
+                    alert('No events found for this week to export.');
+                    return;
+                }
             
-            if (isIOS) {
-                // Bulletproof method for iOS PWAs (Standalone mode)
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    window.location.href = e.target.result;
-                };
-                reader.readAsDataURL(new Blob([icsContent], { type: mimeType }));
-            } else {
-                // Standard method for Desktop / Android
-                const blob = new Blob([icsContent], { type: mimeType });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = fileName;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                // 5. Build the ICS File
+                const ics = [
+                    'BEGIN:VCALENDAR',
+                    'VERSION:2.0',
+                    'PRODID:-//AFMC//Schedule//EN',
+                    'CALSCALE:GREGORIAN',
+                    'METHOD:PUBLISH'
+                ];
+            
+                weekEvs.forEach(e => {
+                        // Skip hidden/null topics
+                        if (!e.topic || e.topic.toUpperCase() === 'NULL' || e.topic.trim() === "") return;
+                
+                        // 1. Identify specific faculty (Exclude 'Staff' or empty values)
+                        const facultyName = e.faculty || e.instructor;
+                        const hasSpecificFaculty = facultyName && 
+                                                   facultyName.toLowerCase() !== 'staff' && 
+                                                   facultyName.trim() !== "";
+                
+                        // 2. Summary: Just the topic (No bracketed faculty or updated tags)
+                        const summary = e.topic;
+                
+                        const start = e.startTime ? e.startTime.replace(':', '') : "0800";
+                        const end = e.endTime ? e.endTime.replace(':', '') : "0900";
+                        
+                        const dtstamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+                        const uid = `${e.date.replace(/-/g,'')}T${start}00-${(e.department || 'General').replace(/\s+/g, '')}@afmc.schedule`;
+
+                        ics.push('BEGIN:VEVENT');
+                        ics.push(`UID:${uid}`);
+                        ics.push(`DTSTAMP:${dtstamp}`);
+                        ics.push(`SUMMARY:${summary}`);
+                        ics.push(`DTSTART;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${start}00`);
+                        ics.push(`DTEND;TZID=Asia/Kolkata:${e.date.replace(/-/g,'')}T${end}00`);
+                        ics.push(`LOCATION:${e.location || 'AFMC'}`);
+                        
+                        // 3. Description: Mention Department and Faculty (if available)
+                        let description = `Dept: ${e.department}`;
+                        if (hasSpecificFaculty) {
+                            description += `\\nFaculty: ${facultyName}`;
+                        }
+                        
+                        ics.push(`DESCRIPTION:${description}`);
+                        ics.push('END:VEVENT');
+                    });
+            
+                ics.push('END:VCALENDAR');
+            
+                // 6. Trigger Download
+                const icsContent = ics.join('\r\n');
+                const dateLabel = exportStartDate.toISOString().split('T')[0];
+                const fileName = `AFMC_Week_Starting_${dateLabel}.ics`;
+                const mimeType = 'text/calendar;charset=utf-8';
+                
+                if (isIOS) {
+                    // Bulletproof method for iOS PWAs (Standalone mode)
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        window.location.href = e.target.result;
+                    };
+                    reader.readAsDataURL(new Blob([icsContent], { type: mimeType }));
+                } else {
+                    // Standard method for Desktop / Android
+                    const blob = new Blob([icsContent], { type: mimeType });
+                    const a = document.createElement('a');
+                    a.href = URL.createObjectURL(blob);
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            } catch (err) {
+                console.error("Calendar export error:", err);
+                alert("Failed to export calendar: " + err.message);
             }
         };
 
