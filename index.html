@@ -233,6 +233,7 @@
         .chip-em { background: #7f1d1d; color: #fca5a5; } .chip-elective { background: #4c1d95; color: #e9d5ff; }
         .chip-holiday { background: #14532d; color: #86efac; } .chip-radiology { background: #1f2937; color: #d1d5db; }
         .chip-resp { background: #134e4a; color: #99f6e4; } .chip-termbreak { background: #1e3a5f; color: #93c5fd; }
+        .chip-theory-exam { background: #881337; color: #ffe4e6; } .chip-practical-exam { background: #78350f; color: #fef3c7; }
         .chip-default { background: #1e293b; color: #94a3b8; }
 
         .cal-month-slide { scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -744,7 +745,7 @@
     const getClinicBatch  = (r) => r<=38?'A': r<=76?'B': r<=114?'C': r<=150?'D': null;
     const getGeneralBatch = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
     // Exam practicals batch (A–F), 25 per batch
-    const getExamBatch    = (r) => { const n=parseInt(r); if(n>=1&&n<=25)return'A'; if(n>=26&&n<=50)return'B'; if(n>=51&&n<=75)return'C'; if(n>=76&&n<=100)return'D'; if(n>=101&&n<=125)return'E'; if(n>=126&&n<=148)return'F'; return null; };
+    const getExamBatch    = (r) => { const n=parseInt(r, 10); if(isNaN(n))return'A'; if(n>=1&&n<=25)return'A'; if(n>=26&&n<=50)return'B'; if(n>=51&&n<=75)return'C'; if(n>=76&&n<=100)return'D'; if(n>=101&&n<=125)return'E'; if(n>=126)return'F'; return 'A'; };
 
     const normalizeDept = (dept) => {
         if (!dept) return dept;
@@ -757,6 +758,8 @@
         if (d.includes("RESPIRATORY") || d.includes("RESP MED") || d.includes("RESP. MED")) return "Respiratory Medicine";
         if (d.includes("RADIO")) return "Radiology";
         if (d.includes("TERM BREAK")) return "Term Break";
+        if (d.includes("THEORY EXAM")) return "IA Theory Exam";
+        if (d.includes("PRACTICAL EXAM")) return "IA Practical Exam";
         return dept;
     };
 
@@ -778,8 +781,8 @@
             "AETCOM":               "border-stone-500 bg-stone-800/40 text-stone-200",
             "Respiratory Medicine": "border-teal-500 bg-teal-900/30 text-teal-200",
             "Term Break":           "border-blue-400 bg-blue-900/20 text-blue-300",
-            "IA Theory Exam":       "border-red-500 bg-red-900/40 text-red-100",
-            "IA Practical Exam":    "border-orange-400 bg-orange-900/40 text-orange-100"
+            "IA Theory Exam":       "border-rose-600 bg-rose-950/40 text-rose-200",
+            "IA Practical Exam":    "border-amber-500 bg-amber-950/40 text-amber-200"
         };
         return map[dept] || "border-slate-600 bg-slate-800 text-slate-300";
     };
@@ -800,7 +803,9 @@
             "Electives":            "chip-elective",
             "Radiology":            "chip-radiology",
             "Respiratory Medicine": "chip-resp",
-            "Term Break":           "chip-termbreak"
+            "Term Break":           "chip-termbreak",
+            "IA Theory Exam":       "chip-theory-exam",
+            "IA Practical Exam":    "chip-practical-exam"
         };
         return map[dept] || 'chip-default';
     };
@@ -820,7 +825,9 @@
         "Electives":            "#7c3aed",
         "Radiology":            "#64748b",
         "Respiratory Medicine": "#0d9488",
-        "Term Break":           "#3b82f6"
+        "Term Break":           "#3b82f6",
+        "IA Theory Exam":       "#e11d48",
+        "IA Practical Exam":    "#f59e0b"
     };
 
     const getDeptColorClass = (dept) => {
@@ -836,7 +843,9 @@
             "Psychiatry":           "bg-indigo-500",
             "Anaesthesia":          "bg-cyan-500",
             "Respiratory Medicine": "bg-teal-500",
-            "Term Break":           "bg-blue-400"
+            "Term Break":           "bg-blue-400",
+            "IA Theory Exam":       "bg-rose-500",
+            "IA Practical Exam":    "bg-amber-500"
         };
         return map[dept] || "bg-slate-500";
     };
@@ -1111,7 +1120,8 @@
         const r      = parseInt(rollNo);
         const gBatch = getGeneralBatch(r);
         const cBatch = getClinicBatch(r);
-        document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch ${gBatch} | Clinics ${cBatch}`;
+        const eBatch = getExamBatch(r);
+        document.getElementById('user-info-display').textContent = `Roll: ${rollNo} | Batch ${gBatch} | Clinics ${cBatch} | IA Exam ${eBatch}`;
 
         let dynamicEvents = [];
         try {
@@ -1126,7 +1136,7 @@
                 catch { updateOfflineNotice("Offline: Generic Schedule"); }
             } else updateOfflineNotice("Offline: Generic Schedule");
         } finally {
-            generateSchedule(gBatch, cBatch, dynamicEvents);
+            generateSchedule(gBatch, cBatch, dynamicEvents, r);
             render();
             generateTopicsLog();
             
@@ -1151,7 +1161,7 @@
         data.push({ date, startTime: start, endTime: end, topic, department: normalizeDept(dept), location: loc, isDynamic: false });
     }
 
-    function generateSchedule(gBatch, cBatch, dynamicEvents = []) {
+    function generateSchedule(gBatch, cBatch, dynamicEvents = [], currentRoll = rollNo) {
         const data    = [];
         let current   = new Date(termStartDate);
         // VII Term elective period
@@ -1164,6 +1174,7 @@
             const isVIIITerm  = current >= termVIIIStart;               // 01 Jun 2026 onwards
             const isTermBreak = current >= termBreakStart && current <= termBreakEnd; // 18–31 May 2026
             const isElective  = !isVIIITerm && !isTermBreak && current >= eStart && current <= eEnd;
+            const isIAExamPeriod = current >= iaExamStart && current <= iaExamEnd;   // 17–31 Oct 2026
             const week        = getNthWeekdayOfMonth(current);
             // Select the correct weekly schedule rules
             const rules       = isVIIITerm ? scheduleRulesVIII[dayName] : scheduleRules[dayName];
@@ -1213,8 +1224,8 @@
                 continue;
             }
 
-            // ── Regular schedule ─────────────────────────────────────────────
-            if (dayName !== "Sunday" && rules && !isGlobalHoliday && !isTermBreak) {
+            // ── Regular schedule (suppressed during IA Exam period) ───────────
+            if (dayName !== "Sunday" && rules && !isGlobalHoliday && !isTermBreak && !isIAExamPeriod) {
                 if (!isElective) {
                     // Theory lectures (both terms)
                     for (const [time, cfg] of Object.entries(rules.theory || {})) {
@@ -1288,7 +1299,7 @@
         });
 
         // Practicals: batch-specific (Exam Batch A–F, derived from roll number)
-        const eBatch = getExamBatch(rollNo);
+        const eBatch = getExamBatch(currentRoll);
         iaPracticalSchedule.forEach(row => {
             iaPracticalDepts.forEach((dept, deptIdx) => {
                 if (row.batches[deptIdx] === eBatch) {
@@ -1688,8 +1699,8 @@
     function buildDayCell(dateStr, dayNum, isOtherMonth, events, todayStr, legendDepts) {
         const cell = document.createElement('div');
         const isToday = dateStr === todayStr, isSunday = new Date(dateStr + 'T00:00:00Z').getUTCDay() === 0;
-        // inTerm covers both VII term, term break, and VIII term
-        const inTerm = (dateStr >= '2026-01-12' && dateStr <= '2026-10-18'), holiday = events.find(e => e.isHoliday);
+        // inTerm covers VII term, term break, VIII term, and IA exams
+        const inTerm = (dateStr >= '2026-01-12' && dateStr <= '2026-10-31'), holiday = events.find(e => e.isHoliday);
         const isTermBreakDay = dateStr >= '2026-05-18' && dateStr <= '2026-05-31';
         const termBreakEv = events.find(e => e.isTermBreak);
 
@@ -1733,7 +1744,22 @@
 
     function renderCalLegend(deptSet) {
         const el = document.getElementById('cal-legend'); el.innerHTML = '';
-        const chipMap = { "Internal Medicine": { cls: "chip-medicine", label: "Medicine" }, "Surgery": { cls: "chip-surgery", label: "Surgery" }, "Obs & Gynae": { cls: "chip-obg", label: "OBG" }, "Paediatrics": { cls: "chip-paeds", label: "Paeds" }, "ENT": { cls: "chip-ent", label: "ENT" }, "Orthopaedics": { cls: "chip-ortho", label: "Ortho" }, "Ophthalmology": { cls: "chip-ophthal", label: "Ophtha" }, "Dermatology": { cls: "chip-derm", label: "Derm" }, "Psychiatry": { cls: "chip-psych", label: "Psych" }, "Anaesthesia": { cls: "chip-anaes", label: "Anaes" }, "Emergency Medicine": { cls: "chip-em", label: "EM" }, "Radiology": { cls: "chip-radiology", label: "Radio" } };
+        const chipMap = {
+            "Internal Medicine": { cls: "chip-medicine", label: "Medicine" },
+            "Surgery": { cls: "chip-surgery", label: "Surgery" },
+            "Obs & Gynae": { cls: "chip-obg", label: "OBG" },
+            "Paediatrics": { cls: "chip-paeds", label: "Paeds" },
+            "ENT": { cls: "chip-ent", label: "ENT" },
+            "Orthopaedics": { cls: "chip-ortho", label: "Ortho" },
+            "Ophthalmology": { cls: "chip-ophthal", label: "Ophtha" },
+            "Dermatology": { cls: "chip-derm", label: "Derm" },
+            "Psychiatry": { cls: "chip-psych", label: "Psych" },
+            "Anaesthesia": { cls: "chip-anaes", label: "Anaes" },
+            "Emergency Medicine": { cls: "chip-em", label: "EM" },
+            "Radiology": { cls: "chip-radiology", label: "Radio" },
+            "IA Theory Exam": { cls: "chip-theory-exam", label: "Theory Exam" },
+            "IA Practical Exam": { cls: "chip-practical-exam", label: "Practical Exam" }
+        };
         deptSet.forEach(dept => {
             const info = chipMap[dept]; if (!info) return;
             const item = document.createElement('div'); item.className = 'flex items-center gap-1';
