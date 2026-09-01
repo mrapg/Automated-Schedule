@@ -541,7 +541,7 @@
     // Holidays are managed exclusively via the admin panel (Firestore).
     // ═══════════════════════════════════════════════════════════════════════
     const termStartDate  = new Date('2026-01-12T00:00:00Z'); // VII Term Start
-    const termEndDate    = new Date('2026-10-18T00:00:00Z'); // VIII Term End (extended)
+    const termEndDate    = new Date('2026-10-31T00:00:00Z'); // VIII Term End (incl. IA Exams)
     const termVIIEndDate  = new Date('2026-05-17T00:00:00Z');
     const termVIIIStart   = new Date('2026-06-01T00:00:00Z');
     const termBreakStart  = new Date('2026-05-18T00:00:00Z'); // Break: 18 May – 31 May
@@ -695,10 +695,43 @@
         { department: "Psychiatry",          batch: "C", startDate: "2026-09-07", endDate: "2026-09-13" },
         { department: "Psychiatry",          batch: "D", startDate: "2026-09-21", endDate: "2026-09-27" },
         // Dermatology — 1 week
-        { department: "Dermatology",         batch: "A", startDate: "2026-10-12", endDate: "2026-10-18" },
+        { department: "Dermatology",         batch: "A", startDate: "2026-10-12", endDate: "2026-10-16" },
         { department: "Dermatology",         batch: "B", startDate: "2026-08-31", endDate: "2026-09-06" },
         { department: "Dermatology",         batch: "C", startDate: "2026-09-14", endDate: "2026-09-20" },
         { department: "Dermatology",         batch: "D", startDate: "2026-09-28", endDate: "2026-10-04" },
+    ];
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERNAL ASSESSMENT EXAM SCHEDULE  (17 Oct – 31 Oct 2026)
+    // Exam Batch mapping (A–F, different from clinical batches A–D):
+    //   Batch A: Roll 01–25  | B: 26–50   | C: 51–75
+    //   Batch D: Roll 76–100 | E: 101–125 | F: 126–148
+    // Theory: Aprameya Exam Hall, 0930–1230h (all students same day)
+    // Practicals: Respective Depts, 0830h onwards
+    // ═══════════════════════════════════════════════════════════════════════
+    const iaExamStart = new Date('2026-10-17T00:00:00Z');
+    const iaExamEnd   = new Date('2026-10-31T00:00:00Z');
+
+    // Theory papers — same for ALL students on each date
+    const iaTheorySchedule = [
+        { date: '2026-10-17', subject: 'Medicine & Allied', startTime: '09:30', endTime: '12:30' },
+        { date: '2026-10-19', subject: 'Surgery & Allied',  startTime: '09:30', endTime: '12:30' },
+        { date: '2026-10-21', subject: 'Obs & Gynae',       startTime: '09:30', endTime: '12:30' },
+        { date: '2026-10-22', subject: 'Ophthalmology',     startTime: '09:30', endTime: '12:30' },
+        { date: '2026-10-23', subject: 'Paediatrics',       startTime: '09:30', endTime: '12:30' },
+        { date: '2026-10-24', subject: 'ENT',               startTime: '09:30', endTime: '12:30' },
+    ];
+
+    // Practicals — which dept each exam-batch attends per day
+    // Dept order: [Medicine, Surgery, OBG, Paed, Ophthal, ENT]
+    const iaPracticalDepts = ['Internal Medicine', 'Surgery', 'Obs & Gynae', 'Paediatrics', 'Ophthalmology', 'ENT'];
+    const iaPracticalSchedule = [
+        { date: '2026-10-26', batches: ['A','B','C','D','E','F'] },
+        { date: '2026-10-27', batches: ['B','C','D','E','F','A'] },
+        { date: '2026-10-28', batches: ['C','D','E','F','A','B'] },
+        { date: '2026-10-29', batches: ['D','E','F','A','B','C'] },
+        { date: '2026-10-30', batches: ['E','F','A','B','C','D'] },
+        { date: '2026-10-31', batches: ['F','A','B','C','D','E'] },
     ];
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -710,6 +743,8 @@
 
     const getClinicBatch  = (r) => r<=38?'A': r<=76?'B': r<=114?'C': r<=150?'D': null;
     const getGeneralBatch = (r) => r<=50?'A': r<=100?'B': r<=150?'C': null;
+    // Exam practicals batch (A–F), 25 per batch
+    const getExamBatch    = (r) => { const n=parseInt(r); if(n>=1&&n<=25)return'A'; if(n>=26&&n<=50)return'B'; if(n>=51&&n<=75)return'C'; if(n>=76&&n<=100)return'D'; if(n>=101&&n<=125)return'E'; if(n>=126&&n<=148)return'F'; return null; };
 
     const normalizeDept = (dept) => {
         if (!dept) return dept;
@@ -742,7 +777,9 @@
             "Electives":            "border-violet-700 bg-violet-900/40 text-violet-100",
             "AETCOM":               "border-stone-500 bg-stone-800/40 text-stone-200",
             "Respiratory Medicine": "border-teal-500 bg-teal-900/30 text-teal-200",
-            "Term Break":           "border-blue-400 bg-blue-900/20 text-blue-300"
+            "Term Break":           "border-blue-400 bg-blue-900/20 text-blue-300",
+            "IA Theory Exam":       "border-red-500 bg-red-900/40 text-red-100",
+            "IA Practical Exam":    "border-orange-400 bg-orange-900/40 text-orange-100"
         };
         return map[dept] || "border-slate-600 bg-slate-800 text-slate-300";
     };
@@ -1234,6 +1271,40 @@
             }
             current.setUTCDate(current.getUTCDate() + 1);
         }
+
+        // ── Internal Assessment Exams (17–31 Oct 2026) ──────────────────
+        // Theory: same for everyone
+        iaTheorySchedule.forEach(t => {
+            data.push({
+                date:       t.date,
+                startTime:  t.startTime,
+                endTime:    t.endTime,
+                topic:      `IA Theory – ${t.subject}`,
+                department: 'IA Theory Exam',
+                location:   'Aprameya Exam Hall',
+                isDynamic:  false,
+                isIAExam:   true,
+            });
+        });
+
+        // Practicals: batch-specific (Exam Batch A–F, derived from roll number)
+        const eBatch = getExamBatch(rollNo);
+        iaPracticalSchedule.forEach(row => {
+            iaPracticalDepts.forEach((dept, deptIdx) => {
+                if (row.batches[deptIdx] === eBatch) {
+                    data.push({
+                        date:       row.date,
+                        startTime:  '08:30',
+                        endTime:    '13:00',
+                        topic:      `IA Practical – ${dept}`,
+                        department: 'IA Practical Exam',
+                        location:   `${dept} Dept`,
+                        isDynamic:  false,
+                        isIAExam:   true,
+                    });
+                }
+            });
+        });
 
         personalizedSchedule = data;
 
