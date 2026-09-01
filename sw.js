@@ -15,7 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);
 
-const CACHE_NAME = 'afmc-schedule-v29';
+const CACHE_NAME = 'afmc-schedule-v30';
 const ASSETS = [
   './',
   './index.html',
