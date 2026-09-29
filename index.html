@@ -1366,8 +1366,9 @@
             } else {
                 content += sorted.map(e => {
                     const idx = personalizedSchedule.indexOf(e);
-                    return `<div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden ${e.isDynamic ? 'clickable-card' : ''}"
-                        ${e.isDynamic ? `data-event-date="${ds}" data-event-idx="${idx}"` : ''}>
+                    const facultyName = e.instructor || e.faculty || (e.isDynamic ? 'Staff' : '');
+                    return `<div class="bg-slate-800 border-l-[10px] ${getDeptStyles(e.department)} p-6 mb-6 card-shadow rounded-r-3xl border border-slate-700 overflow-hidden clickable-card"
+                        data-event-date="${ds}" data-event-idx="${idx}">
                         <div class="flex justify-between items-start gap-3 flex-nowrap">
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center gap-2 mb-1.5 flex-wrap">
@@ -1381,7 +1382,7 @@
                                 <p class="text-[10px] text-slate-400 uppercase font-black tracking-tighter">TO ${e.endTime}</p>
                             </div>
                         </div>
-                        ${e.location ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest"><span>📍 ${esc(e.location)}</span></div>` : ''}
+                        ${facultyName ? `<div class="mt-6 flex items-center text-[12px] font-black text-slate-400 border-t border-slate-700 pt-4 uppercase tracking-widest"><span>👨‍🏫 ${esc(facultyName)}</span></div>` : ''}
                     </div>`;
                 }).join('');
             }
@@ -1843,11 +1844,12 @@
         else {
             allDayEvents.forEach(e => {
                 const dept = e.department || 'Other', barColor = DEPT_BAR_COLORS[dept] || '#475569';
+                const fac = e.instructor || e.faculty;
                 const row = document.createElement('div'); row.className = 'flex items-start gap-3 py-2.5 border-b border-slate-800 last:border-0';
                 row.innerHTML = `
                     <div class="text-right shrink-0 w-12"><p class="text-white font-black text-sm leading-none">${e.startTime||'--'}</p><p class="text-slate-600 text-[9px] font-bold mt-0.5">${e.endTime||''}</p></div>
                     <div class="w-0.5 self-stretch rounded-full shrink-0 mt-0.5" style="background-color:${barColor};"></div>
-                    <div class="flex-1 min-w-0"><p class="text-white font-black text-sm leading-snug">${e.topic||'Untitled'}</p><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${esc(dept)}</p>${e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${esc(e.location)}</p>` : ''}</div>`;
+                    <div class="flex-1 min-w-0"><p class="text-white font-black text-sm leading-snug">${e.topic||'Untitled'}</p><p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">${esc(dept)}</p>${fac ? `<p class="text-[10px] text-slate-400 mt-0.5">👨‍🏫 ${esc(fac)}</p>` : (e.location ? `<p class="text-[10px] text-slate-500 mt-0.5">📍 ${esc(e.location)}</p>` : '')}</div>`;
                 eventsList.appendChild(row);
             });
         }
@@ -1871,7 +1873,7 @@
     // ═══════════════════════════════════════════════════════════════════════
     window.showDetails = (date, index) => {
         const event = personalizedSchedule[index];
-        if (!event || !event.isDynamic) return;
+        if (!event) return;
         const content = document.getElementById('detail-content'), facultyName = event.instructor || event.faculty || 'Staff';
         content.innerHTML = `
             <div class="space-y-6">
@@ -1880,7 +1882,7 @@
                     <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Faculty / Resident</p><p class="text-white font-black text-lg uppercase">${esc(facultyName)}</p></div>
                     <div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Time Slot</p><p class="text-white font-black text-lg uppercase">${esc(event.startTime)} - ${esc(event.endTime)}</p></div>
                 </div>
-                ${event.location ? `<div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue Details</p><p class="text-white font-black text-lg uppercase">📍 ${esc(event.location)}</p></div>` : ''}
+                ${event.location ? `<div class="bg-slate-800/50 p-4 rounded-2xl border border-slate-700"><p class="text-[9px] text-slate-500 font-black tracking-widest uppercase mb-1">Venue / Location</p><p class="text-white font-black text-lg uppercase">📍 ${esc(event.location)}</p></div>` : ''}
             </div>`;
         // Save Android scroll position before showing overlay
         if (!isIOS) {
