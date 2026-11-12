@@ -542,12 +542,16 @@
     // Holidays are managed exclusively via the admin panel (Firestore).
     // ═══════════════════════════════════════════════════════════════════════
     const termStartDate  = new Date('2026-01-12T00:00:00Z'); // VII Term Start
-    const termEndDate    = new Date('2026-10-31T00:00:00Z'); // VIII Term End (incl. IA Exams)
+    const termEndDate    = new Date('2027-03-05T00:00:00Z'); // IX Term End (Final Exams wef 06 Mar 2027)
     const termVIIEndDate  = new Date('2026-05-17T00:00:00Z');
     const termVIIIStart   = new Date('2026-06-01T00:00:00Z');
     const termBreakStart  = new Date('2026-05-18T00:00:00Z'); // Break: 18 May – 31 May
     const termBreakEnd    = new Date('2026-05-31T00:00:00Z');
     const electivePeriod  = { start: '2026-02-23', end: '2026-03-08' }; // VII Term electives
+    const termIXStart     = new Date('2026-11-16T00:00:00Z'); // IX Term Start
+    const termIXBreakEnd  = new Date('2026-11-15T00:00:00Z'); // Inter-term break ends 15 Nov
+    const prelimsIXStart  = new Date('2027-01-25T00:00:00Z'); // IX Term Prelims start
+    const prelimsIXEnd    = new Date('2027-02-13T00:00:00Z'); // IX Term Prelims end
 
     const scheduleRules = {
         "Monday": {
@@ -703,6 +707,127 @@
     ];
 
     // ═══════════════════════════════════════════════════════════════════════
+    // IX TERM WEEKLY SCHEDULE RULES  (16 Nov 2026 – 05 Mar 2027, 16 Wks)
+    // Source: Block Weekly Training Programme (Theory/Clinics) — IX Term (I3 Batch)
+    // Venue: LH-Sushruta (NLH)
+    // Clinics: 10:00–13:00 (Morning) and 17:00–19:00 (Evening)
+    // ═══════════════════════════════════════════════════════════════════════
+    const scheduleRulesIX = {
+        "Monday": {
+            theory:    { "08:00-09:00": "Obstetrics & Gynaecology", "09:00-10:00": "General Medicine" },
+            tutorials: {
+                // 14:00-15:00: Batch A → Medicine, Batch B → Surgery, Batch C → OBG
+                "14:00-15:00": { "General Medicine": "A", "General Surgery": "B", "Obstetrics & Gynaecology": "C" },
+                // 15:00-16:00: Batch A → Surgery, Batch B → OBG, Batch C → Medicine
+                "15:00-16:00": { "General Surgery": "A", "Obstetrics & Gynaecology": "B", "General Medicine": "C" }
+            }
+        },
+        "Tuesday": {
+            theory:    {
+                "08:00-09:00": "General Medicine",
+                // 09:00-10:00: Dermatology on 1st/3rd/5th Tuesday, Anaesthesia on 2nd/4th Tuesday
+                "09:00-10:00": { 1: "Dermatology", 2: "Anaesthesia", 3: "Dermatology", 4: "Anaesthesia", 5: "Dermatology" }
+            },
+            tutorials: {
+                // 14:00-15:00: Batch A → OBG, Batch B → Medicine, Batch C → Surgery
+                "14:00-15:00": { "Obstetrics & Gynaecology": "A", "General Medicine": "B", "General Surgery": "C" }
+            },
+            pandemic:  { "15:00-16:00": "Pandemic Module (General Medicine / Pulmonary / Anaesthesia)" }
+        },
+        "Wednesday": {
+            theory:    { "08:00-09:00": "General Surgery", "09:00-10:00": "Paediatrics" },
+            aetcom:    {
+                // 14:00-15:00: Gen Medicine 1st & 2nd, Surgery 3rd, OBG 4th & 5th Wednesday of month
+                "14:00-15:00": { 1: "General Medicine", 2: "General Medicine", 3: "General Surgery", 4: "Obstetrics & Gynaecology", 5: "Obstetrics & Gynaecology" }
+            }
+        },
+        "Thursday": {
+            theory:    { "08:00-09:00": "Paediatrics", "09:00-10:00": "General Surgery" },
+            tutorials: {
+                // 14:00-15:00: Paediatrics 1st & 3rd, Radiology 2nd & 4th Thursday of month
+                "14:00-15:00": { 1: "Paediatrics", 2: "Radiology", 3: "Paediatrics", 4: "Radiology", 5: "Paediatrics" }
+            }
+        },
+        "Friday": {
+            theory:    {
+                "08:00-09:00": "ENT",
+                // 09:00-10:00: Radiology 1st & 3rd, Psychiatry 2nd/4th/5th Friday of month
+                "09:00-10:00": { 1: "Radiology", 2: "Psychiatry", 3: "Radiology", 4: "Psychiatry", 5: "Psychiatry" },
+                "14:00-15:00": "Orthopaedics"
+            }
+        },
+        "Saturday": {
+            theory:    { "08:00-09:00": "Ophthalmology", "09:00-10:00": "Obstetrics & Gynaecology" }
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // IX TERM CLINICAL ROTATION RULES  (16 Nov 2026 – 24 Jan 2027)
+    // Source: Block Weekly Training Programme (Clinics) — IX Term (I3 Batch)
+    // Batch A: Roll 01–38 | B: 39–76 | C: 77–114 | D: 115–150
+    // All Clinics at CH (SC), AICTS & MH Kirkee
+    // session: "morning" = 10:00–13:00  |  "evening" = 17:00–19:00
+    // ═══════════════════════════════════════════════════════════════════════
+    const clinicalRotationRulesIX = [
+        // ── General Medicine (2 wk morning + 1 wk evening) ──
+        { department: "Internal Medicine", batch: "A", session: "morning", startDate: "2026-11-16", endDate: "2026-11-29" },
+        { department: "Internal Medicine", batch: "B", session: "morning", startDate: "2026-11-30", endDate: "2026-12-13" },
+        { department: "Internal Medicine", batch: "C", session: "morning", startDate: "2026-12-14", endDate: "2026-12-27" },
+        { department: "Internal Medicine", batch: "D", session: "morning", startDate: "2026-12-28", endDate: "2027-01-10" },
+        { department: "Internal Medicine", batch: "A", session: "evening", startDate: "2026-11-16", endDate: "2026-11-22" },
+        { department: "Internal Medicine", batch: "B", session: "evening", startDate: "2026-11-30", endDate: "2026-12-06" },
+        { department: "Internal Medicine", batch: "C", session: "evening", startDate: "2026-12-14", endDate: "2026-12-20" },
+        { department: "Internal Medicine", batch: "D", session: "evening", startDate: "2026-12-28", endDate: "2027-01-03" },
+        // ── General Surgery (2 wk morning + 1 wk evening) ──
+        { department: "Surgery", batch: "A", session: "morning", startDate: "2026-11-30", endDate: "2026-12-13" },
+        { department: "Surgery", batch: "B", session: "morning", startDate: "2026-12-14", endDate: "2026-12-27" },
+        { department: "Surgery", batch: "C", session: "morning", startDate: "2026-12-28", endDate: "2027-01-10" },
+        { department: "Surgery", batch: "D", session: "morning", startDate: "2027-01-11", endDate: "2027-01-24" },
+        { department: "Surgery", batch: "A", session: "evening", startDate: "2026-11-30", endDate: "2026-12-06" },
+        { department: "Surgery", batch: "B", session: "evening", startDate: "2026-12-14", endDate: "2026-12-20" },
+        { department: "Surgery", batch: "C", session: "evening", startDate: "2026-12-28", endDate: "2027-01-03" },
+        { department: "Surgery", batch: "D", session: "evening", startDate: "2027-01-11", endDate: "2027-01-17" },
+        // ── Obstetrics & Gynaecology (2 wk morning + 1 wk evening) ──
+        { department: "Obs & Gynae", batch: "A", session: "morning", startDate: "2026-12-14", endDate: "2026-12-27" },
+        { department: "Obs & Gynae", batch: "B", session: "morning", startDate: "2026-12-28", endDate: "2027-01-10" },
+        { department: "Obs & Gynae", batch: "C", session: "morning", startDate: "2026-11-16", endDate: "2026-11-22" }, // part 1 (split)
+        { department: "Obs & Gynae", batch: "C", session: "morning", startDate: "2027-01-11", endDate: "2027-01-17" }, // part 2 (split)
+        { department: "Obs & Gynae", batch: "D", session: "morning", startDate: "2026-11-23", endDate: "2026-12-06" },
+        { department: "Obs & Gynae", batch: "A", session: "evening", startDate: "2026-12-14", endDate: "2026-12-20" },
+        { department: "Obs & Gynae", batch: "B", session: "evening", startDate: "2026-12-28", endDate: "2027-01-03" },
+        { department: "Obs & Gynae", batch: "C", session: "evening", startDate: "2026-11-16", endDate: "2026-11-22" },
+        { department: "Obs & Gynae", batch: "D", session: "evening", startDate: "2026-11-23", endDate: "2026-11-29" },
+        // ── Paediatrics (2 wk morning + 1 wk evening) ──
+        { department: "Paediatrics", batch: "A", session: "morning", startDate: "2026-12-28", endDate: "2027-01-10" },
+        { department: "Paediatrics", batch: "B", session: "morning", startDate: "2027-01-11", endDate: "2027-01-24" },
+        { department: "Paediatrics", batch: "C", session: "morning", startDate: "2026-11-23", endDate: "2026-12-06" },
+        { department: "Paediatrics", batch: "D", session: "morning", startDate: "2026-11-16", endDate: "2026-11-22" }, // part 1 (split)
+        { department: "Paediatrics", batch: "D", session: "morning", startDate: "2026-12-07", endDate: "2026-12-13" }, // part 2 (split)
+        { department: "Paediatrics", batch: "A", session: "evening", startDate: "2026-12-28", endDate: "2027-01-03" },
+        { department: "Paediatrics", batch: "B", session: "evening", startDate: "2027-01-11", endDate: "2027-01-17" },
+        { department: "Paediatrics", batch: "C", session: "evening", startDate: "2026-11-23", endDate: "2026-11-29" },
+        { department: "Paediatrics", batch: "D", session: "evening", startDate: "2026-11-16", endDate: "2026-11-22" },
+        // ── ENT (1 wk morning + 1 wk evening — same dates both sessions) ──
+        { department: "ENT", batch: "A", session: "morning", startDate: "2027-01-11", endDate: "2027-01-17" },
+        { department: "ENT", batch: "B", session: "morning", startDate: "2026-11-16", endDate: "2026-11-22" },
+        { department: "ENT", batch: "C", session: "morning", startDate: "2027-01-18", endDate: "2027-01-24" },
+        { department: "ENT", batch: "D", session: "morning", startDate: "2026-12-14", endDate: "2026-12-20" },
+        { department: "ENT", batch: "A", session: "evening", startDate: "2027-01-11", endDate: "2027-01-17" },
+        { department: "ENT", batch: "B", session: "evening", startDate: "2026-11-16", endDate: "2026-11-22" },
+        { department: "ENT", batch: "C", session: "evening", startDate: "2027-01-18", endDate: "2027-01-24" },
+        { department: "ENT", batch: "D", session: "evening", startDate: "2026-12-14", endDate: "2026-12-20" },
+        // ── Ophthalmology (1 wk morning + 1 wk evening — same dates both sessions) ──
+        { department: "Ophthalmology", batch: "A", session: "morning", startDate: "2027-01-18", endDate: "2027-01-24" },
+        { department: "Ophthalmology", batch: "B", session: "morning", startDate: "2026-11-23", endDate: "2026-11-29" },
+        { department: "Ophthalmology", batch: "C", session: "morning", startDate: "2026-12-07", endDate: "2026-12-13" },
+        { department: "Ophthalmology", batch: "D", session: "morning", startDate: "2026-12-21", endDate: "2026-12-27" },
+        { department: "Ophthalmology", batch: "A", session: "evening", startDate: "2027-01-18", endDate: "2027-01-24" },
+        { department: "Ophthalmology", batch: "B", session: "evening", startDate: "2026-11-23", endDate: "2026-11-29" },
+        { department: "Ophthalmology", batch: "C", session: "evening", startDate: "2026-12-07", endDate: "2026-12-13" },
+        { department: "Ophthalmology", batch: "D", session: "evening", startDate: "2026-12-21", endDate: "2026-12-27" },
+    ];
+
+    // ═══════════════════════════════════════════════════════════════════════
     // INTERNAL ASSESSMENT EXAM SCHEDULE  (17 Oct – 31 Oct 2026)
     // Exam Batch mapping (A–F, different from clinical batches A–D):
     //   Batch A: Roll 01–25  | B: 26–50   | C: 51–75
@@ -760,6 +885,7 @@
         if (d.includes("TERM BREAK")) return "Term Break";
         if (d.includes("THEORY EXAM")) return "IA Theory Exam";
         if (d.includes("PRACTICAL EXAM")) return "IA Practical Exam";
+        if (d.includes("PRELIMS")) return "Prelims";
         return dept;
     };
 
@@ -782,7 +908,8 @@
             "Respiratory Medicine": "border-teal-500 bg-teal-900/30 text-teal-200",
             "Term Break":           "border-blue-400 bg-blue-900/20 text-blue-300",
             "IA Theory Exam":       "border-rose-600 bg-rose-950/40 text-rose-200",
-            "IA Practical Exam":    "border-amber-500 bg-amber-950/40 text-amber-200"
+            "IA Practical Exam":    "border-amber-500 bg-amber-950/40 text-amber-200",
+            "Prelims":              "border-purple-600 bg-purple-950/40 text-purple-200"
         };
         return map[dept] || "border-slate-600 bg-slate-800 text-slate-300";
     };
@@ -805,7 +932,8 @@
             "Respiratory Medicine": "chip-resp",
             "Term Break":           "chip-termbreak",
             "IA Theory Exam":       "chip-theory-exam",
-            "IA Practical Exam":    "chip-practical-exam"
+            "IA Practical Exam":    "chip-practical-exam",
+            "Prelims":              "chip-theory-exam"
         };
         return map[dept] || 'chip-default';
     };
@@ -827,7 +955,8 @@
         "Respiratory Medicine": "#0d9488",
         "Term Break":           "#3b82f6",
         "IA Theory Exam":       "#e11d48",
-        "IA Practical Exam":    "#f59e0b"
+        "IA Practical Exam":    "#f59e0b",
+        "Prelims":              "#a855f7"
     };
 
     const getDeptColorClass = (dept) => {
@@ -843,6 +972,7 @@
             "Psychiatry":           "bg-indigo-500",
             "Anaesthesia":          "bg-cyan-500",
             "Respiratory Medicine": "bg-teal-500",
+            "Prelims":              "bg-purple-600",
             "Term Break":           "bg-blue-400",
             "IA Theory Exam":       "bg-rose-500",
             "IA Practical Exam":    "bg-amber-500"
@@ -1171,15 +1301,18 @@
         while (current <= termEndDate) {
             const dayName     = current.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'UTC' });
             const ds          = current.toISOString().split('T')[0];
-            const isVIIITerm  = current >= termVIIIStart;               // 01 Jun 2026 onwards
-            const isTermBreak = current >= termBreakStart && current <= termBreakEnd; // 18–31 May 2026
-            const isElective  = !isVIIITerm && !isTermBreak && current >= eStart && current <= eEnd;
-            const isIAExamPeriod = current >= iaExamStart && current <= iaExamEnd;   // 17–31 Oct 2026
+            const isIXTerm    = current >= termIXStart;                                  // 16 Nov 2026 onwards
+            const isInterTermBreak = current > iaExamEnd && current < termIXStart;       // 01 Nov – 15 Nov 2026
+            const isPrelims   = current >= prelimsIXStart && current <= prelimsIXEnd;    // 25 Jan – 13 Feb 2027
+            const isVIIITerm  = current >= termVIIIStart && !isIXTerm;                   // 01 Jun 2026 – 31 Oct 2026
+            const isTermBreak = current >= termBreakStart && current <= termBreakEnd;   // 18–31 May 2026
+            const isElective  = !isVIIITerm && !isIXTerm && !isTermBreak && current >= eStart && current <= eEnd;
+            const isIAExamPeriod = current >= iaExamStart && current <= iaExamEnd;     // 17–31 Oct 2026
             const week        = getNthWeekdayOfMonth(current);
             // Select the correct weekly schedule rules
-            const rules       = isVIIITerm ? scheduleRulesVIII[dayName] : scheduleRules[dayName];
+            const rules       = isIXTerm ? scheduleRulesIX[dayName] : (isVIIITerm ? scheduleRulesVIII[dayName] : scheduleRules[dayName]);
 
-            // ── Dynamic events from Firestore (apply to both terms) ──────────
+            // ── Dynamic events from Firestore (apply to all terms) ──────────
             const myDynamic = dynamicEvents.filter(e => {
                 if (e.date !== ds) return false;
                 const batches = Array.isArray(e.batch) ? e.batch : [e.batch];
@@ -1224,38 +1357,78 @@
                 continue;
             }
 
-            // ── Regular schedule (suppressed during IA Exam period) ───────────
-            if (dayName !== "Sunday" && rules && !isGlobalHoliday && !isTermBreak && !isIAExamPeriod) {
+            // ── Inter-term Break: 01 Nov – 15 Nov 2026 ─────────────────────
+            if (isInterTermBreak && !isGlobalHoliday && dayName !== "Sunday") {
+                data.push({ date: ds, isTermBreak: true, topic: "Inter-term Break", department: "Term Break", startTime: "08:00", endTime: "17:00", location: "AFMC", isDynamic: false });
+                current.setUTCDate(current.getUTCDate() + 1);
+                continue;
+            }
+
+            // ── Prelims: 25 Jan – 13 Feb 2027 ──────────────────────────────
+            if (isPrelims && !isGlobalHoliday && dayName !== "Sunday") {
+                data.push({ date: ds, isPrelims: true, topic: "Prelims – IX Term", department: "Prelims", startTime: "09:00", endTime: "17:00", location: "LH-Sushruta / Aprameya", isDynamic: false });
+                current.setUTCDate(current.getUTCDate() + 1);
+                continue;
+            }
+
+            // ── Regular schedule (suppressed during IA Exam period, Prelims, Breaks) ───────────
+            if (dayName !== "Sunday" && rules && !isGlobalHoliday && !isTermBreak && !isInterTermBreak && !isPrelims && !isIAExamPeriod) {
                 if (!isElective) {
-                    // Theory lectures (both terms)
+                    const defaultLh = isIXTerm ? "LH-Sushruta (NLH)" : "NLH Sushruta";
+
+                    // Theory lectures
                     for (const [time, cfg] of Object.entries(rules.theory || {})) {
                         const topic = typeof cfg === 'string' ? cfg : cfg[week];
-                        if (topic && !isOverridden(time)) addEntry(data, ds, time, topic, topic, "NLH Sushruta");
+                        if (topic && !isOverridden(time)) addEntry(data, ds, time, topic, topic, defaultLh);
                     }
-                    // Pandemic module (VII Term only — Saturday)
-                    if (!isVIIITerm && rules.pandemic && !isOverridden("09:00")) {
-                        for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", "NLH Sushruta");
-                    }
-                    // Clinical rotation clinics (11:00–13:00 or 10:00-13:00)
-                    // VII term: OPD/Ward  |  VIII term: CH(SC)/AICTS/MH Kirkee
-                    const rotRules   = isVIIITerm ? clinicalRotationRulesVIII : clinicalRotationRules;
-                    const clinicLoc  = isVIIITerm ? "CH (SC) / AICTS / MH Kirkee" : "OPD/Ward";
-                    const clinicTime = isVIIITerm ? "10:00-13:00" : "11:00-13:00";
-                    const clinicHour = isVIIITerm ? "10:00" : "11:00";
-                    rotRules.forEach(rot => {
-                        const s = new Date(rot.startDate + 'T00:00:00Z');
-                        const e = new Date(rot.endDate   + 'T00:00:00Z');
-                        if (current >= s && current <= e && rot.batch === cBatch && !isOverridden(clinicHour)) {
-                            addEntry(data, ds, clinicTime, `${rot.department} Clinics`, rot.department, clinicLoc);
+
+                    // Pandemic module
+                    if (isIXTerm && rules.pandemic) {
+                        for (const [time, topic] of Object.entries(rules.pandemic)) {
+                            if (!isOverridden(time)) addEntry(data, ds, time, topic, "Internal Medicine", defaultLh);
                         }
-                    });
+                    } else if (!isVIIITerm && !isIXTerm && rules.pandemic && !isOverridden("09:00")) {
+                        // VII Term only — Saturday
+                        for (const [time, topic] of Object.entries(rules.pandemic)) addEntry(data, ds, time, topic, "Internal Medicine", defaultLh);
+                    }
+
+                    // Clinical rotation clinics
+                    if (isIXTerm) {
+                        // IX Term: Morning (10:00–13:00) and Evening (17:00–19:00) at CH(SC) / AICTS / MH Kirkee
+                        clinicalRotationRulesIX.forEach(rot => {
+                            const s = new Date(rot.startDate + 'T00:00:00Z');
+                            const e = new Date(rot.endDate   + 'T00:00:00Z');
+                            if (current >= s && current <= e && rot.batch === cBatch) {
+                                const isMorning  = rot.session === "morning";
+                                const clinicTime = isMorning ? "10:00-13:00" : "17:00-19:00";
+                                const clinicHour = isMorning ? "10:00" : "17:00";
+                                if (!isOverridden(clinicHour)) {
+                                    addEntry(data, ds, clinicTime, `${rot.department} Clinics`, rot.department, "CH (SC) / AICTS / MH Kirkee");
+                                }
+                            }
+                        });
+                    } else {
+                        // VII Term (11:00–13:00 OPD/Ward) & VIII Term (10:00–13:00 CH(SC)/AICTS/MH Kirkee)
+                        const rotRules   = isVIIITerm ? clinicalRotationRulesVIII : clinicalRotationRules;
+                        const clinicLoc  = isVIIITerm ? "CH (SC) / AICTS / MH Kirkee" : "OPD/Ward";
+                        const clinicTime = isVIIITerm ? "10:00-13:00" : "11:00-13:00";
+                        const clinicHour = isVIIITerm ? "10:00" : "11:00";
+                        rotRules.forEach(rot => {
+                            const s = new Date(rot.startDate + 'T00:00:00Z');
+                            const e = new Date(rot.endDate   + 'T00:00:00Z');
+                            if (current >= s && current <= e && rot.batch === cBatch && !isOverridden(clinicHour)) {
+                                addEntry(data, ds, clinicTime, `${rot.department} Clinics`, rot.department, clinicLoc);
+                            }
+                        });
+                    }
+
                     // Tutorials
                     for (const [time, cfg] of Object.entries(rules.tutorials || {})) {
                         if (typeof cfg === 'string') {
-                            if (!isOverridden(time)) addEntry(data, ds, time, `${cfg} Tutorial`, cfg, "NLH Sushruta");
+                            if (!isOverridden(time)) addEntry(data, ds, time, `${cfg} Tutorial`, cfg, defaultLh);
                         } else if (cfg[week] !== undefined && !Object.values(cfg).some(v => v === 'A' || v === 'B' || v === 'C')) {
                             // Week-of-month based tutorial
-                            if (!isOverridden(time)) addEntry(data, ds, time, `${cfg[week]} Tutorial`, cfg[week], "NLH Sushruta");
+                            if (!isOverridden(time)) addEntry(data, ds, time, `${cfg[week]} Tutorial`, cfg[week], defaultLh);
                         } else {
                             // Batch-specific or group-based tutorial
                             for (const [topic, target] of Object.entries(cfg)) {
@@ -1265,15 +1438,17 @@
                             }
                         }
                     }
+
                     // SDL (week-of-month based)
                     for (const [time, cfg] of Object.entries(rules.sdl || {})) {
                         const topic = cfg[week];
                         if (topic && !isOverridden(time)) (Array.isArray(topic) ? topic : [topic]).forEach(t => addEntry(data, ds, time, `SDL – ${t}`, t, "Library/Dept"));
                     }
-                    // AETCOM (VIII term — Wednesday week-of-month based)
+
+                    // AETCOM (VIII & IX terms — Wednesday week-of-month based)
                     for (const [time, cfg] of Object.entries(rules.aetcom || {})) {
                         const topic = typeof cfg === 'string' ? cfg : cfg[week];
-                        if (topic && !isOverridden(time)) addEntry(data, ds, time, `AETCOM – ${topic}`, topic, "NLH Sushruta");
+                        if (topic && !isOverridden(time)) addEntry(data, ds, time, `AETCOM – ${topic}`, topic, defaultLh);
                     }
                 } else {
                     // VII Term elective rotation
@@ -1700,10 +1875,11 @@
     function buildDayCell(dateStr, dayNum, isOtherMonth, events, todayStr, legendDepts) {
         const cell = document.createElement('div');
         const isToday = dateStr === todayStr, isSunday = new Date(dateStr + 'T00:00:00Z').getUTCDay() === 0;
-        // inTerm covers VII term, term break, VIII term, and IA exams
-        const inTerm = (dateStr >= '2026-01-12' && dateStr <= '2026-10-31'), holiday = events.find(e => e.isHoliday);
-        const isTermBreakDay = dateStr >= '2026-05-18' && dateStr <= '2026-05-31';
+        // inTerm covers VII term, term break, VIII term, IA exams, inter-term break, IX term, and prelims
+        const inTerm = (dateStr >= '2026-01-12' && dateStr <= '2027-03-05'), holiday = events.find(e => e.isHoliday);
+        const isTermBreakDay = (dateStr >= '2026-05-18' && dateStr <= '2026-05-31') || (dateStr >= '2026-11-01' && dateStr <= '2026-11-15');
         const termBreakEv = events.find(e => e.isTermBreak);
+        const prelimsEv = events.find(e => e.isPrelims);
 
         cell.className = `cal-day-cell bg-slate-900 p-1.5 flex flex-col ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today-cell' : ''} ${isSunday ? 'is-sunday' : ''} ${holiday ? 'is-holiday' : ''}`;
         cell.dataset.date = dateStr;
@@ -1722,11 +1898,16 @@
             // Term break indicator in calendar
             const banner = document.createElement('div');
             banner.className = 'rounded bg-blue-500/20 border border-blue-400/40 px-1 py-1 text-center mb-1';
-            banner.innerHTML = `<div class="text-base leading-none mb-0.5">🏖️</div><span class="text-[8px] font-black text-blue-300 uppercase tracking-wide block leading-tight">Break</span>`;
+            banner.innerHTML = `<div class="text-base leading-none mb-0.5">🏖️</div><span class="text-[8px] font-black text-blue-300 uppercase tracking-wide block leading-tight">${termBreakEv.topic || 'Break'}</span>`;
+            cell.appendChild(banner);
+        } else if (prelimsEv && !isOtherMonth) {
+            const banner = document.createElement('div');
+            banner.className = 'rounded bg-purple-500/20 border border-purple-400/40 px-1 py-1 text-center mb-1';
+            banner.innerHTML = `<div class="text-base leading-none mb-0.5">📝</div><span class="text-[8px] font-black text-purple-300 uppercase tracking-wide block leading-tight">Prelims</span>`;
             cell.appendChild(banner);
         } else if (isSunday && !isOtherMonth) {
             const sun = document.createElement('div'); sun.className = 'text-center text-base leading-none mb-1'; sun.textContent = '☀️'; cell.appendChild(sun);
-        } else if (inTerm && !isOtherMonth && !isTermBreakDay) {
+        } else if (inTerm && !isOtherMonth && !isTermBreakDay && !prelimsEv) {
             const sorted = [...events].sort((a,b) => (a.startTime||'').localeCompare(b.startTime||''));
             sorted.slice(0, 4).forEach(e => {
                 const dept = e.department || 'Other'; legendDepts.add(dept);
